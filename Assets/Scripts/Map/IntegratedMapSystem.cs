@@ -236,10 +236,10 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
             float roll = Random.value;
             if (roll < 0.50f && resourcePrefabs.Count > 0)
                 PlaceMapPrefabAtPosition(pos, resourcePrefabs[Random.Range(0, resourcePrefabs.Count)]);
-            else if (roll < 0.90f && battlePrefabs.Count > 0)
+            else if (battlePrefabs.Count > 0)
                 PlaceMapPrefabAtPosition(pos, battlePrefabs[Random.Range(0, battlePrefabs.Count)]);
             else
-                PlaceMapPrefabAtPosition(pos, mapPrefabs[0]);
+                PlaceMapPrefabAtPosition(pos, resourcePrefabs[Random.Range(0, resourcePrefabs.Count)]);
         }
 
         GenerateTimeRifts();
