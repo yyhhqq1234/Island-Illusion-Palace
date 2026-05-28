@@ -117,7 +117,7 @@ public class MemoryFragment
     }
 }
 
-public class MemoryFragmentSystem : MonoBehaviour
+public class MemoryFragmentSystem : MonoBehaviour, IMemoryFragmentService
 {
     [Header("记忆碎片设置")]
     public int maxFragmentSlots = 3;
@@ -127,6 +127,10 @@ public class MemoryFragmentSystem : MonoBehaviour
     [Header("记忆碎片库存")]
     public List<MemoryFragment> collectedFragments = new List<MemoryFragment>();
     public List<MemoryFragment> activatedFragments = new List<MemoryFragment>();
+
+    List<MemoryFragment> IMemoryFragmentService.collectedFragments => collectedFragments;
+    List<MemoryFragment> IMemoryFragmentService.activatedFragments => activatedFragments;
+    int IMemoryFragmentService.maxFragmentSlots => maxFragmentSlots;
     public List<MemoryFragment> resonanceFragments = new List<MemoryFragment>();
 
     [Header("剧情触发")]
@@ -282,7 +286,7 @@ public class MemoryFragmentSystem : MonoBehaviour
         return true;
     }
 
-    void UpdateResonanceEffects()
+    public void UpdateResonanceEffects()
     {
         if (resonanceFragments.Count == 0)
         {
@@ -497,6 +501,13 @@ public class MemoryFragmentSystem : MonoBehaviour
         return collectedFragments.Find(fragment => fragment.fragmentName == fragmentName);
     }
 
+    public void CollectFragment(MemoryFragmentType fragmentType)
+    {
+        var fragment = new MemoryFragment(fragmentType.ToString(), fragmentType, FragmentRarity.Common, 1);
+        collectedFragments.Add(fragment);
+        Debug.Log($"收集记忆碎片：{fragmentType}");
+    }
+
     // 调试方法
     public void DebugPrintFragments()
     {
@@ -516,5 +527,11 @@ public class MemoryFragmentSystem : MonoBehaviour
         {
             Debug.Log($"- {memory}");
         }
+    }
+
+    public void OpenConfigurationUI()
+    {
+        Debug.Log("打开记忆碎片配置界面（最多3个槽位）");
+        GlobalEventManager.Instance.ShowNotification("在营火旁配置记忆碎片共鸣", 3f);
     }
 }

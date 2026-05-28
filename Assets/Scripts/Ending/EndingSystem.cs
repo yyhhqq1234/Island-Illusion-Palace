@@ -4,7 +4,7 @@ namespace IIP.Ending
 {
     public enum EndingType { PerfectRebuild, IncompleteReturn, PowerBacklash, SacrificeRedemption, TimeTraveler }
 
-    public class EndingSystem : MonoBehaviour
+    public class EndingSystem : MonoBehaviour, IEndingService
     {
         public static EndingSystem Instance { get; private set; }
 

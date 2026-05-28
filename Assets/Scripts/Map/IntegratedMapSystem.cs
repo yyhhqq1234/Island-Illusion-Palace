@@ -37,7 +37,7 @@ public enum MapType
     TruthCorridor    // 真理时空回廊入口
 }
 
-public class IntegratedMapSystem : MonoBehaviour
+public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
 {
     // === 小地图网格生成设置 ===
     [Header("小地图网格生成")]
@@ -51,9 +51,18 @@ public class IntegratedMapSystem : MonoBehaviour
     // === 共用设置 ===
     [Header("生成种子")]
     public int seed = -1;
+    [Header("当前周目")]
+    public int currentCycle = 1;
+
+    MapType IMapSystem.currentMapType { get => currentMapType; set => currentMapType = value; }
+    MapCategory IMapSystem.currentMapCategory { get => currentMapCategory; set => currentMapCategory = value; }
+    int IMapSystem.currentCycle { get => currentCycle; set => currentCycle = value; }
+
+    float ITimeRiftProvider.BaseProbability => 0.05f;
+    bool ITimeRiftProvider.IsRiftActive => false;
+    void ITimeRiftProvider.OnRiftEntered(MapType dst) { Debug.Log($"裂隙传送至 {dst}"); }
     
     [Header("多周目设置")]
-    public int currentCycle = 1;
     
     [Header("时空裂隙预制件")]
     public GameObject timeRiftPrefab;
@@ -293,29 +302,22 @@ public class IntegratedMapSystem : MonoBehaviour
         int resourceCount = random.Next(minResourceMaps, maxResourceMaps + 1);
         int battleCount = totalRemaining - resourceCount;
         
-        // 5. 放置资源地图
-        for (int i = 0; i < resourceCount; i++)
-        {
-            if (availablePositions.Count == 0) break;
-            
-            int posIndex = random.Next(availablePositions.Count);
-            Vector2Int pos = availablePositions[posIndex];
-            availablePositions.RemoveAt(posIndex);
-            
-            int prefabIndex = random.Next(resourcePrefabs.Count);
-            PlaceMapPrefabAtPosition(pos, resourcePrefabs[prefabIndex]);
-        }
-        
-        // 6. 放置战斗地图
+        // 5. 按概率分配：50%资源 / 40%战斗 / 10%安全
         foreach (Vector2Int pos in availablePositions)
         {
-            int prefabIndex = random.Next(battlePrefabs.Count);
-            PlaceMapPrefabAtPosition(pos, battlePrefabs[prefabIndex]);
+            float roll = Random.value;
+            if (roll < 0.50f && resourcePrefabs.Count > 0)
+                PlaceMapPrefabAtPosition(pos, resourcePrefabs[Random.Range(0, resourcePrefabs.Count)]);
+            else if (roll < 0.90f && battlePrefabs.Count > 0)
+                PlaceMapPrefabAtPosition(pos, battlePrefabs[Random.Range(0, battlePrefabs.Count)]);
+            else
+                PlaceMapPrefabAtPosition(pos, mapPrefabs[0]);
         }
-        
+
+        // 6. 生成时空裂隙
+        GenerateTimeRifts();
+
         Debug.Log("小地图网格生成完成: 安全区在 " + safeRoomPos + ", BOSS房间在 " + bossRoomPos);
-        Debug.Log("资源地图: " + resourceCount + " 个, 战斗地图: " + battleCount + " 个");
-        Debug.Log("资源房间种类: " + resourcePrefabs.Count + " 种, 战斗房间种类: " + battlePrefabs.Count + " 种");
     }
     
     List<Vector2Int> GetEdgePositions()
@@ -376,24 +378,38 @@ public class IntegratedMapSystem : MonoBehaviour
     
     public Vector3 GetWorldPosition(Vector2Int gridPosition)
     {
-        // 小地图大小：39x26格子，每个格子1x1
         float mapWidth = 39f;
         float mapHeight = 26f;
-        
-        // 计算世界坐标，确保整个网格中心在原点
-        // 每个小地图的坐标原点是其最左下角
         float gridOffsetX = (gridSize - 1) * mapWidth / 2f;
         float gridOffsetY = (gridSize - 1) * mapHeight / 2f;
-        
         float x = gridPosition.x * mapWidth - gridOffsetX;
         float y = gridPosition.y * mapHeight - gridOffsetY;
-        
         return new Vector3(x, y, 0);
     }
-    
 
-    
-    // === 通用方法 ===
+    public void GenerateTimeRifts()
+    {
+        if (timeRiftPrefab == null) return;
+
+        float baseProb = 0.05f;
+        var bs = FindObjectOfType<BurdenSystem>();
+        if (bs != null)
+        {
+            if (bs.currentBurden > 50) baseProb += 0.10f;
+            if (bs.currentBurden > 70) baseProb += 0.10f;
+        }
+        var mf = FindObjectOfType<MemoryFragmentSystem>();
+        if (mf != null) baseProb += mf.GetFragmentCount() * 0.03f;
+        if (currentCycle >= 2) baseProb += 0.03f;
+
+        if (Random.value <= baseProb)
+        {
+            Vector3 riftPos = new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), 0);
+            Instantiate(timeRiftPrefab, riftPos, Quaternion.identity);
+            Debug.Log($"[TimeRift] 裂隙生成！概率={baseProb:P0}");
+        }
+    }
+
     public void ClearOldMaps()
     {
         if (gridMaps != null)
@@ -433,7 +449,12 @@ public class IntegratedMapSystem : MonoBehaviour
     {
         currentCycle = cycle;
     }
-    
+
+    public void RegisterCampfire(Vector3 position)
+    {
+        Debug.Log($"营火已注册位置：{position}");
+    }
+
     public void SetMapCategory(MapCategory category)
     {
         currentMapCategory = category;

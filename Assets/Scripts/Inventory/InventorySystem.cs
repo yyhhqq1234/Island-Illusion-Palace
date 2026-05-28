@@ -45,7 +45,7 @@ public class InventoryItem
     public RecipeType potionType;
     
     // 武器特有属性
-    public WeaponSystem.WeaponType weaponType;
+    public WeaponType weaponType;
     public int weaponLevel;
     
     public InventoryItem(string name, ItemType type, int qty, string desc = "", int val = 0, ItemRarity r = ItemRarity.Common)
@@ -71,7 +71,7 @@ public class InventoryItem
     }
 }
 
-public class InventorySystem : MonoBehaviour
+public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollector
 {
     [Header("背包设置")]
     public int maxMaterialSlots = 24;      // 材料空间上限
@@ -80,6 +80,15 @@ public class InventorySystem : MonoBehaviour
     public int maxMemoryFragmentSlots = 24; // 记忆碎片和特殊物品空间上限（4×6=24格）
     public int currentInventorySize = 0;
     
+    [Header("灵魂/精华")]
+    public int currentSouls = 0;
+    public int currentSoulEssence = 0;
+    public int maxSoulEssence = 999;
+    int IInventoryService.currentSouls { get => currentSouls; set => currentSouls = value; }
+    int IInventoryService.currentSoulEssence { get => currentSoulEssence; set => currentSoulEssence = value; }
+    int IResourceCollector.currentSouls { get => currentSouls; set => currentSouls = value; }
+    int IResourceCollector.currentSoulEssence { get => currentSoulEssence; set => currentSoulEssence = value; }
+
     [Header("物品列表")]
     public List<InventoryItem> inventory = new List<InventoryItem>();
     public List<InventoryItem> materialItems = new List<InventoryItem>();
@@ -266,7 +275,7 @@ public class InventorySystem : MonoBehaviour
     }
     
     // 添加武器到背包
-    public bool AddWeapon(WeaponSystem.WeaponType weaponType, int level = 1)
+    public bool AddWeapon(WeaponType weaponType, int level = 1)
     {
         // 检查武器空间上限
         if (weaponItems.Count >= maxWeaponSlots)
@@ -488,7 +497,7 @@ public class InventorySystem : MonoBehaviour
     }
     
     // 装备武器
-    public bool EquipWeapon(WeaponSystem.WeaponType weaponType)
+    public bool EquipWeapon(WeaponType weaponType)
     {
         InventoryItem item = inventory.Find(i => 
             i.itemType == ItemType.Weapon && 
@@ -644,17 +653,17 @@ public class InventorySystem : MonoBehaviour
     }
     
     // 获取武器名称
-    private string GetWeaponName(WeaponSystem.WeaponType type)
+    private string GetWeaponName(WeaponType type)
     {
         switch (type)
         {
-            case WeaponSystem.WeaponType.Sword:
+            case WeaponType.Sword:
                 return "剑";
-            case WeaponSystem.WeaponType.Staff:
+            case WeaponType.Staff:
                 return "法杖";
-            case WeaponSystem.WeaponType.Scythe:
+            case WeaponType.Scythe:
                 return "镰刀";
-            case WeaponSystem.WeaponType.CrystalArm:
+            case WeaponType.CrystalArm:
                 return "水晶臂";
             default:
                 return type.ToString();
@@ -1069,4 +1078,37 @@ public class InventorySystem : MonoBehaviour
             }
         }
     }
+
+    public bool HasMemoryFragment()
+    {
+        return GetAllMemoryFragments().Count > 0;
+    }
+
+    public List<InventoryItem> GetAllItems()
+    {
+        var all = new System.Collections.Generic.List<InventoryItem>();
+        all.AddRange(materialItems);
+        all.AddRange(consumableItems);
+        all.AddRange(weaponItems);
+        all.AddRange(memoryFragmentItems);
+        return all;
+    }
+
+    public bool HasEnoughSouls(int amount) => currentSouls >= amount;
+    public void ConsumeSouls(int amount) => currentSouls = Mathf.Max(0, currentSouls - amount);
+    public void AddSouls(int amount) => currentSouls = Mathf.Min(999999, currentSouls + amount);
+
+    public void CollectSoul(int amount, string source)
+    {
+        AddSouls(amount);
+        Debug.Log($"获得灵魂 ×{amount}（来源：{source}）");
+    }
+
+    public void CollectSoulEssence(int amount)
+    {
+        currentSoulEssence = Mathf.Min(maxSoulEssence, currentSoulEssence + amount);
+        Debug.Log($"获得灵魂精华 ×{amount}");
+    }
+
+    public bool HasEnoughSoulEssence(int amount) => currentSoulEssence >= amount;
 }

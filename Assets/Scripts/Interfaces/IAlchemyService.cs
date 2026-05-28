@@ -3,15 +3,11 @@ using GameSystems;
 
 public interface IAlchemyService
 {
-    Dictionary<MaterialTypeEnum, int> MaterialInventory { get; }
-    List<RecipeData> AvailableRecipes { get; }
-    List<RecipeType> DiscoveredRecipes { get; }
-    float RecipeBaseSuccessRate { get; }
+    float recipeBaseSuccessRate { get; set; }
     bool CraftWithMaterials(MaterialTypeEnum[] materials);
-    bool CraftRecipe(RecipeType recipeType);
-    float CalculateSuccessRate(RecipeData recipe);
-    List<object> GetPendingProduce();
-    void ClearPendingProduce();
+    void ApplyRecipeEffect(RecipeType recipeType);
     MaterialData GetMaterialData(MaterialTypeEnum type);
     int GetMaterialValue(MaterialTypeEnum type);
+    float CalculateSuccessRate(RecipeData recipe);
+    RecipeType MatchRecipeByMaterials(MaterialTypeEnum[] materials);
 }

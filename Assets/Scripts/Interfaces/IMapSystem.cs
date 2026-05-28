@@ -2,9 +2,9 @@ using UnityEngine;
 
 public interface IMapSystem
 {
-    MapType CurrentMapType { get; }
-    MapCategory CurrentMapCategory { get; }
-    int CurrentCycle { get; }
+    MapType currentMapType { get; set; }
+    MapCategory currentMapCategory { get; set; }
+    int currentCycle { get; set; }
     void GenerateMap();
     void GenerateNewMap();
     void SetMapType(MapType type);
@@ -14,7 +14,6 @@ public interface IMapSystem
 
 public interface ICampfireService
 {
-    bool IsPlayerInRange { get; }
     void OnRest();
     void OnConfigureFragments();
     void OnAlchemyAtCampfire();

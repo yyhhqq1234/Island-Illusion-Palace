@@ -207,7 +207,7 @@ public class SkillMasteryData
     }
 }
 
-public class SaveSystem : MonoBehaviour
+public class SaveSystem : MonoBehaviour, ISaveService
 {
     [Header("存档设置")]
     public int maxSaveSlots = 5;
@@ -507,7 +507,7 @@ public class SaveSystem : MonoBehaviour
         ApplyPermanentProgress(saveData.permanentProgress);
     }
 
-    void ApplyPermanentProgress(PermanentProgressData progress)
+    public void ApplyPermanentProgress(PermanentProgressData progress)
     {
         // 应用永久属性加成
         if (characterStats != null)

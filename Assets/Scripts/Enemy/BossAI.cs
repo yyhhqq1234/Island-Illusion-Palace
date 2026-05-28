@@ -4,20 +4,28 @@ using System.Collections.Generic;
 
 public enum BossPhase { Phase1, Phase2, Phase3, Enraged }
 
-public class BossAI : MonoBehaviour
+public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
 {
+    float IEnemyProvider.damage { get => damage; set => damage = value; }
+    bool IEnemyProvider.isBerserk { get => isEnraged; set => isEnraged = value; }
+    void IEnemyProvider.EnterBerserkState() { isEnraged = true; }
+    void IEnemyProvider.TakeDamage(float amount) { TakeDamage(amount); }
+    BossPhase IBossPhaseProvider.currentPhase { get => currentPhase; set => currentPhase = value; }
+
     [Header("BOSS属性")]
     public float maxHealth = 500f;
     public float currentHealth;
     public float damage = 20f;
     public float attackRange = 3f;
+    private List<ElementType> weaknesses = new List<ElementType>();
+    private List<ElementType> resistances = new List<ElementType>();
     public float chaseRange = 15f;
     public float moveSpeed = 3f;
     public float phaseChangeThreshold = 0.7f;
 
     [Header("BOSS阶段")]
     public BossPhase currentPhase = BossPhase.Phase1;
-    public float[] phaseHealthThresholds = { 1f, 0.7f, 0.3f, 0.1f };
+    public float[] phaseHealthThresholds = { 1f, 0.70f, 0.40f, 0.10f };
 
     [Header("技能设置")]
     public List<BossSkill> skills = new List<BossSkill>();
@@ -80,7 +88,7 @@ public class BossAI : MonoBehaviour
         }
     }
 
-    void UpdatePhase()
+    public void UpdatePhase()
     {
         float healthPercent = currentHealth / maxHealth;
 
@@ -325,15 +333,62 @@ public class BossAI : MonoBehaviour
     {
         currentPhase = BossPhase.Enraged;
         isEnraged = true;
-        Debug.Log("进入狂暴阶段");
+        Debug.Log("进入狂暴阶段(Phase4)");
         ShowPhaseChangeEffect();
-        // 最大移动速度
-        moveSpeed *= 1.5f;
-        // 减少技能冷却
-        skillCooldown *= 0.7f;
+
+        var mf = FindObjectOfType<MemoryFragmentSystem>();
+        int collectedFragments = mf != null ? mf.GetFragmentCount() : 0;
+        if (collectedFragments >= 7)
+            EnableAllyMode();
+        else
+            EnableTrueForm();
+
+        SwitchWeakness();
+        StartMapShrink();
     }
 
-    void ShowPhaseChangeEffect()
+    void EnableAllyMode()
+    {
+        Debug.Log("莎娜意识觉醒，协助玩家战斗！");
+        damage *= 0.7f;
+    }
+
+    void EnableTrueForm()
+    {
+        Debug.Log("死灵圣王释放真正力量！");
+        weaknesses.Clear();
+        damage *= 1.5f;
+    }
+
+    public void SwitchWeakness()
+    {
+        if (weaknesses.Count > 0)
+        {
+            weaknesses[0] = (ElementType)Random.Range(0, 7);
+            Debug.Log($"弱点切换为：{weaknesses[0]}");
+        }
+    }
+
+    void StartMapShrink()
+    {
+        var map = FindObjectOfType<IntegratedMapSystem>();
+        if (map != null) map.SetCycle(map.currentCycle);
+        Debug.Log("地图开始缩小！");
+    }
+
+    public void OnPhaseTransition(BossPhase newPhase)
+    {
+        Debug.Log($"Boss 阶段转换：{currentPhase} → {newPhase}");
+        currentPhase = newPhase;
+        ShowPhaseChangeEffect();
+    }
+
+    public void AddAttackPattern(string patternID)
+    {
+        Debug.Log($"Boss 新增攻击模式：{patternID}");
+    }
+
+    public void ShowPhaseChangeEffect()
     {
         if (phaseChangeEffect != null)
         {

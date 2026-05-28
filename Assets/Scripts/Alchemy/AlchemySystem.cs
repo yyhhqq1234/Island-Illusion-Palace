@@ -66,8 +66,9 @@ public class RecipeData
     }
 }
 
-public class AlchemySystem : MonoBehaviour
+public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvider
 {
+    float IAlchemyService.recipeBaseSuccessRate { get => recipeBaseSuccessRate; set => recipeBaseSuccessRate = value; }
     [Header("材料库存")]
     public Dictionary<MaterialTypeEnum, int> materialInventory = new Dictionary<MaterialTypeEnum, int>();
 
@@ -602,7 +603,7 @@ public class AlchemySystem : MonoBehaviour
     }
     
     // 根据材料匹配配方
-    private RecipeType MatchRecipeByMaterials(MaterialTypeEnum[] materials)
+    public RecipeType MatchRecipeByMaterials(MaterialTypeEnum[] materials)
     {
         foreach (var recipe in availableRecipes)
         {
@@ -890,7 +891,7 @@ public class AlchemySystem : MonoBehaviour
     }
     
     // 计算合成成功率（物品合成）
-    private float CalculateSuccessRate(RecipeData recipe)
+    public float CalculateSuccessRate(RecipeData recipe)
     {
         float baseRate = recipeBaseSuccessRate; // 使用可配置的基础成功率
         

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class BurdenSystem : MonoBehaviour
+public class BurdenSystem : MonoBehaviour, IBurdenProvider
 {
     [Header("负担基本设置")]
     public float maxBurden = 100f;
@@ -36,6 +36,9 @@ public class BurdenSystem : MonoBehaviour
     private bool isHighBurden = false;
     private bool isCriticalBurden = false;
     private bool isInCampfire = false;
+
+    float IBurdenProvider.currentBurden { get => currentBurden; set => currentBurden = value; }
+    float IBurdenProvider.maxBurden => maxBurden;
 
     void Start()
     {

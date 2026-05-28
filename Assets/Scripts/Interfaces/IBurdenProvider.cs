@@ -1,11 +1,11 @@
 public interface IBurdenProvider
 {
-    float CurrentBurden { get; }
-    float MaxBurden { get; }
-    bool IsHighBurden { get; }
-    bool IsCriticalBurden { get; }
-    float GetBurdenResistance();
+    float currentBurden { get; set; }
+    float maxBurden { get; }
     void AddBurden(float amount);
     void RemoveBurden(float amount);
     void ResetBurden();
+    float GetBurdenResistance();
+    bool IsHighBurden();
+    bool IsCriticalBurden();
 }

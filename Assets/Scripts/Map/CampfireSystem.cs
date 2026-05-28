@@ -3,7 +3,7 @@ using System.Collections;
 
 public enum CampfireState { Idle, Burn, Burning }
 
-public class CampfireSystem : MonoBehaviour
+public class CampfireSystem : MonoBehaviour, ICampfireService
 {
     [Header("营火设置")]
     public float maxHealthRecovery = 100f; // 最大恢复生命值
@@ -74,14 +74,35 @@ public class CampfireSystem : MonoBehaviour
 
         if (currentState == CampfireState.Idle)
         {
-            // 点燃营火
             LightCampfire();
         }
         else if (currentState == CampfireState.Burning)
         {
-            // 在营火处恢复状态
-            StartCoroutine(RecoverAtCampfire());
+            StartCampfireMenu();
         }
+    }
+
+    void StartCampfireMenu()
+    {
+        Debug.Log("=== 营火菜单 ===");
+        OnRest();
+    }
+
+    public void OnRest()
+    {
+        StartCoroutine(RecoverAtCampfire());
+    }
+
+    public void OnConfigureFragments()
+    {
+        var mf = FindObjectOfType<MemoryFragmentSystem>();
+        if (mf != null) mf.OpenConfigurationUI();
+    }
+
+    public void OnAlchemyAtCampfire()
+    {
+        var alchemyUI = FindObjectOfType<AlchemyUI>();
+        if (alchemyUI != null) alchemyUI.ShowAlchemyPanel();
     }
 
     void LightCampfire()

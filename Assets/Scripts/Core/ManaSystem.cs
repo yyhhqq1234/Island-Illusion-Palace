@@ -100,6 +100,12 @@ public class ManaSystem : MonoBehaviour
         currentMana = maxMana;
     }
 
+    public void RestoreMana(float amount)
+    {
+        if (amount <= 0) return;
+        currentMana = Mathf.Min(maxMana, currentMana + amount);
+    }
+
     public void SetMana(float amount)
     {
         currentMana = Mathf.Clamp(amount, 0f, maxMana);

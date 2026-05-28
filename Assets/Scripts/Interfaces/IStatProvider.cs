@@ -1,17 +1,16 @@
 public interface IStatProvider
 {
-    int Strength { get; }
-    int Vitality { get; }
-    int Intelligence { get; }
-    int Resonance { get; }
-    int Level { get; }
-    float PhysicalDamageBonus { get; }
-    float MagicalDamageBonus { get; }
-    float AlchemySuccessRateBonus { get; }
-    float FragmentDiscoveryRate { get; }
+    int strength { get; set; }
+    int vitality { get; set; }
+    int intelligence { get; set; }
+    int resonance { get; set; }
+    int level { get; }
+    float physicalDamageBonus { get; }
+    float magicalDamageBonus { get; }
+    float alchemySuccessRateBonus { get; }
+    float fragmentDiscoveryRate { get; }
     void RecalculateDerivedStats();
     void AddExperience(int amount);
-    bool AllocateAttribute(AttributeType attr);
 }
 
 public enum AttributeType { Strength, Vitality, Intelligence, Resonance }

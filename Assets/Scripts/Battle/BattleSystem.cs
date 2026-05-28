@@ -27,7 +27,7 @@ public class BattleSystem : MonoBehaviour
     
     [Header("武器切换")]
     private int currentWeaponIndex = 0;
-    private List<WeaponSystem.WeaponType> availableWeapons = new List<WeaponSystem.WeaponType>();
+    private List<WeaponType> availableWeapons = new List<WeaponType>();
     
     void Start()
     {
@@ -52,9 +52,7 @@ public class BattleSystem : MonoBehaviour
             playerHealth = FindObjectOfType<HealthSystem>();
         
         // 初始化可用武器列表
-        availableWeapons.Add(WeaponSystem.WeaponType.Sword);
-        availableWeapons.Add(WeaponSystem.WeaponType.Staff);
-        availableWeapons.Add(WeaponSystem.WeaponType.Scythe);
+        availableWeapons.Add(WeaponType.Sword); availableWeapons.Add(WeaponType.Staff); availableWeapons.Add(WeaponType.Scythe);
         
         // 设置初始武器
         if (weaponSystem != null)
@@ -116,17 +114,17 @@ public class BattleSystem : MonoBehaviour
         // 更新武器图标
         switch (weaponSystem.currentWeaponType)
         {
-            case WeaponSystem.WeaponType.Sword:
+            case WeaponType.Sword:
                 if (swordIcon != null)
                     currentWeaponIcon.sprite = swordIcon;
                 weaponNameText.text = "剑";
                 break;
-            case WeaponSystem.WeaponType.Staff:
+            case WeaponType.Staff:
                 if (staffIcon != null)
                     currentWeaponIcon.sprite = staffIcon;
                 weaponNameText.text = "法杖";
                 break;
-            case WeaponSystem.WeaponType.Scythe:
+            case WeaponType.Scythe:
                 if (daggerIcon != null)
                     currentWeaponIcon.sprite = daggerIcon;
                 weaponNameText.text = "镰刀";

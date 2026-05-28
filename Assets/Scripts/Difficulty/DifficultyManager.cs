@@ -32,11 +32,12 @@ namespace IIP.Difficulty
         public int deathSoulLossMinimum = 100;
     }
 
-    public class DifficultyManager : MonoBehaviour
+    public class DifficultyManager : MonoBehaviour, IDifficultyService
     {
         public static DifficultyManager Instance { get; private set; }
 
         public DifficultyMode currentMode = DifficultyMode.Normal;
+        DifficultyMode IDifficultyService.currentMode { get => currentMode; set => currentMode = value; }
         public DifficultyConfig config;
 
         private bool hasCompletedNormal = false;

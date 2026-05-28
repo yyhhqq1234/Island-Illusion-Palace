@@ -3,13 +3,25 @@ using GameSystems;
 
 public interface IInventoryService
 {
-    void AddMaterial(MaterialTypeEnum type, int count);
-    void RemoveMaterial(MaterialTypeEnum type, int count);
+    bool AddMaterial(MaterialTypeEnum type, int count);
+    bool RemoveMaterial(MaterialTypeEnum type, int count);
     int GetMaterialQuantity(MaterialTypeEnum type);
-    void AddPotion(RecipeType type, int count);
-    void RemovePotion(RecipeType type, int count);
+    bool AddPotion(RecipeType type, int count);
     int GetPotionQuantity(RecipeType type);
-    List<MemoryFragment> GetAllMemoryFragments();
+    List<InventoryItem> GetAllMemoryFragments();
     bool HasMemoryFragment();
     List<InventoryItem> GetAllItems();
+    int currentSouls { get; set; }
+    int currentSoulEssence { get; set; }
+    bool HasEnoughSouls(int amount);
+    void ConsumeSouls(int amount);
+    void AddSouls(int amount);
+}
+
+public interface IResourceCollector
+{
+    int currentSouls { get; set; }
+    int currentSoulEssence { get; set; }
+    void CollectSoul(int amount, string source);
+    void CollectSoulEssence(int amount);
 }

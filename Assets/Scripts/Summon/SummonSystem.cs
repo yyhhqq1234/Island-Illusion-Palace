@@ -5,7 +5,7 @@ public enum SoulCoreQuality { Common, Elite, Boss }
 
 
 
-public class SummonSystem : MonoBehaviour
+public class SummonSystem : MonoBehaviour, ISummonService
 {
     [Header("灵魂之核库存")]
     public List<SoulCoreData> soulCoreInventory = new List<SoulCoreData>();
@@ -40,6 +40,13 @@ public class SummonSystem : MonoBehaviour
     private float lastSummonTime = 0f;
     private int lastSummonedSlot = 0;
     private bool summonWheelOpen = false;
+
+    List<SoulCoreData> ISummonService.soulCoreInventory => soulCoreInventory;
+    List<SoulCoreData> ISummonService.battleSummons => battleSummons;
+    List<GameObject> ISummonService.activeSummons => activeSummons;
+    int ISummonService.maxActiveSummons => maxActiveSummons;
+    float ISummonService.summonCooldown => summonCooldown;
+    int ISummonService.maxBattleSlots => maxBattleSlots;
 
     void Start()
     {
@@ -112,7 +119,7 @@ public class SummonSystem : MonoBehaviour
         }
     }
 
-    void SummonFromSlot(int slotIndex)
+    public void SummonFromSlot(int slotIndex)
     {
         if (Time.time - lastSummonTime < summonCooldown)
         {
@@ -267,6 +274,11 @@ public class SummonSystem : MonoBehaviour
 
         summonAI.SetSoulCoreData(core);
         summonAI.SetPlayer(playerTransform);
+
+        if (core.quality == "Common")
+            summonAI.lifetime = 75f;
+        else
+            summonAI.isPermanent = true;
 
         ApplyMemoryFragmentEffects(summonedCreature, summonAI);
 

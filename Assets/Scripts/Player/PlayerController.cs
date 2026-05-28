@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : MonoBehaviour, IDashProvider
 {
     [Header("移动参数")]
     public float moveSpeed = 5f;
@@ -34,6 +34,10 @@ public class PlayerController : MonoBehaviour
     private bool isMoving = false;
     private bool isRunning = false;
     private bool isDashing = false;
+    bool IDashProvider.isDashing => isDashing;
+    float IDashProvider.dashSpeed => dashSpeed;
+    float IDashProvider.dashDuration => dashDuration;
+    float IDashProvider.dashCooldown => dashCooldown;
     private float dashTimer = 0f;
     private float dashCooldownTimer = 0f;
 
@@ -348,9 +352,14 @@ public class PlayerController : MonoBehaviour
         if (rb == null) return;
         Vector2 dashDirection = movement.sqrMagnitude > 0 ? movement.normalized : (currentDirection != Vector2.zero ? currentDirection : Vector2.down);
         rb.velocity = dashDirection * dashSpeed;
+
+        if (dashTimer >= dashDuration - 0.02f)
+            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);
+        if (dashTimer <= 0.02f)
+            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);
     }
 
-    void StartDash()
+    public void StartDash()
     {
         isDashing = true;
         dashTimer = dashDuration;
@@ -445,6 +454,14 @@ public class PlayerController : MonoBehaviour
     public Vector2 GetCurrentDirection() => currentDirection;
     public bool IsMoving() => isMoving;
     public bool IsRunning() => isRunning;
+
+    public void SetInvulnerable(bool invulnerable)
+    {
+        if (invulnerable)
+            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);
+        else
+            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);
+    }
 
     // 调整玩家大小的方法
     public void SetScale(float newScale)

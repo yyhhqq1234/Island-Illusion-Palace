@@ -1,11 +1,14 @@
 using UnityEngine;
 
-public class HealthSystem : MonoBehaviour
+public class HealthSystem : MonoBehaviour, IHealthProvider
 {
     [Header("生命值设置")]
     public float maxHealth = 100f;
     public float currentHealth;
     public System.Action onDeath;
+
+    float IHealthProvider.currentHealth { get => currentHealth; set => currentHealth = value; }
+    float IHealthProvider.maxHealth { get => maxHealth; set => maxHealth = value; }
 
     
 

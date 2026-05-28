@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class CharacterStats : MonoBehaviour
+public class CharacterStats : MonoBehaviour, IStatProvider
 {
     [Header("基础属性")]
     public int strength = 10;      // 力量：物理伤害、负重
@@ -106,16 +106,11 @@ public class CharacterStats : MonoBehaviour
 
     int CalculateExperienceNeeded()
     {
-        // 经验需求计算公式
-        int baseExperience = 100 + (level - 1) * 50;
-        int scaledExperience = (int)Mathf.Pow(level - 1, 1.5f) * 20;
-        int totalExperience = baseExperience + scaledExperience;
-        
-        // 确保经验值不为负数，且有一个合理的上限
-        const int minExperience = 100;
-        const int maxExperience = 999999999;
-        
-        return Mathf.Clamp(totalExperience, minExperience, maxExperience);
+        if (level <= 10) return 100 + level * 20;
+        if (level <= 20) return 300 + level * 30;
+        if (level <= 30) return 500 + level * 40;
+        if (level <= 40) return 800 + level * 50;
+        return 1200 + level * 60;
     }
 
     public void AddAttributePoints(string attributeName, int points)
@@ -315,4 +310,14 @@ public class CharacterStats : MonoBehaviour
         Debug.Log($"负担抗性: {burdenResistance * 100}%, 炼金成功率加成: {alchemySuccessRateBonus * 100}%");
         Debug.Log($"碎片发现率: {fragmentDiscoveryRate * 100}%, 记忆碎片效果加成: {memoryFragmentEffectBonus * 100}%");
     }
+
+    int IStatProvider.strength { get => strength; set => strength = value; }
+    int IStatProvider.vitality { get => vitality; set => vitality = value; }
+    int IStatProvider.intelligence { get => intelligence; set => intelligence = value; }
+    int IStatProvider.resonance { get => resonance; set => resonance = value; }
+    int IStatProvider.level => level;
+    float IStatProvider.physicalDamageBonus => physicalDamageBonus;
+    float IStatProvider.magicalDamageBonus => magicalDamageBonus;
+    float IStatProvider.alchemySuccessRateBonus => alchemySuccessRateBonus;
+    float IStatProvider.fragmentDiscoveryRate => fragmentDiscoveryRate;
 }

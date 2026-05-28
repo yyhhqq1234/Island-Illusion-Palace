@@ -44,6 +44,10 @@ public class SummonedCreatureAI : MonoBehaviour
     public float bossDamageBonus = 0f;
     public bool deathExplosion = false;
 
+    [Header("召唤时限")]
+    public float lifetime = 0f;         // 0=无限
+    public bool isPermanent = false;    // 永久的不会被销毁
+
     [Header("感知组件")]
     public Transform playerTransform;
     public Transform currentTarget;
@@ -143,6 +147,12 @@ public class SummonedCreatureAI : MonoBehaviour
     void Update()
     {
         if (isRecalled) return;
+
+        if (!isPermanent && lifetime > 0)
+        {
+            lifetime -= Time.deltaTime;
+            if (lifetime <= 0) { MarkAsRecalled(); Destroy(gameObject, 0.5f); return; }
+        }
 
         // 更新状态切换冷却时间
         if (stateChangeCooldown > 0)
@@ -774,6 +784,12 @@ public class SummonedCreatureAI : MonoBehaviour
             GameplayAudioManager.Instance?.PlaySummonDisappear();
         }
         catch { }
+    }
+
+    public void AddBuff(float percentBuff)
+    {
+        damageBonus += percentBuff;
+        healthBonus += percentBuff * 0.5f;
     }
 
     void TriggerDeathExplosion()

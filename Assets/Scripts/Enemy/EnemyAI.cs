@@ -1,8 +1,16 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class EnemyAI : MonoBehaviour
+public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
 {
+    float IEnemyProvider.damage { get => damage; set => damage = value; }
+    bool IEnemyProvider.isBerserk { get => isBerserk; set => isBerserk = value; }
+    void IEnemyProvider.TakeDamage(float amount) { var hs = GetComponent<HealthSystem>(); if (hs != null) hs.TakeDamage(amount); }
+
+    DropTableData ILootProvider.dropTable { get => dropTable; set => dropTable = value; }
+    int ILootProvider.soulDropAmount { get => soulDropAmount; set => soulDropAmount = value; }
+    int ILootProvider.essenceDropAmount { get => essenceDropAmount; set => essenceDropAmount = value; }
+
     // 常量定义
     private const float MIN_VELOCITY_THRESHOLD = 0.1f;
 
@@ -105,7 +113,7 @@ public class EnemyAI : MonoBehaviour
     public float berserkDefenseReduction = 0.3f;
 
     // 狂暴状态
-    private bool isBerserk = false;
+    public bool isBerserk = false;
 
     [Header("低血量逃跑设置")]
     [Tooltip("低血量逃跑的血量比例阈值 (0-1)")]
@@ -192,6 +200,15 @@ public class EnemyAI : MonoBehaviour
     public List<ElementType> weaknesses = new List<ElementType>();
     public List<ElementType> resistances = new List<ElementType>();
 
+    public bool IsWeakness(ElementType element) => weaknesses.Contains(element);
+    public bool IsResistance(ElementType element) => resistances.Contains(element);
+
+    [Header("掉落")]
+    public int soulDropAmount = 15;
+    public int essenceDropAmount = 0;
+    [Tooltip("ScriptableObject 掉落表（优先于下方的硬编码掉落）")]
+    public DropTableData dropTable;
+
     [Header("外观设置")]
     public float scaleMultiplier = 2.5f;
 
@@ -256,7 +273,7 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
-    void EnterBerserkState()
+    public void EnterBerserkState()
     {
         isBerserk = true;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -1136,11 +1153,37 @@ public class EnemyAI : MonoBehaviour
         }
 
         SpawnSoulCore();
+        RollDropTableLoot();
 
         Destroy(gameObject, 0.5f);
     }
 
-    void SpawnSoulCore()
+    void RollDropTableLoot()
+    {
+        if (dropTable == null) return;
+        var results = dropTable.RollLoot();
+        var inventory = FindObjectOfType<InventorySystem>();
+        if (inventory == null) return;
+
+        foreach (var r in results)
+        {
+            switch (r.type)
+            {
+                case DropTableData.DropType.Material:
+                    inventory.AddMaterial(r.materialType, r.amount);
+                    break;
+                case DropTableData.DropType.Recipe:
+                    inventory.AddPotion(r.recipeType, r.amount);
+                    break;
+                case DropTableData.DropType.Soul:
+                    if (soulDropAmount > 0)
+                        Debug.Log($"[Loot] 灵魂 +{soulDropAmount}");
+                    break;
+            }
+        }
+    }
+
+    public void SpawnSoulCore()
     {
         Debug.Log($"生成灵魂之核：{enemyType} 在位置 {transform.position}");
 

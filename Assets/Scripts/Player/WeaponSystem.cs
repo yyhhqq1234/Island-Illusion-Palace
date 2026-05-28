@@ -1,19 +1,26 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class WeaponSystem : MonoBehaviour
-{
-    public enum WeaponType { Sword, Staff, Scythe, CrystalArm }
-    public enum DamageType { Physical, Magic, Mixed }
-    public enum ElementType { None, Frost, Water, Fire, Lightning, Soul, Holy }
+public enum WeaponType { Sword, Staff, Scythe, CrystalArm }
+public enum DamageType { Physical, Magic, Mixed }
+public enum ElementType { None, Frost, Water, Fire, Lightning, Soul, Holy }
 
+public class WeaponSystem : MonoBehaviour, IWeaponProvider
+{
     [Header("武器类型")]
     public WeaponType currentWeaponType;
 
+    WeaponType IWeaponProvider.currentWeaponType { get => currentWeaponType; set => currentWeaponType = value; }
+    [Header("武器数据（ScriptableObject 驱动）")]
+    [Tooltip("拖入 WeaponData asset 后自动覆盖下方数值")]
+    public WeaponData weaponData;
+
     [Header("武器属性")]
     public float baseDamage = 20f;
+    float IWeaponProvider.baseDamage { get => baseDamage; set => baseDamage = value; }
     [HideInInspector]
     public float attackInterval = 0.833f;
+    float IWeaponProvider.attackInterval { get => attackInterval; set => attackInterval = value; }
     [Header("自定义攻击间隔")]
     [Tooltip("如果设置为true，将使用自定义的攻击间隔值，而不是武器默认值")]
     public bool useCustomAttackInterval = false;
@@ -26,6 +33,8 @@ public class WeaponSystem : MonoBehaviour
     [Header("武器强化")]
     public int enhancementLevel = 0;
     public int maxEnhancementLevel = 5;
+    int IWeaponProvider.enhancementLevel { get => enhancementLevel; set => enhancementLevel = value; }
+    int IWeaponProvider.maxEnhancementLevel => maxEnhancementLevel;
     public List<WeaponEffect> activeEffects = new List<WeaponEffect>();
     public int maxEffectSlots = 0;
 
@@ -196,27 +205,26 @@ public class WeaponSystem : MonoBehaviour
 
     void SecondaryAttack()
     {
-        switch (currentWeaponType)
+        if (weaponData != null && weaponData.secondaryEffects.Count > 0)
         {
-            case WeaponType.Sword:
-                PrecisionStrike();
-                break;
-            case WeaponType.Staff:
-                SpellAmplify();
-                break;
-            case WeaponType.Scythe:
-                SoulHarvest();
-                break;
-            case WeaponType.CrystalArm:
-                EnergyBurst();
-                break;
+            foreach (var effect in weaponData.secondaryEffects)
+                if (effect != null) effect.Execute(this, null);
         }
-
+        else
+        {
+            switch (currentWeaponType)
+            {
+                case WeaponType.Sword:       PrecisionStrike();  break;
+                case WeaponType.Staff:       SpellAmplify();     break;
+                case WeaponType.Scythe:      SoulHarvest();      break;
+                case WeaponType.CrystalArm:  EnergyBurst();      break;
+            }
+        }
         PlayAttackSound();
         TriggerAttackAnimation();
     }
 
-    void ExecuteAttack(float damage)
+    public void ExecuteAttack(float damage)
     {
         if (swordAttackTriggerPrefab != null && attackTriggerPos != null)
         {
@@ -273,7 +281,7 @@ public class WeaponSystem : MonoBehaviour
         }
     }
 
-    float GetCurrentDamage()
+    public float GetCurrentDamage()
     {
         float damage = baseDamage;
 
@@ -324,13 +332,14 @@ public class WeaponSystem : MonoBehaviour
         // 应用弱点抗性
         if (enemy.weaknesses.Contains(ConvertElementType(weaponElement)))
         {
-            multiplier *= 1.5f;
-            Debug.Log($"击中弱点！伤害x1.5");
+            multiplier *= 1.8f;
+            Debug.Log($"击中弱点！伤害x1.8");
         }
         else if (enemy.resistances.Contains(ConvertElementType(weaponElement)))
         {
-            multiplier *= 0.8f;
-            Debug.Log($"击中抗性！伤害x0.8");
+            multiplier *= 0.4f;
+            multiplier = Mathf.Max(multiplier, baseDmg * 0.1f); // 最低10%伤害保护
+            Debug.Log($"击中抗性！伤害x0.4");
         }
 
         // 应用元素克制链
@@ -510,36 +519,34 @@ public class WeaponSystem : MonoBehaviour
 
     void UpdateWeaponStats()
     {
+        if (weaponData != null)
+        {
+            baseDamage = weaponData.GetRandomDamage();
+            attackInterval = weaponData.attackInterval;
+            attackRange = weaponData.attackRange;
+            weaponElement = (ElementType)(int)weaponData.elementType;
+            switch (weaponData.weaponType)
+            {
+                case WeaponType.Sword:       damageType = DamageType.Physical; break;
+                case WeaponType.Staff:       damageType = DamageType.Magic;    break;
+                default:                                damageType = DamageType.Mixed;    break;
+            }
+            return;
+        }
         switch (currentWeaponType)
         {
             case WeaponType.Sword:
-                baseDamage = 25f;
-                attackInterval = 0.833f;
-                attackRange = 2f;
-                damageType = DamageType.Physical;
-                weaponElement = ElementType.None;
-                break;
+                baseDamage = 25f; attackInterval = 0.833f; attackRange = 2f;
+                damageType = DamageType.Physical; weaponElement = ElementType.None; break;
             case WeaponType.Staff:
-                baseDamage = 20f;
-                attackInterval = 1.25f;
-                attackRange = 5f;
-                damageType = DamageType.Magic;
-                weaponElement = ElementType.Soul;
-                break;
+                baseDamage = 20f; attackInterval = 1.25f; attackRange = 5f;
+                damageType = DamageType.Magic; weaponElement = ElementType.Soul; break;
             case WeaponType.Scythe:
-                baseDamage = 30f;
-                attackInterval = 1.43f;
-                attackRange = 2.5f;
-                damageType = DamageType.Mixed;
-                weaponElement = ElementType.Soul;
-                break;
+                baseDamage = 30f; attackInterval = 1.43f; attackRange = 2.5f;
+                damageType = DamageType.Mixed; weaponElement = ElementType.Soul; break;
             case WeaponType.CrystalArm:
-                baseDamage = 18f;
-                attackInterval = 0.67f;
-                attackRange = 3f;
-                damageType = DamageType.Mixed;
-                weaponElement = ElementType.Frost;
-                break;
+                baseDamage = 18f; attackInterval = 0.67f; attackRange = 3f;
+                damageType = DamageType.Mixed; weaponElement = ElementType.Frost; break;
         }
     }
 
@@ -561,12 +568,25 @@ public class WeaponSystem : MonoBehaviour
         weaponSpriteRenderer.enabled = true;
     }
 
-    public bool EnhanceWeapon()
+    public bool EnhanceWeapon(IInventoryService inventory = null)
     {
         if (enhancementLevel >= maxEnhancementLevel)
         {
             Debug.Log("已达最大强化等级！");
             return false;
+        }
+
+        int nextLevel = enhancementLevel + 1;
+        int[] soulCost = { 0, 60, 120, 240, 400, 600 };
+
+        if (inventory != null)
+        {
+            if (!inventory.HasEnoughSouls(soulCost[nextLevel]))
+            {
+                Debug.Log($"灵魂不足！需要 {soulCost[nextLevel]} 灵魂");
+                return false;
+            }
+            inventory.ConsumeSouls(soulCost[nextLevel]);
         }
 
         enhancementLevel++;
@@ -630,6 +650,33 @@ public class WeaponSystem : MonoBehaviour
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
+
+    public void HealPercent(float percent)
+    {
+        var hs = GetComponent<HealthSystem>();
+        if (hs != null) hs.Heal(hs.maxHealth * percent);
+    }
+
+    public void RestoreMana(float amount)
+    {
+        var ms = GetComponent<ManaSystem>();
+        if (ms != null) ms.RestoreMana(amount);
+    }
+
+    public void BuffSummons(float percent)
+    {
+        var ss = FindObjectOfType<SummonSystem>();
+        if (ss != null)
+            foreach (var s in ss.GetActiveSummons())
+                if (s != null) s.GetComponent<SummonedCreatureAI>()?.AddBuff(percent);
+    }
+
+    public void DebuffEnemy(GameObject target, float percent)
+    {
+        if (target == null) return;
+        var ai = target.GetComponent<EnemyAI>();
+        if (ai != null) { ai.damage *= (1f - percent); ai.moveSpeed *= (1f - percent); }
     }
 }
 
