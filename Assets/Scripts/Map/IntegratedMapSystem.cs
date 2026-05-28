@@ -184,6 +184,9 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
             return;
         }
 
+        float mapWidth = 39f;
+        float mapHeight = 26f;
+
         List<GameObject> resourcePrefabs = new List<GameObject>();
         List<GameObject> battlePrefabs = new List<GameObject>();
 
@@ -243,8 +246,54 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         }
 
         GenerateTimeRifts();
+        GenerateBoundaryWalls();
 
         Debug.Log("Grid generated: SafeRoom=" + safeRoomPos + ", BossRoom=" + bossRoomPos);
+    }
+
+    void GenerateBoundaryWalls()
+    {
+        float cellWidth = 39f;
+        float cellHeight = 26f;
+
+        float leftBoundary = -(gridSize - 1) * cellWidth / 2f;
+        float rightBoundary = leftBoundary + gridSize * cellWidth;
+        float bottomBoundary = -(gridSize - 1) * cellHeight / 2f;
+        float topBoundary = bottomBoundary + gridSize * cellHeight;
+
+        float wallThickness = 5f;
+
+        GameObject boundaryParent = new GameObject("BoundaryWalls");
+        boundaryParent.transform.parent = transform;
+
+        CreateWall(new Vector3((leftBoundary + rightBoundary) / 2f, topBoundary + wallThickness / 2f, 0), 
+                   new Vector2(rightBoundary - leftBoundary + wallThickness * 2, wallThickness), 
+                   boundaryParent.transform);
+
+        CreateWall(new Vector3((leftBoundary + rightBoundary) / 2f, bottomBoundary - wallThickness / 2f, 0), 
+                   new Vector2(rightBoundary - leftBoundary + wallThickness * 2, wallThickness), 
+                   boundaryParent.transform);
+
+        CreateWall(new Vector3(rightBoundary + wallThickness / 2f, (bottomBoundary + topBoundary) / 2f, 0), 
+                   new Vector2(wallThickness, topBoundary - bottomBoundary + wallThickness * 2), 
+                   boundaryParent.transform);
+
+        CreateWall(new Vector3(leftBoundary - wallThickness / 2f, (bottomBoundary + topBoundary) / 2f, 0), 
+                   new Vector2(wallThickness, topBoundary - bottomBoundary + wallThickness * 2), 
+                   boundaryParent.transform);
+    }
+
+    void CreateWall(Vector3 position, Vector2 colliderSize, Transform parent)
+    {
+        GameObject wall = new GameObject("BoundaryWall");
+        wall.transform.position = position;
+        wall.transform.parent = parent;
+
+        BoxCollider2D collider = wall.AddComponent<BoxCollider2D>();
+        collider.isTrigger = false;
+        collider.size = colliderSize;
+
+        wall.layer = LayerMask.NameToLayer("Wall");
     }
 
     List<Vector2Int> GetEdgePositions()
