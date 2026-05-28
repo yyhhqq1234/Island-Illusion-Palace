@@ -273,29 +273,29 @@ public class MaterialItem : MonoBehaviour, ICollectible
             case GameSystems.MaterialTypeEnum.BoneFragments:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.BoneFragments, "碎骨", 2, "断裂的骨骼。", "常见", "骷髅战士、腐化村民掉落");
             case GameSystems.MaterialTypeEnum.StarlightGrass:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.StarlightGrass, "星光草", 3, "夜晚发光的植物。", "常见", "草原、森林地图采集");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.StarlightGrass, "星光草", 3, "夜晚发光的植物。", "常见", "森林地图采集");
             case GameSystems.MaterialTypeEnum.CorruptedTissue:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.CorruptedTissue, "腐化组织", 4, "被幻宫能量侵蚀的肉块。", "常见", "腐化村民、沼泽潜伏者掉落");
             case GameSystems.MaterialTypeEnum.MoonlightFlower:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.MoonlightFlower, "月影花", 5, "满月夜绽放的银色花朵。", "常见", "月光下的森林、草原采集");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.MoonlightFlower, "月影花", 5, "满月夜绽放的银色花朵。", "常见", "月光下的森林采集");
             case GameSystems.MaterialTypeEnum.RustedParts:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.RustedParts, "锈蚀零件", 6, "废弃机械的金属零件。", "常见", "机械残骸掉落，废墟地图采集");
             case GameSystems.MaterialTypeEnum.SoulDust:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.SoulDust, "灵魂微尘", 7, "逸散的灵魂能量微粒。", "常见", "怨魂等灵魂类敌人掉落");
             case GameSystems.MaterialTypeEnum.CloudyDew:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.CloudyDew, "浑浊露珠", 8, "凝结时空能量的水珠。", "常见", "森林、草原、雪山地清晨采集");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.CloudyDew, "浑浊露珠", 8, "凝结时空能量的水珠。", "常见", "森林、荒原、湿地、冰原采集");
             case GameSystems.MaterialTypeEnum.PurifyingSalt:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.PurifyingSalt, "净化盐晶", 9, "蕴含净化能量的盐结晶。", "常见", "岩地、沙漠地图采集");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.PurifyingSalt, "净化盐晶", 9, "蕴含净化能量的盐结晶。", "常见", "岩地、沙漠采集，结晶蜥蜴、石像鬼掉落");
             case GameSystems.MaterialTypeEnum.WailingVine:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.WailingVine, "哀嚎藤蔓", 10, "触碰时会发出悲鸣的黑暗植物。", "常见", "沼泽、湿地地图采集");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.WailingVine, "哀嚎藤蔓", 10, "触碰时会发出悲鸣的黑暗植物。", "常见", "沼泽潜伏者掉落，湿地地图采集");
             
             // 稀有材料
             case GameSystems.MaterialTypeEnum.MemoryResidue:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.MemoryResidue, "记忆残渣", 11, "记忆逸散的能量渣滓。", "稀有", "记忆碎片区域采集");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.MemoryResidue, "记忆残渣", 11, "记忆逸散的能量渣滓。", "稀有", "记忆碎片区域采集，怨魂掉落（低概率）");
             case GameSystems.MaterialTypeEnum.TimeFragment:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.TimeFragment, "时空碎片", 12, "包含不稳定时空能量的脆弱碎片。", "稀有", "时空守护者掉落，时空裂隙区域采集");
             case GameSystems.MaterialTypeEnum.SoulCrystal:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.SoulCrystal, "灵魂结晶", 13, "提纯凝固的灵魂能量块。", "稀有", "灵魂吞噬者、精英怨魂掉落");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.SoulCrystal, "灵魂结晶", 13, "提纯凝固的灵魂能量块。", "稀有", "灵魂吞噬者掉落");
             case GameSystems.MaterialTypeEnum.CrystalizedCore:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.CrystalizedCore, "晶化残核", 14, "晶化生物遗留的惰性能量核。", "稀有", "结晶蜥蜴掉落");
             case GameSystems.MaterialTypeEnum.MechCore:
@@ -307,9 +307,9 @@ public class MaterialItem : MonoBehaviour, ICollectible
             case GameSystems.MaterialTypeEnum.GargoyleFragment:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.GargoyleFragment, "石像鬼碎片", 18, "活化雕像上剥落的带魔力石片。", "稀有", "石像鬼掉落");
             case GameSystems.MaterialTypeEnum.FrostShard:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.FrostShard, "极寒冰屑", 19, "永恒冻土中形成的刺骨冰屑。", "稀有", "雪山地采集，冰原狼掉落");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.FrostShard, "极寒冰屑", 19, "永恒冻土中形成的刺骨冰屑。", "稀有", "冰原采集，冰原狼掉落");
             case GameSystems.MaterialTypeEnum.AncientDragonBonePowder:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.AncientDragonBonePowder, "古龙骨粉", 20, "研磨自远古巨兽骨骼的能量粉末。", "稀有", "岩地、雪山地远古遗骸处采集");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.AncientDragonBonePowder, "古龙骨粉", 20, "研磨自远古巨兽骨骼的能量粉末。", "稀有", "岩地、冰原远古遗骸处采集");
             
             // 史诗材料
             case GameSystems.MaterialTypeEnum.SoulEssence:

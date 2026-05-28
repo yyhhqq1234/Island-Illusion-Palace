@@ -530,29 +530,29 @@ public class InventorySystem : MonoBehaviour
             case MaterialTypeEnum.BoneFragments:
                 return new MaterialData(type, "碎骨", 2, "断裂的骨骼。", "常见", "骷髅战士、腐化村民掉落");
             case MaterialTypeEnum.StarlightGrass:
-                return new MaterialData(type, "星光草", 3, "夜晚发光的植物。", "常见", "草原、森林地图采集");
+                return new MaterialData(type, "星光草", 3, "夜晚发光的植物。", "常见", "森林地图采集");
             case MaterialTypeEnum.CorruptedTissue:
                 return new MaterialData(type, "腐化组织", 4, "被幻宫能量侵蚀的肉块。", "常见", "腐化村民、沼泽潜伏者掉落");
             case MaterialTypeEnum.MoonlightFlower:
-                return new MaterialData(type, "月影花", 5, "满月夜绽放的银色花朵。", "常见", "月光下的森林、草原采集");
+                return new MaterialData(type, "月影花", 5, "满月夜绽放的银色花朵。", "常见", "月光下的森林采集");
             case MaterialTypeEnum.RustedParts:
                 return new MaterialData(type, "锈蚀零件", 6, "废弃机械的金属零件。", "常见", "机械残骸掉落，废墟地图采集");
             case MaterialTypeEnum.SoulDust:
                 return new MaterialData(type, "灵魂微尘", 7, "逸散的灵魂能量微粒。", "常见", "怨魂等灵魂类敌人掉落");
             case MaterialTypeEnum.CloudyDew:
-                return new MaterialData(type, "浑浊露珠", 8, "凝结时空能量的水珠。", "常见", "森林、草原、雪山地清晨采集");
+                return new MaterialData(type, "浑浊露珠", 8, "凝结时空能量的水珠。", "常见", "森林、荒原、湿地、冰原采集");
             case MaterialTypeEnum.PurifyingSalt:
-                return new MaterialData(type, "净化盐晶", 9, "蕴含净化能量的盐结晶。", "常见", "岩地、沙漠地图采集");
+                return new MaterialData(type, "净化盐晶", 9, "蕴含净化能量的盐结晶。", "常见", "岩地、沙漠采集，结晶蜥蜴、石像鬼掉落");
             case MaterialTypeEnum.WailingVine:
-                return new MaterialData(type, "哀嚎藤蔓", 10, "触碰时会发出悲鸣的黑暗植物。", "常见", "沼泽、湿地地图采集");
+                return new MaterialData(type, "哀嚎藤蔓", 10, "触碰时会发出悲鸣的黑暗植物。", "常见", "沼泽潜伏者掉落，湿地地图采集");
 
             // 稀有材料（10种）
             case MaterialTypeEnum.MemoryResidue:
-                return new MaterialData(type, "记忆残渣", 11, "记忆逸散的能量渣滓。", "稀有", "记忆碎片区域采集");
+                return new MaterialData(type, "记忆残渣", 11, "记忆逸散的能量渣滓。", "稀有", "记忆碎片区域采集，怨魂掉落（低概率）");
             case MaterialTypeEnum.TimeFragment:
                 return new MaterialData(type, "时空碎片", 12, "包含不稳定时空能量的脆弱碎片。", "稀有", "时空守护者掉落，时空裂隙区域采集");
             case MaterialTypeEnum.SoulCrystal:
-                return new MaterialData(type, "灵魂结晶", 13, "提纯凝固的灵魂能量块。", "稀有", "灵魂吞噬者、精英怨魂掉落");
+                return new MaterialData(type, "灵魂结晶", 13, "提纯凝固的灵魂能量块。", "稀有", "灵魂吞噬者掉落");
             case MaterialTypeEnum.CrystalizedCore:
                 return new MaterialData(type, "晶化残核", 14, "晶化生物遗留的惰性能量核。", "稀有", "结晶蜥蜴掉落");
             case MaterialTypeEnum.MechCore:
@@ -564,9 +564,9 @@ public class InventorySystem : MonoBehaviour
             case MaterialTypeEnum.GargoyleFragment:
                 return new MaterialData(type, "石像鬼碎片", 18, "活化雕像上剥落的带魔力石片。", "稀有", "石像鬼掉落");
             case MaterialTypeEnum.FrostShard:
-                return new MaterialData(type, "极寒冰屑", 19, "永恒冻土中形成的刺骨冰屑。", "稀有", "雪山地采集，冰原狼掉落");
+                return new MaterialData(type, "极寒冰屑", 19, "永恒冻土中形成的刺骨冰屑。", "稀有", "冰原采集，冰原狼掉落");
             case MaterialTypeEnum.AncientDragonBonePowder:
-                return new MaterialData(type, "古龙骨粉", 20, "研磨自远古巨兽骨骼的能量粉末。", "稀有", "岩地、雪山地远古遗骸处采集");
+                return new MaterialData(type, "古龙骨粉", 20, "研磨自远古巨兽骨骼的能量粉末。", "稀有", "岩地、冰原远古遗骸处采集");
 
             // 史诗材料（3种）
             case MaterialTypeEnum.SoulEssence:
