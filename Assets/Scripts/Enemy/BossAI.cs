@@ -34,7 +34,7 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
 
     [Header("状态")]
     private bool isEnraged = false;
-    private bool isInvulnerable = false;
+    protected bool isInvulnerable = false;
     private float invulnerabilityTimer = 0f;
 
     [Header("引用")]
@@ -403,7 +403,7 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
         Debug.Log($"BOSS进入无敌状态，持续 {duration} 秒");
     }
 
-    void Die()
+    protected virtual void Die()
     {
         Debug.Log("BOSS死亡");
 
