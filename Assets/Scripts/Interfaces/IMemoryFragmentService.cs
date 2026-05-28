@@ -1,17 +1,14 @@
 using System.Collections.Generic;
 
-namespace IIP.Memory
+public interface IMemoryFragmentService
 {
-    public interface IMemoryFragmentService
-    {
-        List<MemoryFragment> CollectedFragments { get; }
-        List<MemoryFragment> ActivatedFragments { get; }
-        int MaxFragmentSlots { get; }
-        void CollectFragment(MemoryFragmentType fragmentType);
-        bool ActivateFragment(MemoryFragment fragment);
-        bool DeactivateFragment(MemoryFragment fragment);
-        void UpdateResonanceEffects();
-        int GetFragmentCount();
-        int GetActivatedFragmentCount();
-    }
+    List<MemoryFragment> CollectedFragments { get; }
+    List<MemoryFragment> ActivatedFragments { get; }
+    int MaxFragmentSlots { get; }
+    void CollectFragment(MemoryFragmentType fragmentType);
+    bool ActivateFragment(MemoryFragment fragment);
+    bool DeactivateFragment(MemoryFragment fragment);
+    void UpdateResonanceEffects();
+    int GetFragmentCount();
+    int GetActivatedFragmentCount();
 }
