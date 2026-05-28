@@ -166,8 +166,16 @@ public class PlayerController : MonoBehaviour
 
     void HandleKeyboardInput()
     {
-        movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-        if (movement.magnitude > 1) movement.Normalize();
+        float horizontal = 0f;
+        float vertical = 0f;
+        
+        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) vertical = 1f;
+        else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) vertical = -1f;
+        
+        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) horizontal = 1f;
+        else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) horizontal = -1f;
+        
+        movement = new Vector2(horizontal, vertical);
         isMoving = movement.magnitude > 0.1f;
     }
 
