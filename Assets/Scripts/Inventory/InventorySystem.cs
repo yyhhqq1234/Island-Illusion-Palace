@@ -579,7 +579,7 @@ public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollec
 
             // 史诗材料（3种）
             case MaterialTypeEnum.SoulEssence:
-                return new MaterialData(type, "灵魂精华", 25, "用于炼金的高纯度灵魂能量。", "史诗", "灵魂炼金（灵魂×50）");
+                return new MaterialData(type, "灵魂精华", 1, "用于炼金的高纯度灵魂能量。", "史诗", "灵魂炼金（灵魂×50）");
             case MaterialTypeEnum.LeylineCrystal:
                 return new MaterialData(type, "地脉结晶", 30, "大地能量脉络中凝结的坚固结晶。", "史诗", "岩地深处采集");
             case MaterialTypeEnum.AncientRuneStone:

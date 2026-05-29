@@ -35,7 +35,7 @@ public enum RecipeType
     Material_AncientDragonBonePowder, // 古龙骨粉（20）
     Material_LeylineCrystal,     // 地脉结晶（30）
     Material_AncientRuneStone,   // 远古铭文石（33）
-    Material_SoulEssence         // 灵魂精华（25）- 炼金产物
+    Material_SoulEssence         // 灵魂精华（1）- 炼金产物
 }
 
 public enum RecipeTier
@@ -152,7 +152,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
         Dictionary<MaterialTypeEnum, int> soulStabilizerRecipe = new Dictionary<MaterialTypeEnum, int>();
         soulStabilizerRecipe[MaterialTypeEnum.CloudyDew] = 3;
         soulStabilizerRecipe[MaterialTypeEnum.PurifyingSalt] = 1;
-        availableRecipes.Add(new RecipeData(RecipeType.SoulStabilizer, "灵魂稳定剂", RecipeTier.Basic, soulStabilizerRecipe, "减少灵魂负担30点。", 25));
+        availableRecipes.Add(new RecipeData(RecipeType.SoulStabilizer, "灵魂稳定剂", RecipeTier.Basic, soulStabilizerRecipe, "减少灵魂负担30点。", 33));
 
         Dictionary<MaterialTypeEnum, int> healingPotionRecipe = new Dictionary<MaterialTypeEnum, int>();
         healingPotionRecipe[MaterialTypeEnum.MoonlightFlower] = 1;
@@ -276,7 +276,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             ancientDragonBonePowderRecipe[MaterialTypeEnum.PurifyingSalt] = 1;
             availableRecipes.Add(new RecipeData(RecipeType.Material_AncientDragonBonePowder, "古龙骨粉", RecipeTier.Advanced, ancientDragonBonePowderRecipe, "研磨自远古巨兽骨骼的能量粉末。", 20));
 
-            // 史诗材料（价值25, 30, 33）
+            // 史诗材料（价值1, 30, 33）
             Dictionary<MaterialTypeEnum, int> soulEssenceRecipe = new Dictionary<MaterialTypeEnum, int>();
             soulEssenceRecipe[MaterialTypeEnum.SoulCrystal] = 1;
             soulEssenceRecipe[MaterialTypeEnum.SoulDust] = 3;

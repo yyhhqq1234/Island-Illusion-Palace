@@ -1201,7 +1201,7 @@ MonoBehaviour:
   consumablesGrid: {fileID: 1956517147}
   materialsGrid: {fileID: 680023814}
   cellSize: {x: 92, y: 88}
-  spacing: {x: 18, y: 18}
+  spacing: {x: 18, y: 16}
   tooltipHideDelay: 0.15
 --- !u!1 &606614256
 GameObject:
