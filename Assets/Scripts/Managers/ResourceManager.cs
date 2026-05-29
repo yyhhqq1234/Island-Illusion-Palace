@@ -189,29 +189,22 @@ public class ResourceManager : MonoBehaviour
 
     /// <summary>
     /// 配置AudioManager的音效资源
+    /// [已弃用] 新音频系统使用MapMusicDatabase，请在Inspector中配置
     /// </summary>
     public void ConfigureAudioManager()
     {
+        Debug.Log("ConfigureAudioManager已弃用，请使用MapMusicDatabase配置音频系统");
+
         if (GameplayAudioManager.Instance == null)
         {
-            Debug.LogWarning("GameplayAudioManager未找到，无法自动配置音效资源");
+            Debug.LogWarning("GameplayAudioManager未找到，无法配置音效资源");
             return;
         }
 
         GameplayAudioManager audioManager = GameplayAudioManager.Instance;
 
 #if UNITY_EDITOR
-        // 编辑器模式：自动加载资源
-        // 配置背景音乐
-        audioManager.mainTheme = LoadAudioClip(mainThemePath);
-        audioManager.battleMusic = LoadAudioClip(battleMusicPath);
-        audioManager.bossBattleMusic = LoadAudioClip(bossBattleMusicPath);
-        audioManager.explorationMusic1 = LoadAudioClip(explorationMusic1Path);
-        audioManager.explorationMusic2 = LoadAudioClip(explorationMusic2Path);
-        audioManager.explorationMusic3 = LoadAudioClip(explorationMusic3Path);
-        audioManager.campMusic = LoadAudioClip(campMusicPath);
-        audioManager.defaultMusic = LoadAudioClip(defaultMusicPath);
-
+        // 编辑器模式：加载音效资源（保留，因为这些在GameplayAudioManager中仍然存在）
         // 配置战斗音效
         audioManager.playerAttackSound = LoadAudioClip(playerAttackSoundPath);
         audioManager.playerDeathSound = LoadAudioClip(playerDeathSoundPath);
@@ -232,17 +225,9 @@ public class ResourceManager : MonoBehaviour
         audioManager.confirmSound = LoadAudioClip(confirmSoundPath);
         audioManager.selectSound = LoadAudioClip(selectSoundPath);
 
-        Debug.Log("GameplayAudioManager音效资源配置完成！");
+        Debug.Log("GameplayAudioManager音效资源配置完成！请在MapMusicDatabase中配置背景音乐。");
 #else
-        // 运行时模式：资源应该已经在Inspector中分配
-        if (audioManager.mainTheme == null)
-        {
-            Debug.LogWarning("GameplayAudioManager音效资源未在Inspector中分配！请在编辑器中手动分配资源。");
-        }
-        else
-        {
-            Debug.Log("GameplayAudioManager音效资源已配置（运行时模式）。");
-        }
+        Debug.Log("请在Unity编辑器中使用MapMusicDatabase配置音频系统。");
 #endif
     }
 
