@@ -313,7 +313,7 @@ public class MaterialItem : MonoBehaviour, ICollectible
             
             // 史诗材料
             case GameSystems.MaterialTypeEnum.SoulEssence:
-                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.SoulEssence, "灵魂精华", 25, "用于炼金的高纯度灵魂能量。", "史诗", "灵魂炼金（灵魂×50）");
+                return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.SoulEssence, "灵魂精华", 1, "用于炼金的高纯度灵魂能量。", "史诗", "灵魂炼金（灵魂×50）");
             case GameSystems.MaterialTypeEnum.LeylineCrystal:
                 return new GameSystems.MaterialData(GameSystems.MaterialTypeEnum.LeylineCrystal, "地脉结晶", 30, "大地能量脉络中凝结的坚固结晶。", "史诗", "岩地深处采集");
             case GameSystems.MaterialTypeEnum.AncientRuneStone:

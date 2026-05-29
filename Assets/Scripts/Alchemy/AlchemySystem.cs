@@ -280,7 +280,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             Dictionary<MaterialTypeEnum, int> soulEssenceRecipe = new Dictionary<MaterialTypeEnum, int>();
             soulEssenceRecipe[MaterialTypeEnum.SoulCrystal] = 1;
             soulEssenceRecipe[MaterialTypeEnum.SoulDust] = 3;
-            availableRecipes.Add(new RecipeData(RecipeType.Material_SoulEssence, "灵魂精华", RecipeTier.Advanced, soulEssenceRecipe, "用于炼金的高纯度灵魂能量。", 25));
+            availableRecipes.Add(new RecipeData(RecipeType.Material_SoulEssence, "灵魂精华", RecipeTier.Advanced, soulEssenceRecipe, "用于炼金的高纯度灵魂能量。", 1));
 
             Dictionary<MaterialTypeEnum, int> leylineCrystalRecipe = new Dictionary<MaterialTypeEnum, int>();
             leylineCrystalRecipe[MaterialTypeEnum.CloudyDew] = 2;
@@ -1338,7 +1338,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             
             // 史诗材料
             case MaterialTypeEnum.SoulEssence:
-                return new MaterialData(MaterialTypeEnum.SoulEssence, "灵魂精华", 25, "用于炼金的高纯度灵魂能量。", "史诗", "灵魂炼金（灵魂×50）");
+                return new MaterialData(MaterialTypeEnum.SoulEssence, "灵魂精华", 1, "用于炼金的高纯度灵魂能量。", "史诗", "灵魂炼金（灵魂×50）");
             case MaterialTypeEnum.LeylineCrystal:
                 return new MaterialData(MaterialTypeEnum.LeylineCrystal, "地脉结晶", 30, "大地能量脉络中凝结的坚固结晶。", "史诗", "岩地深处采集");
             case MaterialTypeEnum.AncientRuneStone:
