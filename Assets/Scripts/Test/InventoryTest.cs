@@ -24,7 +24,7 @@ public class InventoryTest : MonoBehaviour
         // 检测是否按下测试键（B键）
         if (Input.GetKeyDown(testKey))
         {
-            AddAllBasicMaterials();
+            AddAllMaterials();
         }
         
         // 按住Shift+B键可以一次性添加大量素材用于测试
@@ -32,6 +32,34 @@ public class InventoryTest : MonoBehaviour
         {
             AddLargeAmountOfMaterials();
         }
+        
+        // 按住Ctrl+B键只添加基础材料
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(testKey))
+        {
+            AddAllBasicMaterials();
+        }
+    }
+
+    void AddAllMaterials()
+    {
+        if (inventorySystem == null)
+        {
+            Debug.LogError("未找到InventorySystem，请检查引用");
+            return;
+        }
+        
+        Debug.Log("========== 测试：添加所有炼金素材 ==========");
+        
+        AddAllBasicMaterials();
+        AddAllRareMaterials();
+        AddAllEpicMaterials();
+        AddAllLegendaryMaterials();
+        
+        Debug.Log("========== 所有素材添加完成 ==========");
+        Debug.Log($"当前背包总物品数: {inventorySystem.currentInventorySize}");
+        
+        // 自动刷新背包UI
+        RefreshInventoryUI();
     }
 
     void AddAllBasicMaterials()
@@ -42,7 +70,7 @@ public class InventoryTest : MonoBehaviour
             return;
         }
         
-        Debug.Log("========== 测试：添加基础炼金素材 ==========");
+        Debug.Log("---------- 添加基础材料（10种）----------");
         
         // 添加所有基础炼金材料（10种）
         AddMaterial(MaterialTypeEnum.RottenWood, addQuantity);
@@ -55,12 +83,59 @@ public class InventoryTest : MonoBehaviour
         AddMaterial(MaterialTypeEnum.CloudyDew, addQuantity);
         AddMaterial(MaterialTypeEnum.PurifyingSalt, addQuantity);
         AddMaterial(MaterialTypeEnum.WailingVine, addQuantity);
+    }
 
-        Debug.Log("========== 基础素材添加完成 ==========");
-        Debug.Log($"当前背包总物品数: {inventorySystem.currentInventorySize}");
+    void AddAllRareMaterials()
+    {
+        if (inventorySystem == null)
+        {
+            Debug.LogError("未找到InventorySystem，请检查引用");
+            return;
+        }
         
-        // 自动刷新背包UI
-        RefreshInventoryUI();
+        Debug.Log("---------- 添加稀有材料（10种）----------");
+        
+        // 添加所有稀有炼金材料（10种）
+        AddMaterial(MaterialTypeEnum.MemoryResidue, addQuantity);
+        AddMaterial(MaterialTypeEnum.TimeFragment, addQuantity);
+        AddMaterial(MaterialTypeEnum.SoulCrystal, addQuantity);
+        AddMaterial(MaterialTypeEnum.CrystalizedCore, addQuantity);
+        AddMaterial(MaterialTypeEnum.MechCore, addQuantity);
+        AddMaterial(MaterialTypeEnum.AncientTreeResin, addQuantity);
+        AddMaterial(MaterialTypeEnum.LavaCore, addQuantity);
+        AddMaterial(MaterialTypeEnum.GargoyleFragment, addQuantity);
+        AddMaterial(MaterialTypeEnum.FrostShard, addQuantity);
+        AddMaterial(MaterialTypeEnum.AncientDragonBonePowder, addQuantity);
+    }
+
+    void AddAllEpicMaterials()
+    {
+        if (inventorySystem == null)
+        {
+            Debug.LogError("未找到InventorySystem，请检查引用");
+            return;
+        }
+        
+        Debug.Log("---------- 添加史诗材料（3种）----------");
+        
+        // 添加所有史诗炼金材料（3种）
+        AddMaterial(MaterialTypeEnum.SoulEssence, addQuantity);
+        AddMaterial(MaterialTypeEnum.LeylineCrystal, addQuantity);
+        AddMaterial(MaterialTypeEnum.AncientRuneStone, addQuantity);
+    }
+
+    void AddAllLegendaryMaterials()
+    {
+        if (inventorySystem == null)
+        {
+            Debug.LogError("未找到InventorySystem，请检查引用");
+            return;
+        }
+        
+        Debug.Log("---------- 添加传奇材料（1种）----------");
+        
+        // 添加所有传奇炼金材料（1种）
+        AddMaterial(MaterialTypeEnum.ParadoxShard, addQuantity);
     }
 
     void AddMaterial(MaterialTypeEnum materialType, int quantity)
@@ -161,6 +236,10 @@ public class InventoryTest : MonoBehaviour
                 return "地脉结晶";
             case MaterialTypeEnum.AncientRuneStone:
                 return "远古铭文石";
+
+            // 传奇材料
+            case MaterialTypeEnum.ParadoxShard:
+                return "悖时薄片";
 
             default:
                 return type.ToString();

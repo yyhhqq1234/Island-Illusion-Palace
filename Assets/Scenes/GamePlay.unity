@@ -171,6 +171,9 @@ MonoBehaviour:
   currentMapType: 0
   seed: -1
   currentCycle: 1
+  timeGuardianPrefab: {fileID: 0}
+  bossRoomPrefab: {fileID: 0}
+  timePortalPrefab: {fileID: 0}
   timeRiftPrefab: {fileID: 0}
   treasureChestPrefab: {fileID: 0}
   mapPrefabsByType:
@@ -1151,6 +1154,9 @@ MonoBehaviour:
   maxWeaponSlots: 24
   maxMemoryFragmentSlots: 7
   currentInventorySize: 0
+  currentSouls: 0
+  currentSoulEssence: 0
+  maxSoulEssence: 999
   inventory: []
   materialItems: []
   consumableItems: []

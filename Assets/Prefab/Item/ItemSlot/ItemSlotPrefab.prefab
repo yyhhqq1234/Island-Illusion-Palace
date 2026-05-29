@@ -327,6 +327,48 @@ MonoBehaviour:
       - itemName: "\u54C0\u568E\u85E4\u8513"
         icon: {fileID: 21300000, guid: 55501d05dfde18842a2bc0a309319cd8, type: 3}
         rarity: 0
+      - itemName: "\u8BB0\u5FC6\u6B8B\u6E23"
+        icon: {fileID: 21300000, guid: adcab4f4147a72d43a4273fca355fbf2, type: 3}
+        rarity: 1
+      - itemName: "\u65F6\u7A7A\u788E\u7247"
+        icon: {fileID: 21300000, guid: 16752b16c9c89a7478ccd83feb84d116, type: 3}
+        rarity: 1
+      - itemName: "\u7075\u9B42\u7ED3\u6676"
+        icon: {fileID: 21300000, guid: b78843fffcaa8e0468fdb9917ca1f178, type: 3}
+        rarity: 1
+      - itemName: "\u6676\u5316\u6B8B\u6838"
+        icon: {fileID: 21300000, guid: abf70202b64529947ae7efb370db6299, type: 3}
+        rarity: 1
+      - itemName: "\u673A\u68B0\u6838\u5FC3"
+        icon: {fileID: 21300000, guid: 9b4c6b9562f07da4ba6c45d7a7cc8fb4, type: 3}
+        rarity: 1
+      - itemName: "\u53E4\u6811\u6811\u8102"
+        icon: {fileID: 21300000, guid: 671bee6193bbeba489ea0b1b1fa6ce41, type: 3}
+        rarity: 1
+      - itemName: "\u7194\u5CA9\u6838\u5FC3"
+        icon: {fileID: 21300000, guid: 564dfebcf45a3b74a860d65fd15a7bbb, type: 3}
+        rarity: 1
+      - itemName: "\u77F3\u50CF\u9B3C\u788E\u7247"
+        icon: {fileID: 21300000, guid: b36863c581526e04bbfef6ab278761f8, type: 3}
+        rarity: 1
+      - itemName: "\u6781\u5BD2\u51B0\u5C51"
+        icon: {fileID: 21300000, guid: 452f51839edce854c93de28184275eb5, type: 3}
+        rarity: 1
+      - itemName: "\u53E4\u9F99\u9AA8\u7C89 "
+        icon: {fileID: 21300000, guid: f1a91ba340dea2447a2ef522712fee07, type: 3}
+        rarity: 1
+      - itemName: "\u7075\u9B42\u7CBE\u534E"
+        icon: {fileID: 21300000, guid: 20e2839095229db4b808497a9783ee16, type: 3}
+        rarity: 2
+      - itemName: "\u5730\u8109\u7ED3\u6676"
+        icon: {fileID: 21300000, guid: 2391c09e8614cec49a1f44656f654be3, type: 3}
+        rarity: 2
+      - itemName: "\u8FDC\u53E4\u94ED\u6587\u77F3 "
+        icon: {fileID: 21300000, guid: 008d056556833da4bbfe921e9d994107, type: 3}
+        rarity: 2
+      - itemName: "\u6096\u65F6\u8584\u7247 "
+        icon: {fileID: 21300000, guid: 2457650b295b0a5418ce55b33e90e3cb, type: 3}
+        rarity: 3
     consumables:
       categoryName: "\u6D88\u8017\u54C1"
       icons:
