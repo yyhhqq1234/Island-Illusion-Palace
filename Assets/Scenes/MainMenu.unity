@@ -387,7 +387,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1275460582}
-  - component: {fileID: 1275460581}
+  - component: {fileID: 1275460583}
   m_Layer: 0
   m_Name: AudioManager
   m_TagString: Untagged
@@ -395,51 +395,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1275460581
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1275460580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a495357c9d2b1b45b71ca7ce0e1f7cc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  musicSource: {fileID: 0}
-  sfxSource: {fileID: 0}
-  uiSource: {fileID: 0}
-  masterVolume: 1
-  musicVolume: 1
-  sfxVolume: 1
-  uiVolume: 1
-  mainTheme: {fileID: 8300000, guid: e652f0827fcf01f4ab269c443223a101, type: 3}
-  battleMusic: {fileID: 8300000, guid: c7b2c77659bdafb4cbbb58b2913741b9, type: 3}
-  bossBattleMusic: {fileID: 8300000, guid: 34a496059b7ebc14a91fe39e113afe73, type: 3}
-  explorationMusic1: {fileID: 8300000, guid: dafc79ca28d53b74ba3296d19134f3b9, type: 3}
-  explorationMusic2: {fileID: 8300000, guid: c83cdfe5e46ab1a458bd79b57ab99ef4, type: 3}
-  explorationMusic3: {fileID: 8300000, guid: e9ab0dc213e050640bbb72710fba9117, type: 3}
-  campMusic: {fileID: 8300000, guid: 8b68833cf52688f4dba7600c3e5139d4, type: 3}
-  defaultMusic: {fileID: 0}
-  playerAttackSound: {fileID: 8300000, guid: 4581d293d8a7fab428683ea165ce21d6, type: 3}
-  playerDeathSound: {fileID: 8300000, guid: cc7dcb117d0fc8847a3b0bdf1ba3a1d7, type: 3}
-  enemyHitSound: {fileID: 8300000, guid: f728214365d557744a7efb62c6b3fd97, type: 3}
-  summonStartSound: {fileID: 8300000, guid: 6e24ec23e1adebd4db6357e2ccbe6700, type: 3}
-  summonAppearSound: {fileID: 8300000, guid: e29f687a41bff864d846884524a5d56c, type: 3}
-  summonAttackSound: {fileID: 8300000, guid: f728214365d557744a7efb62c6b3fd97, type: 3}
-  summonDisappearSound: {fileID: 8300000, guid: 2d07f15a9b4ead9419b38ce50fd39eb2, type: 3}
-  alchemySuccessSound: {fileID: 8300000, guid: 2a89b790661b53e42a25f54ec67dcf44, type: 3}
-  alchemyFailSound: {fileID: 8300000, guid: b3d59265c959e88468352e1efc89c6f8, type: 3}
-  clickSound: {fileID: 8300000, guid: 91619223578382d4c951ca585e4ac8e4, type: 3}
-  confirmSound: {fileID: 8300000, guid: 96e7ef79b370866439b7eeb562f05964, type: 3}
-  selectSound: {fileID: 8300000, guid: 2885e09f829d3b64ebcc99b7993c4ad4, type: 3}
-  battleDetectionRadius: 15
-  stateCheckInterval: 0.5
-  battleEndDelay: 3
-  playerPrefab: {fileID: 4694522678506344863, guid: b568912edd2bda14e903298399723425, type: 3}
-  mainMenuSceneName: MainMenu
-  gameplaySceneName: GamePlay
 --- !u!4 &1275460582
 Transform:
   m_ObjectHideFlags: 0
@@ -455,6 +410,56 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1275460583
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1275460580}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c800c7ebfb748954c9fcbfce426997de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  musicSource: {fileID: 0}
+  sfxSource: {fileID: 0}
+  uiSource: {fileID: 0}
+  masterVolume: 1
+  musicVolume: 0.7
+  sfxVolume: 1
+  uiVolume: 1
+  mainMenuMusic: {fileID: 8300000, guid: 0956ab27124fae74095ec8610329c1ed, type: 3}
+  endingMusic: {fileID: 0}
+  defaultExplorationLowBurden: {fileID: 0}
+  defaultExplorationMediumBurden: {fileID: 0}
+  defaultExplorationHighBurden: {fileID: 0}
+  defaultBattleMusic: {fileID: 0}
+  defaultBossBattleMusic: {fileID: 0}
+  defaultSafeZoneMusic: {fileID: 0}
+  mapMusicConfigs:
+  - mapType: 0
+    mapName: 
+    safeZoneMusic: {fileID: 8300000, guid: 318593fa164ab8f49b8fcbdf8786bc72, type: 3}
+    explorationMusicLowBurden: {fileID: 8300000, guid: 4436ff5b0a07ee048ae4ff2d28802882, type: 3}
+    explorationMusicMediumBurden: {fileID: 8300000, guid: 8aa301b68e4cacb498028b34c6e14e8a, type: 3}
+    explorationMusicHighBurden: {fileID: 8300000, guid: f37c9c1d0a5398c4e99465dfd4d1dd57, type: 3}
+    battleMusic: {fileID: 8300000, guid: 2c3a80e22c418cf46b84f4ce9bf8e864, type: 3}
+    bossBattleMusic: {fileID: 0}
+    isSpecialArea: 1
+    isFinalArea: 0
+  playerAttackSound: {fileID: 8300000, guid: 4581d293d8a7fab428683ea165ce21d6, type: 3}
+  playerDeathSound: {fileID: 8300000, guid: cc7dcb117d0fc8847a3b0bdf1ba3a1d7, type: 3}
+  enemyHitSound: {fileID: 8300000, guid: 5d0d097f52115754a88af8c1d38766ad, type: 3}
+  summonStartSound: {fileID: 8300000, guid: 6e24ec23e1adebd4db6357e2ccbe6700, type: 3}
+  summonAppearSound: {fileID: 8300000, guid: e29f687a41bff864d846884524a5d56c, type: 3}
+  summonAttackSound: {fileID: 8300000, guid: f728214365d557744a7efb62c6b3fd97, type: 3}
+  summonDisappearSound: {fileID: 8300000, guid: 2d07f15a9b4ead9419b38ce50fd39eb2, type: 3}
+  alchemySuccessSound: {fileID: 8300000, guid: 2a89b790661b53e42a25f54ec67dcf44, type: 3}
+  alchemyFailSound: {fileID: 8300000, guid: b3d59265c959e88468352e1efc89c6f8, type: 3}
+  clickSound: {fileID: 8300000, guid: 91619223578382d4c951ca585e4ac8e4, type: 3}
+  confirmSound: {fileID: 8300000, guid: 96e7ef79b370866439b7eeb562f05964, type: 3}
+  selectSound: {fileID: 8300000, guid: 2885e09f829d3b64ebcc99b7993c4ad4, type: 3}
 --- !u!1 &1579468827
 GameObject:
   m_ObjectHideFlags: 0
