@@ -241,6 +241,17 @@ public class GameplayAudioManager : MonoBehaviour
     void OnMusicStateChange(GlobalEventManager.MusicState state)
     {
         currentMusicState = state;
+        
+        // 安全区音乐优先级最高
+        bool isInSafeZone = SafeZoneDetector.IsAnyPlayerInSafeZone();
+        if (isInSafeZone && state != GlobalEventManager.MusicState.MainMenu && state != GlobalEventManager.MusicState.Silence)
+        {
+            // 玩家在安全区内，强制播放安全区音乐（主菜单和静音状态除外）
+            PlayMusic(GetSafeZoneMusic(), true);
+            Debug.Log($"[AudioManager] BGM → SafeZone (强制，原状态: {state}, Map: {currentMapType})");
+            return;
+        }
+        
         AudioClip target = GetTargetMusic(state);
         if (state == GlobalEventManager.MusicState.Silence) StopMusic();
         else PlayMusic(target, true);

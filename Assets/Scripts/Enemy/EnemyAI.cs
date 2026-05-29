@@ -196,6 +196,15 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
     private const float BATTLE_MUSIC_DISTANCE = 7f;
     private const float BATTLE_MUSIC_DISTANCE_SQR = BATTLE_MUSIC_DISTANCE * BATTLE_MUSIC_DISTANCE;
 
+    [Header("安全区限制")]
+    [Tooltip("敌人是否会被安全区阻挡")]
+    public bool blockBySafeZone = true;
+    [Tooltip("安全区警戒距离（在进入安全区前多少距离开始避开）")]
+    public float safeZoneAvoidDistance = 2f;
+    
+    // 缓存是否在安全区内
+    private bool isInSafeZone = false;
+
     [Header("弱点与抗性")]
     public List<ElementType> weaknesses = new List<ElementType>();
     public List<ElementType> resistances = new List<ElementType>();
@@ -537,18 +546,19 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
             else rb.velocity = Vector2.zero;
         }
         
-        // 基于距离的战斗音乐逻辑
-        bool shouldPlayBattleMusic = cachedDistanceToPlayer <= BATTLE_MUSIC_DISTANCE_SQR;
+        // 基于距离的战斗音乐逻辑（玩家在安全区内时不触发战斗音乐）
+        bool isPlayerInSafeZone = player != null && SafeZoneDetector.IsInAnySafeZone(player.position);
+        bool shouldPlayBattleMusic = !isPlayerInSafeZone && cachedDistanceToPlayer <= BATTLE_MUSIC_DISTANCE_SQR;
         
         if (shouldPlayBattleMusic && !isBattleMusicPlaying)
         {
-            // 距离小于等于7，开始播放战斗音乐
+            // 距离小于等于7且玩家不在安全区，开始播放战斗音乐
             GlobalEventManager.Instance.TriggerBattleStart(gameObject);
             isBattleMusicPlaying = true;
         }
         else if (!shouldPlayBattleMusic && isBattleMusicPlaying)
         {
-            // 距离大于7，停止播放战斗音乐
+            // 距离大于7或玩家进入安全区，停止播放战斗音乐
             GlobalEventManager.Instance.TriggerBattleEnd(gameObject);
             isBattleMusicPlaying = false;
         }
@@ -591,6 +601,8 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
         if (cachedDistanceToPlayer > attackRangeSqr)
         {
             Vector2 direction = ((Vector2)(currentTarget.position - transform.position)).normalized;
+            direction = ApplySafeZoneRestriction(direction);
+            
             if (rb != null)
             {
                 rb.velocity = direction * GetCurrentMoveSpeed();
@@ -604,6 +616,60 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
             AttackCurrentTarget();
         }
     }
+    
+    // ==================== 安全区限制 ====================
+    Vector2 ApplySafeZoneRestriction(Vector2 direction)
+    {
+        if (!blockBySafeZone) return direction;
+        
+        Vector2 currentPosition = transform.position;
+        Vector2 targetPosition = currentPosition + direction * GetCurrentMoveSpeed() * Time.deltaTime;
+        
+        // 检查目标位置是否在安全区内
+        bool wouldEnterSafeZone = SafeZoneDetector.IsInAnySafeZone(targetPosition);
+        
+        if (wouldEnterSafeZone)
+        {
+            // 如果即将进入安全区，计算离开安全区的方向
+            Vector2 avoidDirection;
+            if (SafeZoneDetector.TryGetSafeZoneBoundary(currentPosition, out avoidDirection))
+            {
+                // 已经在安全区内，强制离开
+                isInSafeZone = true;
+                Debug.Log($"{gameObject.name} 在安全区内，正在离开");
+                return avoidDirection;
+            }
+            else
+            {
+                // 即将进入安全区，转向避开
+                Debug.Log($"{gameObject.name} 即将进入安全区，正在避开");
+                return GetAvoidSafeZoneDirection(currentPosition, direction);
+            }
+        }
+        else
+        {
+            isInSafeZone = false;
+        }
+        
+        return direction;
+    }
+    
+    Vector2 GetAvoidSafeZoneDirection(Vector2 currentPosition, Vector2 desiredDirection)
+    {
+        SafeZoneDetector nearestSafeZone = SafeZoneDetector.GetNearestSafeZone(currentPosition);
+        if (nearestSafeZone == null) return desiredDirection;
+        
+        Vector2 safeZoneCenter = nearestSafeZone.transform.position;
+        Vector2 toSafeZone = (currentPosition - safeZoneCenter).normalized;
+        
+        // 混合避开方向和原始方向，优先避开
+        float avoidWeight = 0.8f;
+        float originalWeight = 0.2f;
+        
+        Vector2 newDirection = (toSafeZone * avoidWeight + desiredDirection * originalWeight).normalized;
+        
+        return newDirection;
+    }
 
     void HandleRangedBehavior(float distanceToTarget)
     {
@@ -613,6 +679,8 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
         if (cachedDistanceToPlayer > preferredRangeSqr)
         {
             Vector2 direction = ((Vector2)(currentTarget.position - transform.position)).normalized;
+            direction = ApplySafeZoneRestriction(direction);
+            
             if (rb != null)
             {
                 rb.velocity = direction * GetCurrentMoveSpeed() * 0.7f;
@@ -621,6 +689,8 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
         else if (cachedDistanceToPlayer < tooCloseRangeSqr)
         {
             Vector2 direction = ((Vector2)(transform.position - currentTarget.position)).normalized;
+            direction = ApplySafeZoneRestriction(direction);
+            
             if (rb != null)
             {
                 rb.velocity = direction * GetCurrentMoveSpeed() * 0.5f;
