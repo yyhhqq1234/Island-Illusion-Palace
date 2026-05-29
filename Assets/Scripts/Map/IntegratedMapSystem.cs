@@ -120,6 +120,38 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
     public void GenerateMap()
     {
         GenerateGridMap();
+        BroadcastMapType();
+    }
+
+    void BroadcastMapType()
+    {
+        GameSystems.MapMusicType musicType = ConvertToMapMusicType(currentMapType);
+        if (GlobalEventManager.Instance != null)
+        {
+            GlobalEventManager.Instance.TriggerMapTypeChanged(musicType);
+        }
+        Debug.Log($"[IntegratedMapSystem] 当前地图类型: {currentMapType} -> 音乐类型: {musicType}");
+    }
+
+    GameSystems.MapMusicType ConvertToMapMusicType(MapType mapType)
+    {
+        return mapType switch
+        {
+            MapType.Forest          => GameSystems.MapMusicType.Forest,
+            MapType.Wasteland       => GameSystems.MapMusicType.Wasteland,
+            MapType.Desert          => GameSystems.MapMusicType.Desert,
+            MapType.RockLand        => GameSystems.MapMusicType.RockyLand,
+            MapType.Wetland         => GameSystems.MapMusicType.Wetland,
+            MapType.IceField        => GameSystems.MapMusicType.IcePlains,
+            MapType.Volcano         => GameSystems.MapMusicType.VolcanicLand,
+            MapType.RuinCity        => GameSystems.MapMusicType.RuinedCity,
+            MapType.ForgottenManor  => GameSystems.MapMusicType.ForgottenManor,
+            MapType.AncientTemple   => GameSystems.MapMusicType.AncientTemple,
+            MapType.LabFragment     => GameSystems.MapMusicType.LabFragment,
+            MapType.MemoryFragment  => GameSystems.MapMusicType.MemoryFragmentArea,
+            MapType.TruthCorridor   => GameSystems.MapMusicType.TruthTemporalCorridor,
+            _                       => GameSystems.MapMusicType.Forest
+        };
     }
 
     void LoadMapPrefabs()

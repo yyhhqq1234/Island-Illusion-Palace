@@ -108,6 +108,17 @@ public class GlobalEventManager : MonoBehaviour
     }
 
     // ═══════════════════════════════════════════
+    // 地图类型广播
+    // ═══════════════════════════════════════════
+    public event Action<GameSystems.MapMusicType> OnMapTypeChanged;
+    
+    public void TriggerMapTypeChanged(GameSystems.MapMusicType mapType) 
+    {
+        OnMapTypeChanged?.Invoke(mapType);
+        Debug.Log($"[GlobalEventManager] 地图类型广播: {mapType}");
+    }
+
+    // ═══════════════════════════════════════════
     // 音乐 / 音效
     // ═══════════════════════════════════════════
     public event Action<MusicState> OnMusicStateChange;

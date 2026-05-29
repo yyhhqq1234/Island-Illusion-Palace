@@ -158,6 +158,7 @@ public class GameplayAudioManager : MonoBehaviour
         if (e != null)
         {
             e.OnSceneDidLoad += OnSceneChanged;
+            e.OnMapTypeChanged += OnMapTypeChanged;
             e.OnMusicStateChange += OnMusicStateChange;
             e.OnBurdenChanged += OnBurdenChanged;
             e.OnPlayerEnterSafeZone += _ => GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Camp);
@@ -173,11 +174,22 @@ public class GameplayAudioManager : MonoBehaviour
         if (GlobalEventManager.Instance == null) return;
         var e = GlobalEventManager.Instance;
         e.OnSceneDidLoad -= OnSceneChanged;
+        e.OnMapTypeChanged -= OnMapTypeChanged;
         e.OnMusicStateChange -= OnMusicStateChange;
         e.OnBurdenChanged -= OnBurdenChanged;
         e.OnBattleStart -= OnBattleStart;
         e.OnBattleEnd -= OnBattleEnd;
         e.OnBossEncounter -= OnBossEncounter;
+    }
+
+    void OnMapTypeChanged(GameSystems.MapMusicType mapType)
+    {
+        if (mapType != currentMapType)
+        {
+            currentMapType = mapType;
+            Debug.Log($"[AudioManager] 接收地图类型广播: {mapType}");
+            RefreshMusicForCurrentState();
+        }
     }
 
     void OnSceneChanged(string sceneName)
