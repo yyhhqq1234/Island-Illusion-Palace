@@ -132,6 +132,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4450391}
   - component: {fileID: 4450392}
+  - component: {fileID: 4450393}
   m_Layer: 0
   m_Name: MapGenerator
   m_TagString: Untagged
@@ -250,6 +251,41 @@ MonoBehaviour:
       bossRoomPrefab: {fileID: 0}
       resourcePrefabs: []
       battlePrefabs: []
+--- !u!114 &4450393
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4450389}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c88b1ce2dc76d9e4b91eff46d6909450, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  riftPrefab: {fileID: 3925113783251185547, guid: 201d813e159669a40b706d2723992b29, type: 3}
+  minSpawnChance: 5
+  maxSpawnChance: 10
+  spawnCheckInterval: 15
+  minRiftsPerMap: 1
+  maxRiftsPerMap: 2
+  burdenBonus: 5
+  fragmentBonus: 2
+  cycleBonus: 3
+  minDistanceFromPlayer: 8
+  maxDistanceFromPlayer: 20
+  avoidSafeZone: 1
+  avoidBossRoom: 1
+  safeZoneAvoidRadius: 5
+  bossRoomAvoidRadius: 8
+  avoidObstacles: 1
+  obstacleAvoidRadius: 3
+  obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxObstacleChecks: 5
+  mapBoundaryPadding: 5
+  riftSortingOrder: 100
 --- !u!1 &256830356
 GameObject:
   m_ObjectHideFlags: 0

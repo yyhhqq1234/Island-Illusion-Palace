@@ -30,16 +30,21 @@ public enum MapType
 
 public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
 {
-    [Header("Grid")]
+    [Header("Grid Settings")]
+    [Tooltip("网格大小（5x5表示25个小地图）")]
     public int gridSize = 5;
 
     [Header("Map Category")]
+    [Tooltip("当前地图分类")]
     public MapCategory currentMapCategory = MapCategory.Natural;
+    [Tooltip("当前地图类型")]
     public MapType currentMapType = MapType.Forest;
 
-    [Header("Seed")]
+    [Header("Seed Settings")]
+    [Tooltip("随机种子（-1表示使用时间作为种子）")]
     public int seed = -1;
-    [Header("Cycle")]
+    [Header("Cycle Settings")]
+    [Tooltip("当前循环次数")]
     public int currentCycle = 1;
 
     MapType IMapSystem.currentMapType { get => currentMapType; set => currentMapType = value; }
@@ -50,27 +55,32 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
     bool ITimeRiftProvider.IsRiftActive => false;
     void ITimeRiftProvider.OnRiftEntered(MapType dst) { Debug.Log("Rift teleport to " + dst); }
 
-    [Header("Cycle Settings")]
-
-    [Header("Boss")]
+    [Header("Boss Settings")]
+    [Tooltip("时空守护者预制体")]
     public GameObject timeGuardianPrefab;
+    [Tooltip("Boss房间预制体")]
     public GameObject bossRoomPrefab;
 
-    [Header("Portal")]
+    [Header("Portal Settings")]
+    [Tooltip("时空传送门预制体")]
     public GameObject timePortalPrefab;
 
-    [Header("Time Rift")]
+    [Header("Time Rift Settings")]
+    [Tooltip("时空裂隙预制体")]
     public GameObject timeRiftPrefab;
 
-    [Header("Treasure Chest")]
+    [Header("Treasure Settings")]
+    [Tooltip("宝箱预制体")]
     public GameObject treasureChestPrefab;
 
     [Header("Map Prefabs")]
+    [Tooltip("各类型地图的预制体配置")]
     public MapPrefabsByType mapPrefabsByType = new MapPrefabsByType();
 
     [System.Serializable]
     public class MapPrefabsByType
     {
+        [Header("Natural Maps")]
         public MapPrefabs forest;
         public MapPrefabs wasteland;
         public MapPrefabs desert;
@@ -78,20 +88,31 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         public MapPrefabs wetland;
         public MapPrefabs iceField;
         public MapPrefabs volcano;
+
+        [Header("Human Maps")]
         public MapPrefabs ruinCity;
         public MapPrefabs forgottenManor;
         public MapPrefabs ancientTemple;
+
+        [Header("Special Maps")]
         public MapPrefabs labFragment;
         public MapPrefabs memoryFragment;
+
+        [Header("Final Map")]
         public MapPrefabs truthCorridor;
     }
 
     [System.Serializable]
     public class MapPrefabs
     {
+        [Header("Room Prefabs")]
+        [Tooltip("安全屋预制体")]
         public GameObject safeRoomPrefab;
+        [Tooltip("Boss房间预制体")]
         public GameObject bossRoomPrefab;
+        [Tooltip("资源房间预制体列表")]
         public List<GameObject> resourcePrefabs = new List<GameObject>();
+        [Tooltip("战斗房间预制体列表")]
         public List<GameObject> battlePrefabs = new List<GameObject>();
     }
 
@@ -130,7 +151,7 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         {
             GlobalEventManager.Instance.TriggerMapTypeChanged(musicType);
         }
-        Debug.Log($"[IntegratedMapSystem] 当前地图类型: {currentMapType} -> 音乐类型: {musicType}");
+        Debug.Log($"[IntegratedMapSystem] Current Map Type: {currentMapType} -> Music Type: {musicType}");
     }
 
     GameSystems.MapMusicType ConvertToMapMusicType(MapType mapType)
@@ -298,20 +319,20 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         GameObject boundaryParent = new GameObject("BoundaryWalls");
         boundaryParent.transform.parent = transform;
 
-        CreateWall(new Vector3((leftBoundary + rightBoundary) / 2f, topBoundary + wallThickness / 2f, 0), 
-                   new Vector2(rightBoundary - leftBoundary + wallThickness * 2, wallThickness), 
+        CreateWall(new Vector3((leftBoundary + rightBoundary) / 2f, topBoundary + wallThickness / 2f, 0),
+                   new Vector2(rightBoundary - leftBoundary + wallThickness * 2, wallThickness),
                    boundaryParent.transform);
 
-        CreateWall(new Vector3((leftBoundary + rightBoundary) / 2f, bottomBoundary - wallThickness / 2f, 0), 
-                   new Vector2(rightBoundary - leftBoundary + wallThickness * 2, wallThickness), 
+        CreateWall(new Vector3((leftBoundary + rightBoundary) / 2f, bottomBoundary - wallThickness / 2f, 0),
+                   new Vector2(rightBoundary - leftBoundary + wallThickness * 2, wallThickness),
                    boundaryParent.transform);
 
-        CreateWall(new Vector3(rightBoundary + wallThickness / 2f, (bottomBoundary + topBoundary) / 2f, 0), 
-                   new Vector2(wallThickness, topBoundary - bottomBoundary + wallThickness * 2), 
+        CreateWall(new Vector3(rightBoundary + wallThickness / 2f, (bottomBoundary + topBoundary) / 2f, 0),
+                   new Vector2(wallThickness, topBoundary - bottomBoundary + wallThickness * 2),
                    boundaryParent.transform);
 
-        CreateWall(new Vector3(leftBoundary - wallThickness / 2f, (bottomBoundary + topBoundary) / 2f, 0), 
-                   new Vector2(wallThickness, topBoundary - bottomBoundary + wallThickness * 2), 
+        CreateWall(new Vector3(leftBoundary - wallThickness / 2f, (bottomBoundary + topBoundary) / 2f, 0),
+                   new Vector2(wallThickness, topBoundary - bottomBoundary + wallThickness * 2),
                    boundaryParent.transform);
     }
 
@@ -430,6 +451,82 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
     public void RegisterCampfire(Vector3 position)
     {
         Debug.Log("Campfire registered at " + position);
+    }
+
+    public bool IsPositionValidForRift(Vector3 worldPosition)
+    {
+        Vector2Int gridPos = WorldToGridPosition(worldPosition);
+
+        if (!IsValidGridPosition(gridPos))
+            return false;
+
+        GameObject mapCell = gridMaps[gridPos.x, gridPos.y];
+        if (mapCell == null)
+            return true;
+
+        Tilemap collisionTilemap = GetCollisionTilemap(mapCell);
+        if (collisionTilemap == null)
+            return true;
+
+        Vector3Int tilePos = WorldToTilePosition(collisionTilemap, worldPosition);
+        TileBase tile = collisionTilemap.GetTile(tilePos);
+
+        if (tile != null)
+        {
+            Debug.Log($"[IntegratedMapSystem] Position {worldPosition} is on obstacle in grid {gridPos}");
+            return false;
+        }
+
+        return true;
+    }
+
+    public Vector2Int WorldToGridPosition(Vector3 worldPosition)
+    {
+        float mapWidth = 39f;
+        float mapHeight = 26f;
+        float gridOffsetX = (gridSize - 1) * mapWidth / 2f;
+        float gridOffsetY = (gridSize - 1) * mapHeight / 2f;
+
+        int x = Mathf.FloorToInt((worldPosition.x + gridOffsetX) / mapWidth);
+        int y = Mathf.FloorToInt((worldPosition.y + gridOffsetY) / mapHeight);
+
+        return new Vector2Int(x, y);
+    }
+
+    bool IsValidGridPosition(Vector2Int gridPos)
+    {
+        return gridPos.x >= 0 && gridPos.x < gridSize && gridPos.y >= 0 && gridPos.y < gridSize;
+    }
+
+    Tilemap GetCollisionTilemap(GameObject mapCell)
+    {
+        Tilemap[] tilemaps = mapCell.GetComponentsInChildren<Tilemap>();
+        foreach (var tilemap in tilemaps)
+        {
+            if (tilemap.gameObject.layer == LayerMask.NameToLayer("Ground") ||
+                tilemap.gameObject.layer == LayerMask.NameToLayer("Wall") ||
+                tilemap.gameObject.layer == LayerMask.NameToLayer("Water"))
+            {
+                return tilemap;
+            }
+        }
+
+        foreach (var tilemap in tilemaps)
+        {
+            if (tilemap.name.Contains("Collision") ||
+                tilemap.name.Contains("Blocked") ||
+                tilemap.name.Contains("Obstacle"))
+            {
+                return tilemap;
+            }
+        }
+
+        return tilemaps.Length > 0 ? tilemaps[0] : null;
+    }
+
+    Vector3Int WorldToTilePosition(Tilemap tilemap, Vector3 worldPosition)
+    {
+        return tilemap.WorldToCell(worldPosition);
     }
 
     public void SetMapCategory(MapCategory category)
