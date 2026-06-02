@@ -30,20 +30,20 @@ public enum MapType
 
 public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
 {
-    [Header("Grid Settings")]
+    [Header("网格设置")]
     [Tooltip("网格大小（5x5表示25个小地图）")]
     public int gridSize = 5;
 
-    [Header("Map Category")]
+    [Header("地图分类")]
     [Tooltip("当前地图分类")]
     public MapCategory currentMapCategory = MapCategory.Natural;
     [Tooltip("当前地图类型")]
     public MapType currentMapType = MapType.Forest;
 
-    [Header("Seed Settings")]
+    [Header("种子设置")]
     [Tooltip("随机种子（-1表示使用时间作为种子）")]
     public int seed = -1;
-    [Header("Cycle Settings")]
+    [Header("循环设置")]
     [Tooltip("当前循环次数")]
     public int currentCycle = 1;
 
@@ -55,32 +55,32 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
     bool ITimeRiftProvider.IsRiftActive => false;
     void ITimeRiftProvider.OnRiftEntered(MapType dst) { Debug.Log("Rift teleport to " + dst); }
 
-    [Header("Boss Settings")]
+    [Header("Boss设置")]
     [Tooltip("时空守护者预制体")]
     public GameObject timeGuardianPrefab;
     [Tooltip("Boss房间预制体")]
     public GameObject bossRoomPrefab;
 
-    [Header("Portal Settings")]
+    [Header("传送门设置")]
     [Tooltip("时空传送门预制体")]
     public GameObject timePortalPrefab;
 
-    [Header("Time Rift Settings")]
+    [Header("时空裂隙设置")]
     [Tooltip("时空裂隙预制体")]
     public GameObject timeRiftPrefab;
 
-    [Header("Treasure Settings")]
+    [Header("宝箱设置")]
     [Tooltip("宝箱预制体")]
     public GameObject treasureChestPrefab;
 
-    [Header("Map Prefabs")]
+    [Header("地图预制体")]
     [Tooltip("各类型地图的预制体配置")]
     public MapPrefabsByType mapPrefabsByType = new MapPrefabsByType();
 
     [System.Serializable]
     public class MapPrefabsByType
     {
-        [Header("Natural Maps")]
+        [Header("自然地图")]
         public MapPrefabs forest;
         public MapPrefabs wasteland;
         public MapPrefabs desert;
@@ -89,23 +89,23 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         public MapPrefabs iceField;
         public MapPrefabs volcano;
 
-        [Header("Human Maps")]
+        [Header("人文地图")]
         public MapPrefabs ruinCity;
         public MapPrefabs forgottenManor;
         public MapPrefabs ancientTemple;
 
-        [Header("Special Maps")]
+        [Header("特殊地图")]
         public MapPrefabs labFragment;
         public MapPrefabs memoryFragment;
 
-        [Header("Final Map")]
+        [Header("最终地图")]
         public MapPrefabs truthCorridor;
     }
 
     [System.Serializable]
     public class MapPrefabs
     {
-        [Header("Room Prefabs")]
+        [Header("房间预制体")]
         [Tooltip("安全屋预制体")]
         public GameObject safeRoomPrefab;
         [Tooltip("Boss房间预制体")]
