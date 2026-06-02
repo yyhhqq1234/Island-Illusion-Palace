@@ -445,8 +445,8 @@ MonoBehaviour:
     explorationMusicMediumBurden: {fileID: 8300000, guid: 8aa301b68e4cacb498028b34c6e14e8a, type: 3}
     explorationMusicHighBurden: {fileID: 8300000, guid: f37c9c1d0a5398c4e99465dfd4d1dd57, type: 3}
     battleMusic: {fileID: 8300000, guid: 2c3a80e22c418cf46b84f4ce9bf8e864, type: 3}
-    bossBattleMusic: {fileID: 0}
-    isSpecialArea: 1
+    bossBattleMusic: {fileID: 8300000, guid: 899746734e893e14c87608ec604fadd8, type: 3}
+    isSpecialArea: 0
     isFinalArea: 0
   playerAttackSound: {fileID: 8300000, guid: 4581d293d8a7fab428683ea165ce21d6, type: 3}
   playerDeathSound: {fileID: 8300000, guid: cc7dcb117d0fc8847a3b0bdf1ba3a1d7, type: 3}
