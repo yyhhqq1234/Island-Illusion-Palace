@@ -71,7 +71,8 @@ public class BossRoomManager : MonoBehaviour
 
         if (spawnPortalOnDefeat && timePortalPrefab != null)
         {
-            Vector3 portalPos = spawnedBoss.transform.position;
+            // 在Boss房间中心生成传送门
+            Vector3 portalPos = transform.position;
             var portal = Instantiate(timePortalPrefab, portalPos, Quaternion.identity);
             portal.name = "TimePortal";
             var tp = portal.GetComponent<TimePortal>();
