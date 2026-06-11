@@ -6158,6 +6158,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2272197189476007488}
   - component: {fileID: 5110903472541600096}
+  - component: {fileID: 4281788106597280750}
   m_Layer: 0
   m_Name: BossRoom
   m_TagString: Untagged
@@ -6197,6 +6198,26 @@ Grid:
   m_CellGap: {x: 0, y: 0, z: 0}
   m_CellLayout: 0
   m_CellSwizzle: 0
+--- !u!114 &4281788106597280750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2830639158992008232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 51985217fa28b1d41a8c147b9f810cf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  timeGuardianPrefab: {fileID: 0}
+  bossSpawnPoint: {fileID: 0}
+  timePortalPrefab: {fileID: 6820917116793413281, guid: b211971ef879c0c44ae3541927d07e3a, type: 3}
+  treasureChestPrefab: {fileID: 0}
+  spawnPortalOnDefeat: 1
+  spawnChestOnDefeat: 1
+  enableRiftsInBossRoom: 0
+  riftPrefab: {fileID: 3925113783251185547, guid: 201d813e159669a40b706d2723992b29, type: 3}
 --- !u!1 &7195629374879754180
 GameObject:
   m_ObjectHideFlags: 0
