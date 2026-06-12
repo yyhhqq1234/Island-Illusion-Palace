@@ -251,6 +251,13 @@ MonoBehaviour:
       bossRoomPrefab: {fileID: 0}
       resourcePrefabs: []
       battlePrefabs: []
+  enableLabFragmentAccess: 1
+  labWisdomThreshold: 30
+  labResonanceThreshold: 25
+  labMultiCycleThreshold: 3
+  labMultiCycleWisdomThreshold: 20
+  labFragmentUnlocked: 0
+  labPotionEffectDuration: 1800
 --- !u!114 &4450393
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -264,12 +271,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   riftPrefab: {fileID: 3925113783251185547, guid: 201d813e159669a40b706d2723992b29, type: 3}
-  minSpawnChance: 5
-  maxSpawnChance: 10
+  baseSpawnChance: 5
+  probabilityCap: 50
   spawnCheckInterval: 15
   minRiftsPerMap: 1
   maxRiftsPerMap: 2
-  burdenBonus: 5
+  burdenOver50Bonus: 10
+  burdenOver70Bonus: 10
   fragmentBonus: 2
   cycleBonus: 3
   minDistanceFromPlayer: 8
@@ -806,7 +814,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.00000047683716, y: 0.00000023841858, z: -10}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3463,6 +3471,8 @@ MonoBehaviour:
   memoryShardBonus: 0.15
   successRateMinimum: 0.05
   successRateMaximum: 0.95
+  soulToEssenceRatio: 50
+  maxConversionPerRun: 10
 --- !u!1 &2051660072
 GameObject:
   m_ObjectHideFlags: 0
