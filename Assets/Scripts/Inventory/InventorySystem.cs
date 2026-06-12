@@ -1096,7 +1096,31 @@ public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollec
 
     public bool HasEnoughSouls(int amount) => currentSouls >= amount;
     public void ConsumeSouls(int amount) => currentSouls = Mathf.Max(0, currentSouls - amount);
-    public void AddSouls(int amount) => currentSouls = Mathf.Min(999999, currentSouls + amount);
+
+    private const float SoulSoftCap = 15000f;         // 软上限
+    private const float SoulHardCap = 50000f;          // 硬上限
+    private const float SoulSoftCapEfficiency = 0.7f;  // 软上限效率
+
+    public void AddSouls(int amount)
+    {
+        float current = currentSouls;
+        float remaining = amount;
+
+        if (current < SoulSoftCap)
+        {
+            float softCapRoom = SoulSoftCap - current;
+            float normalAmount = Mathf.Min(remaining, softCapRoom);
+            current += normalAmount;
+            remaining -= normalAmount;
+        }
+
+        if (remaining > 0 && current < SoulHardCap)
+        {
+            current += remaining * SoulSoftCapEfficiency;
+        }
+
+        currentSouls = Mathf.Min((int)current, (int)SoulHardCap);
+    }
 
     public void CollectSoul(int amount, string source)
     {

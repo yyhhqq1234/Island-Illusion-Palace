@@ -44,8 +44,10 @@ public class MaterialSpawnManager : MonoBehaviour
     public LayerMask obstacleLayer;
     [Tooltip("最大生成尝试次数")]
     public int maxSpawnAttempts = 10;
-    [Tooltip("生成点附近距离阈值（检查障碍物密度用）")]
+    [Tooltip("生成点附近距离阈值（检查密度用）")]
     public float spawnPointProximityThreshold = 10f;
+    [Tooltip("生成点附近最大材料数量")]
+    public int maxMaterialsPerSpawnPoint = 1;
     [Tooltip("最大材料数量")]
     public int maxMaterialCount = 20;
     [Tooltip("生成间隔（秒）")]
@@ -256,7 +258,7 @@ public class MaterialSpawnManager : MonoBehaviour
         // 清理已销毁的材料映射
         CleanUpDestroyedMaterials();
 
-        // 创建可用生成点列表（排除附近障碍物过多的生成点和已有材料的生成点）
+        // 创建可用生成点列表（排除附近材料过多的生成点）
         List<MaterialSpawnPointEntry> availablePoints = new List<MaterialSpawnPointEntry>();
         int totalWeight = 0;
 
@@ -264,10 +266,12 @@ public class MaterialSpawnManager : MonoBehaviour
         {
             if (entry != null && entry.point != null)
             {
-                // 检查该生成点是否已有材料
-                if (spawnPointToMaterial.ContainsKey(entry.point) && spawnPointToMaterial[entry.point] != null)
+                // 检查该生成点附近的材料数量
+                int nearbyMaterials = GetNearbyMaterialCount(entry.point.position, spawnPointProximityThreshold);
+                if (nearbyMaterials >= maxMaterialsPerSpawnPoint)
                 {
-                    continue; // 跳过已有材料的生成点
+                    Debug.Log($"生成点 '{entry.name}' 附近已有 {nearbyMaterials} 个材料，达到上限 {maxMaterialsPerSpawnPoint}，跳过");
+                    continue;
                 }
 
                 // 检查附近障碍物数量
@@ -282,7 +286,7 @@ public class MaterialSpawnManager : MonoBehaviour
         // 如果没有可用生成点，返回null
         if (availablePoints.Count == 0)
         {
-            Debug.LogWarning("所有生成点附近都有障碍物或已有材料，暂时无法使用生成点");
+            Debug.LogWarning("所有生成点附近材料已满或障碍物过多，暂时无法使用生成点");
             return null;
         }
 
@@ -307,6 +311,26 @@ public class MaterialSpawnManager : MonoBehaviour
 
         // 兜底返回第一个可用条目
         return availablePoints[0];
+    }
+
+    /// <summary>
+    /// 计算指定位置附近指定距离内的材料数量
+    /// </summary>
+    int GetNearbyMaterialCount(Vector3 position, float threshold)
+    {
+        int count = 0;
+        foreach (var kvp in spawnPointToMaterial)
+        {
+            if (kvp.Value != null)
+            {
+                float distance = Vector3.Distance(position, kvp.Value.transform.position);
+                if (distance <= threshold)
+                {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     /// <summary>

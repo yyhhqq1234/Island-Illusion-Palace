@@ -72,7 +72,6 @@ MonoBehaviour:
   - {fileID: 8807240279632014756, guid: 37e0d49e8b60a7348a4c73ef3ce569b0, type: 3}
   - {fileID: 5254113251810218486, guid: 9bd5c5040f08954499631668bc2649ad, type: 3}
   - {fileID: 1931088693896139969, guid: 4d16c5f86bd9f574fa7204f946ad24fd, type: 3}
-  - {fileID: 0}
   materialSpawnParent: {fileID: 0}
   spawnRadius: 1
   spawnPointEntries:

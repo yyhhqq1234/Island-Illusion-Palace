@@ -42,11 +42,11 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("是否启用自动生成")]
     public bool autoSpawn = true;
     [Tooltip("基础生成间隔时间（秒）")]
-    public float baseSpawnInterval = 3f;
+    public float baseSpawnInterval = 5f;
     [Tooltip("生成间隔波动范围（秒）")]
-    public float spawnIntervalVariance = 1f;
-    [Tooltip("最大敌人数量")]
-    public int maxEnemyCount = 5;
+    public float spawnIntervalVariance = 2f;
+    [Tooltip("最大敌人数量（0=由区域大小自动计算）")]
+    public int maxEnemyCount = 0;
 
     [Header("敌人设置")]
     [Tooltip("敌人配置列表")]
@@ -59,25 +59,54 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("生成范围半径")]
     public float spawnRadius = 5f;
     [Tooltip("生成点附近距离阈值（检查敌人密度用）")]
-    public float spawnPointProximityThreshold = 10f;
+    public float spawnPointProximityThreshold = 15f;
     [Tooltip("生成点附近最大敌人数量")]
-    public int maxEnemiesPerSpawnPoint = 2;
+    public int maxEnemiesPerSpawnPoint = 1;
+
+    [Header("战斗区域限制")]
+    [Tooltip("瓦片地图宽度（格）")]
+    public int tileWidth = 39;
+    [Tooltip("瓦片地图高度（格）")]
+    public int tileHeight = 26;
+    [Tooltip("区域最大敌人数量上限")]
+    public int maxEnemyCountByArea = 5;
+
+    [Header("清空滞空")]
+    [Tooltip("敌人清空后进入滞空状态的冷却时间（秒）")]
+    public float clearZoneCooldown = 8f;
 
     // 私有变量
     private List<GameObject> activeEnemies = new List<GameObject>();
-    private float nextSpawnTime = 0f; // 下次生成时间
+    private float nextSpawnTime = 0f;
+    private int cachedMaxEnemyCount = 0;
+    private bool isInClearZoneCooldown = false;
+    private float clearZoneCooldownTimer = 0f;
 
     void Start()
     {
+        // 缓存最大敌人数量
+        CalculateAndCacheEnemyCount();
+
         // 计算第一次生成时间
         CalculateNextSpawnTime();
-        Debug.Log("敌人生成器已初始化");
+        Debug.Log($"[EnemySpawner] 已初始化 | 最大敌人数={cachedMaxEnemyCount} | 生成间隔={baseSpawnInterval}s±{spawnIntervalVariance}s | 生成点阈值={spawnPointProximityThreshold}");
     }
 
     void Update()
     {
         // 清理死亡的敌人
         CleanDeadEnemies();
+
+        // 滞空冷却计时
+        if (isInClearZoneCooldown)
+        {
+            clearZoneCooldownTimer -= Time.deltaTime;
+            if (clearZoneCooldownTimer <= 0f)
+            {
+                ExitClearZoneCooldown();
+            }
+            return;
+        }
 
         // 自动生成逻辑
         if (autoSpawn && Time.time >= nextSpawnTime && ShouldSpawnEnemy())
@@ -91,11 +120,24 @@ public class EnemySpawner : MonoBehaviour
     /// </summary>
     bool ShouldSpawnEnemy()
     {
+        // 获取当前有效的最大敌人数量
+        int effectiveMax = GetEffectiveMaxEnemyCount();
+
         // 检查敌人数量上限
-        if (activeEnemies.Count >= maxEnemyCount)
+        if (activeEnemies.Count >= effectiveMax)
             return false;
 
         return true;
+    }
+
+    /// <summary>
+    /// 获取当前有效的最大敌人数量（手动 > 自动计算 > 默认值）
+    /// </summary>
+    int GetEffectiveMaxEnemyCount()
+    {
+        if (maxEnemyCount > 0)
+            return maxEnemyCount;
+        return cachedMaxEnemyCount;
     }
 
     /// <summary>
@@ -166,6 +208,8 @@ public class EnemySpawner : MonoBehaviour
     /// </summary>
     void CleanDeadEnemies()
     {
+        int countBefore = activeEnemies.Count;
+
         for (int i = activeEnemies.Count - 1; i >= 0; i--)
         {
             if (activeEnemies[i] == null)
@@ -181,6 +225,34 @@ public class EnemySpawner : MonoBehaviour
                 activeEnemies.RemoveAt(i);
             }
         }
+
+        // 检测清空：有敌人被清理且当前数量归零时进入滞空
+        if (countBefore > 0 && activeEnemies.Count == 0 && !isInClearZoneCooldown)
+        {
+            EnterClearZoneCooldown();
+        }
+    }
+
+    /// <summary>
+    /// 进入清空滞空状态
+    /// </summary>
+    void EnterClearZoneCooldown()
+    {
+        isInClearZoneCooldown = true;
+        clearZoneCooldownTimer = clearZoneCooldown;
+        Debug.Log($"[EnemySpawner] 战斗区敌人已清空，进入滞空状态 {clearZoneCooldown}秒");
+    }
+
+    /// <summary>
+    /// 退出清空滞空状态，恢复正常生成
+    /// </summary>
+    void ExitClearZoneCooldown()
+    {
+        isInClearZoneCooldown = false;
+        clearZoneCooldownTimer = 0f;
+        // 重置下次生成时间，避免立即生成
+        CalculateNextSpawnTime();
+        Debug.Log("[EnemySpawner] 滞空状态结束，恢复正常敌人生成");
     }
 
     /// <summary>
@@ -334,5 +406,22 @@ public class EnemySpawner : MonoBehaviour
         float actualInterval = UnityEngine.Random.Range(minInterval, maxInterval);
 
         nextSpawnTime = Time.time + actualInterval;
+    }
+
+    /// <summary>
+    /// 缓存最大敌人数量（直接使用 maxEnemyCountByArea）
+    /// </summary>
+    void CalculateAndCacheEnemyCount()
+    {
+        cachedMaxEnemyCount = maxEnemyCountByArea;
+        Debug.Log($"[EnemySpawner] 最大敌人数={cachedMaxEnemyCount} (直接上限)");
+    }
+
+    /// <summary>
+    /// 获取当前区域最大敌人数量（供外部查询）
+    /// </summary>
+    public int GetAreaMaxEnemyCount()
+    {
+        return GetEffectiveMaxEnemyCount();
     }
 }

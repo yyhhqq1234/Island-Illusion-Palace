@@ -25,7 +25,6 @@ public class BurdenEffectManager : MonoBehaviour
     [Header("音效引用")]
     private GameplayAudioManager audioManager;
     private BurdenSystem burdenSystem;
-    private float lastBurdenPercent = 0f;
 
     void Start()
     {
@@ -41,27 +40,63 @@ public class BurdenEffectManager : MonoBehaviour
         burdenSystem = GetComponent<BurdenSystem>();
         if (burdenSystem == null)
             burdenSystem = FindObjectOfType<BurdenSystem>();
+
+        // 订阅负担等级变化事件，由事件驱动而非主动轮询
+        GlobalEventManager.Instance.OnBurdenLevelChanged += OnBurdenLevelChanged;
+    }
+
+    void OnDestroy()
+    {
+        GlobalEventManager.Instance.OnBurdenLevelChanged -= OnBurdenLevelChanged;
+    }
+
+    void OnBurdenLevelChanged(BurdenLevel level)
+    {
+        if (burdenSystem == null) return;
+
+        switch (level)
+        {
+            case BurdenLevel.Critical:
+            case BurdenLevel.High:
+                if (!isHighBurden)
+                {
+                    isHighBurden = true;
+                    OnEnterHighBurden();
+                }
+                break;
+            case BurdenLevel.Normal:
+                if (isHighBurden)
+                {
+                    isHighBurden = false;
+                    OnExitHighBurden();
+                }
+                break;
+        }
     }
 
     void Update()
     {
-        if (burdenSystem == null) return;
-
-        float burdenPercent = burdenSystem.GetBurdenPercent();
-
-        if (Mathf.Abs(burdenPercent - lastBurdenPercent) > 0.05f)
+        // 负担效果现在由 OnBurdenLevelChanged 事件驱动切换状态
+        // Update 仅负责持续性视觉效果渐变（distortion、背景色）
+        if (isHighBurden)
         {
-            UpdateBurdenEffects(burdenPercent);
-            lastBurdenPercent = burdenPercent;
-        }
+            float burdenPercent = burdenSystem != null ? burdenSystem.GetBurdenPercent() : 0f;
+            float intensity = (burdenPercent - highBurdenThreshold) / (1f - highBurdenThreshold);
+            currentDistortion = Mathf.Lerp(currentDistortion, intensity * 0.1f, Time.deltaTime * 2f);
 
-        if (burdenPercent > highBurdenThreshold)
-        {
-            UpdateHighBurdenVisuals(burdenPercent);
+            if (mainCamera != null)
+            {
+                mainCamera.backgroundColor = Color.Lerp(normalColor, highBurdenColor, intensity * 0.3f);
+            }
         }
         else
         {
-            ResetVisuals();
+            currentDistortion = Mathf.Lerp(currentDistortion, 0f, Time.deltaTime * 2f);
+
+            if (mainCamera != null)
+            {
+                mainCamera.backgroundColor = Color.Lerp(mainCamera.backgroundColor, normalColor, Time.deltaTime * 2f);
+            }
         }
     }
 
@@ -70,39 +105,6 @@ public class BurdenEffectManager : MonoBehaviour
         if (audioManager != null)
         {
             Debug.Log("负担值变化: " + (burdenPercent * 100) + "%");
-        }
-    }
-
-    void UpdateHighBurdenVisuals(float burdenPercent)
-    {
-        if (!isHighBurden)
-        {
-            isHighBurden = true;
-            OnEnterHighBurden();
-        }
-
-        float intensity = (burdenPercent - highBurdenThreshold) / (1f - highBurdenThreshold);
-        currentDistortion = Mathf.Lerp(currentDistortion, intensity * 0.1f, Time.deltaTime * 2f);
-
-        if (mainCamera != null)
-        {
-            mainCamera.backgroundColor = Color.Lerp(normalColor, highBurdenColor, intensity * 0.3f);
-        }
-    }
-
-    void ResetVisuals()
-    {
-        if (isHighBurden)
-        {
-            isHighBurden = false;
-            OnExitHighBurden();
-        }
-
-        currentDistortion = Mathf.Lerp(currentDistortion, 0f, Time.deltaTime * 2f);
-
-        if (mainCamera != null)
-        {
-            mainCamera.backgroundColor = Color.Lerp(mainCamera.backgroundColor, normalColor, Time.deltaTime * 2f);
         }
     }
 

@@ -240,6 +240,7 @@ public class SummonSystem : MonoBehaviour, ISummonService
     public void SummonCreature(SoulCoreData core, Vector3 position)
     {
         EnemyAI.EnemyType enemyType = core.enemyType;
+        CreatureType creatureType = CreatureTypeConverter.FromEnemyType(enemyType);
         int typeIndex = (int)enemyType;
         if (summonPrefabs == null || typeIndex < 0 || typeIndex >= summonPrefabs.Length)
         {
@@ -263,7 +264,7 @@ public class SummonSystem : MonoBehaviour, ISummonService
             healthSystem = summonedCreature.AddComponent<HealthSystem>();
         }
 
-        float baseHealth = GetBaseHealthForType(enemyType);
+        float baseHealth = GetBaseHealthForType(creatureType);
         healthSystem.maxHealth = baseHealth * (1 + core.level * 0.05f);
 
         var summonAI = summonedCreature.GetComponent<SummonedCreatureAI>();
@@ -292,25 +293,25 @@ public class SummonSystem : MonoBehaviour, ISummonService
         Debug.Log($"成功召唤 {core.enemyType} (Lv.{core.level})！");
     }
 
-    float GetBaseHealthForType(EnemyAI.EnemyType type)
+    float GetBaseHealthForType(CreatureType type)
     {
         return type switch
         {
-            EnemyAI.EnemyType.CorruptedVillager => 60f,
-            EnemyAI.EnemyType.CrystalLizard => 45f,
-            EnemyAI.EnemyType.SwampStalker => 80f,
-            EnemyAI.EnemyType.IceWolf => 55f,
-            EnemyAI.EnemyType.MechanicalDebris => 70f,
-            EnemyAI.EnemyType.SkeletonWarrior => 40f,
-            EnemyAI.EnemyType.Wraith => 45f,
-            EnemyAI.EnemyType.Gargoyle => 110f,
-            EnemyAI.EnemyType.SoulEater => 180f,
-            EnemyAI.EnemyType.LavaElemental => 240f,
-            EnemyAI.EnemyType.MechanicalConstruct => 300f,
-            EnemyAI.EnemyType.TimeGuardian => 350f,
-            EnemyAI.EnemyType.MemoryGuardian => 400f,
-            EnemyAI.EnemyType.CorruptionGuardian => 600f,
-            EnemyAI.EnemyType.ScarletSoulShana => 1000f,
+            CreatureType.CorruptedVillager => 60f,
+            CreatureType.CrystalLizard => 45f,
+            CreatureType.SwampStalker => 80f,
+            CreatureType.IceWolf => 55f,
+            CreatureType.MechanicalDebris => 70f,
+            CreatureType.SkeletonWarrior => 40f,
+            CreatureType.Wraith => 45f,
+            CreatureType.Gargoyle => 110f,
+            CreatureType.SoulEater => 180f,
+            CreatureType.LavaElemental => 240f,
+            CreatureType.MechanicalConstruct => 300f,
+            CreatureType.TimeGuardian => 350f,
+            CreatureType.MemoryGuardian => 400f,
+            CreatureType.CorruptionGuardian => 600f,
+            CreatureType.ScarletSoulShana => 1000f,
             _ => 50f
         };
     }

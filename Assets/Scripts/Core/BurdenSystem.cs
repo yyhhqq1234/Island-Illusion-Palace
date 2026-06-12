@@ -157,6 +157,17 @@ public class BurdenSystem : MonoBehaviour, IBurdenProvider
         {
             OnCriticalBurdenStatusChange();
         }
+
+        // 广播负担等级变化事件
+        BurdenLevel newLevel = GetCurrentBurdenLevel();
+        GlobalEventManager.Instance.TriggerBurdenLevelChanged(newLevel);
+    }
+
+    public BurdenLevel GetCurrentBurdenLevel()
+    {
+        if (currentBurden >= criticalBurdenThreshold) return BurdenLevel.Critical;
+        if (currentBurden >= highBurdenThreshold) return BurdenLevel.High;
+        return BurdenLevel.Normal;
     }
 
     void ApplyBurdenEffects()

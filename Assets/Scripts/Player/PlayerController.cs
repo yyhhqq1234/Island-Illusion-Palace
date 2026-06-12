@@ -269,7 +269,7 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     void HandleQuickSummonInput()
     {
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Input.GetKeyDown(KeyCode.G))
         {
             if (summonSystem != null)
             {

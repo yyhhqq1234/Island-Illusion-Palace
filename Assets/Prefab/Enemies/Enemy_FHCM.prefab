@@ -15,6 +15,13 @@ GameObject:
   - component: {fileID: 7603877087082506992}
   - component: {fileID: 4439743233905004045}
   - component: {fileID: 1488927031625436208}
+  - component: {fileID: 3130169548859234314}
+  - component: {fileID: -2655523851325920241}
+  - component: {fileID: -1765504723404167581}
+  - component: {fileID: 1119435154300322236}
+  - component: {fileID: -4148643831994216046}
+  - component: {fileID: -6573045450932637191}
+  - component: {fileID: -25943196684609263}
   m_Layer: 0
   m_Name: Enemy_FHCM
   m_TagString: Enemy
@@ -217,34 +224,131 @@ MonoBehaviour:
   behaviorMode: 0
   primaryElement: 0
   elementType: 0
-  moveSpeed: 1.5
-  chaseRange: 4
-  chaseRangeExpansion: 3
-  attackRange: 1.5
-  damage: 5
-  attackRate: 1
+  weaknesses: 
+  resistances: 
+  scaleMultiplier: 2.5
+  stateComponent: {fileID: 3130169548859234314}
+  movementComponent: {fileID: -2655523851325920241}
+  combatComponent: {fileID: -1765504723404167581}
+  targetingComponent: {fileID: 1119435154300322236}
+  behaviorComponent: {fileID: -4148643831994216046}
+  animationComponent: {fileID: -6573045450932637191}
+  lootComponent: {fileID: -25943196684609263}
+--- !u!114 &3130169548859234314
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866546702518363930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f240bdf3baa57584c93ec7e2a5512c09, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   berserkHealthThreshold: 0.3
-  berserkAttackSpeedMultiplier: 2
+  berserkAttackSpeedMultiplier: 1.5
   berserkMoveSpeedMultiplier: 1.2
   berserkDefenseReduction: 0.3
-  lowHealthThreshold: 0.1
+  lowHealthThreshold: 0.3
   fleeDetectionRange: 15
   fleeSpeedMultiplier: 1.5
   fleeAttackIntervalMultiplier: 0.5
   outOfCombatHealDelay: 3
-  healRatePerSecond: 0.2
+  healRatePerSecond: 0.05
+--- !u!114 &-2655523851325920241
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866546702518363930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d52a49a2760ea946b3bf03fe4be6745, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseMoveSpeed: 3
+  blockBySafeZone: 1
+  safeZoneAvoidDistance: 2
   enablePatrol: 1
   patrolRange: 5
   patrolWaitTime: 2
-  patrolSpeed: 1
-  player: {fileID: 0}
+  patrolSpeed: 2
+  chaseRange: 10
+  chaseRangeExpansion: 5
+--- !u!114 &-1765504723404167581
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866546702518363930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7efee6078a2fd814f87b26ce1165dd4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseDamage: 10
+  baseAttackRate: 1
+  attackRange: 2
+  attackCooldown: 0.5
   enemyAttackTriggerPrefab: {fileID: 8882666720033001694, guid: 0ed3f6d46e7d29f4fa01317e5ad77e8a, type: 3}
-  attackTriggerPos: {fileID: 8999962784295869211}
-  isChasing: 0
-  weaknesses: 
-  resistances: 
-  scaleMultiplier: 2.5
+  attackTriggerPos: {fileID: 0}
+--- !u!114 &1119435154300322236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866546702518363930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f383716083108d94b9c00ca2b8df7fd9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCheckInterval: 1
+  playerSearchCooldown: 0.5
+--- !u!114 &-4148643831994216046
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866546702518363930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24b3335167bcc6341ace3755f682ee8e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &-6573045450932637191
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866546702518363930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddbe4c84391c4c849a84bdac5a3ef097, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
   debugAnimationFacing: 0
   showScaleDebug: 0
+--- !u!114 &-25943196684609263
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1866546702518363930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfd3f9da9e660c94b9ceb6b953602b82, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  soulDropAmount: 15
+  essenceDropAmount: 0
+  dropTable: {fileID: 0}
   soulCorePrefab: {fileID: 6752315857327889849, guid: 6afb167104025ca48bd2799f6fc6f773, type: 3}
   soulCoreSprites: []

@@ -16,6 +16,7 @@ public class MemoryFragment
     public string description;
     public string memoryText;
     public bool isActivated;
+    public bool hasBeenUpgraded; // P1-003: 抵押升级标记（每个碎片最多升级1次）
 
     public MemoryFragment(string name, MemoryFragmentType type, FragmentRarity fragmentRarity, int fragmentLevel)
     {
@@ -27,6 +28,7 @@ public class MemoryFragment
         description = GenerateDescription();
         memoryText = GenerateMemoryText();
         isActivated = false;
+        hasBeenUpgraded = false;
     }
 
     float CalculateBurdenCost()
@@ -127,6 +129,13 @@ public class MemoryFragmentSystem : MonoBehaviour, IMemoryFragmentService
     [Header("记忆碎片库存")]
     public List<MemoryFragment> collectedFragments = new List<MemoryFragment>();
     public List<MemoryFragment> activatedFragments = new List<MemoryFragment>();
+
+    // P1-003: 抵押博弈机制
+    [Header("抵押机制（P1-003）")]
+    [Tooltip("当前抵押的记忆碎片（进入记忆区域时寄存）")]
+    public MemoryFragment mortgagedFragment;
+    [Tooltip("抵押升级的效果倍率")]
+    public float mortgageUpgradeMultiplier = 1.5f;
 
     List<MemoryFragment> IMemoryFragmentService.collectedFragments => collectedFragments;
     List<MemoryFragment> IMemoryFragmentService.activatedFragments => activatedFragments;
@@ -533,5 +542,117 @@ public class MemoryFragmentSystem : MonoBehaviour, IMemoryFragmentService
     {
         Debug.Log("打开记忆碎片配置界面（最多3个槽位）");
         GlobalEventManager.Instance.ShowNotification("在营火旁配置记忆碎片共鸣", 3f);
+    }
+
+    // ═══════════════════════════════════════════
+    // P1-003: 记忆碎片抵押博弈机制
+    // ═══════════════════════════════════════════
+
+    /// <summary>
+    /// 抵押记忆碎片（进入记忆区域时调用）
+    /// 将碎片寄存在系统，击败守护者后返还并升级，逃跑则永久丢失
+    /// </summary>
+    public bool MortgageFragment(MemoryFragment fragment)
+    {
+        if (mortgagedFragment != null)
+        {
+            Debug.LogWarning("[记忆碎片] 已有抵押中的碎片，请先完成当前记忆区域");
+            return false;
+        }
+
+        if (!collectedFragments.Contains(fragment))
+        {
+            Debug.LogWarning("[记忆碎片] 抵押失败：碎片不存在");
+            return false;
+        }
+
+        // 如果碎片已激活，先停用
+        if (fragment.isActivated)
+        {
+            DeactivateFragment(fragment);
+        }
+
+        // 从收集列表中移除（暂存）
+        collectedFragments.Remove(fragment);
+        mortgagedFragment = fragment;
+
+        Debug.Log($"[记忆碎片] 已抵押碎片: {fragment.fragmentName}（类型={fragment.fragmentType}, 等级={fragment.level}）");
+        GlobalEventManager.Instance.ShowNotification($"已抵押记忆碎片：{fragment.fragmentName}", 3f);
+
+        return true;
+    }
+
+    /// <summary>
+    /// 返还抵押的碎片（击败记忆守护者时调用）
+    /// 碎片返还并升级一次（最多升级1次）
+    /// </summary>
+    public MemoryFragment ReturnMortgagedFragment()
+    {
+        if (mortgagedFragment == null)
+        {
+            Debug.LogWarning("[记忆碎片] 没有抵押中的碎片");
+            return null;
+        }
+
+        var fragment = mortgagedFragment;
+        mortgagedFragment = null;
+
+        // 升级碎片（每个碎片最多升级1次）
+        if (!fragment.hasBeenUpgraded)
+        {
+            fragment.LevelUp();
+            fragment.hasBeenUpgraded = true;
+            Debug.Log($"[记忆碎片] 碎片已升级: {fragment.fragmentName} -> 等级 {fragment.level}");
+            GlobalEventManager.Instance.ShowNotification($"记忆碎片强化：{fragment.fragmentName} Lv.{fragment.level}", 3f);
+        }
+        else
+        {
+            Debug.Log($"[记忆碎片] 碎片 {fragment.fragmentName} 已达到升级上限，保持原等级");
+            GlobalEventManager.Instance.ShowNotification($"记忆碎片已返还：{fragment.fragmentName}", 3f);
+        }
+
+        // 返还到收集列表
+        collectedFragments.Add(fragment);
+        fragmentsCollected++; // 恢复计数
+
+        return fragment;
+    }
+
+    /// <summary>
+    /// 没收抵押的碎片（逃跑/死亡/退出时调用）
+    /// 碎片永久丢失，当前周目不可重新获取
+    /// </summary>
+    public void ForfeitMortgagedFragment()
+    {
+        if (mortgagedFragment == null)
+        {
+            Debug.LogWarning("[记忆碎片] 没有抵押中的碎片");
+            return;
+        }
+
+        var fragment = mortgagedFragment;
+        mortgagedFragment = null;
+
+        Debug.LogWarning($"[记忆碎片] 抵押碎片永久丢失！{fragment.fragmentName}（逃跑惩罚）");
+        GlobalEventManager.Instance.ShowNotification($"记忆碎片已丢失：{fragment.fragmentName}", 5f);
+
+        // 碎片不返还，在当前周目永久丢失
+        // 注意：多周目重置时，该碎片可重新获取
+    }
+
+    /// <summary>
+    /// 获取当前抵押的碎片
+    /// </summary>
+    public MemoryFragment GetMortgagedFragment()
+    {
+        return mortgagedFragment;
+    }
+
+    /// <summary>
+    /// 检查是否有抵押中的碎片
+    /// </summary>
+    public bool HasMortgagedFragment()
+    {
+        return mortgagedFragment != null;
     }
 }

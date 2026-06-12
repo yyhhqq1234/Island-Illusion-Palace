@@ -116,6 +116,26 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         public List<GameObject> battlePrefabs = new List<GameObject>();
     }
 
+    [Header("实验室碎片访问")]
+    [Tooltip("是否启用实验室碎片访问条件判定")]
+    public bool enableLabFragmentAccess = true;
+    [Tooltip("智慧属性阈值（条件A）")]
+    public int labWisdomThreshold = 30;
+    [Tooltip("共鸣属性阈值（条件D）")]
+    public int labResonanceThreshold = 25;
+    [Tooltip("多周目阈值（条件C）")]
+    public int labMultiCycleThreshold = 3;
+    [Tooltip("多周目智慧阈值（条件C）")]
+    public int labMultiCycleWisdomThreshold = 20;
+    [Tooltip("实验室碎片是否已解锁（运行时状态）")]
+    public bool labFragmentUnlocked = false;
+    [Tooltip("药剂效果持续时间（秒），默认1800秒=30分钟")]
+    public float labPotionEffectDuration = 1800f;
+    [Tooltip("药剂效果剩余时间（秒）")]
+    private float labPotionEffectTimer = 0f;
+    [Tooltip("当前活跃的药剂名称")]
+    private string activeLabPotionName = "";
+
     private System.Random random;
     private HealthSystem playerHealth;
     private List<GameObject> mapPrefabs = new List<GameObject>();
@@ -127,6 +147,11 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
     {
         InitializeSystem();
         GenerateMap();
+    }
+
+    void Update()
+    {
+        UpdateLabPotionTimer();
     }
 
     void InitializeSystem()
@@ -558,6 +583,11 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
             case MapType.IceField:
                 break;
             case MapType.LabFragment:
+                if (enableLabFragmentAccess && !CanAccessLabFragment())
+                {
+                    Debug.Log("[IntegratedMapSystem] Lab fragment access denied, fallback to Forest");
+                    currentMapType = MapType.Forest;
+                }
                 break;
             case MapType.MemoryFragment:
                 break;
@@ -572,5 +602,138 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         Debug.Log("BossRoom: " + bossRoomPos);
         Debug.Log("Category: " + currentMapCategory);
         Debug.Log("Type: " + currentMapType);
+    }
+
+    /// <summary>
+    /// 检查是否满足实验室碎片区域任一触发条件
+    /// 判定优先级：D(共鸣) > B(药剂) > A(智慧) > C(多周目+智慧)
+    /// </summary>
+    public bool CanAccessLabFragment()
+    {
+        if (!enableLabFragmentAccess)
+        {
+            Debug.Log("[IntegratedMapSystem] Lab fragment access is disabled");
+            return false;
+        }
+
+        CharacterStats stats = FindObjectOfType<CharacterStats>();
+        if (stats == null)
+        {
+            Debug.LogWarning("[IntegratedMapSystem] CharacterStats not found, cannot check lab fragment access");
+            return false;
+        }
+
+        // 条件D：共鸣属性 >= 25（优先级最高，因与探索系统已有协同）
+        if (stats.resonance >= labResonanceThreshold)
+        {
+            labFragmentUnlocked = true;
+            Debug.Log($"[IntegratedMapSystem] Lab fragment access: Condition D (Resonance {stats.resonance} >= {labResonanceThreshold})");
+            return true;
+        }
+
+        // 条件B：药剂效果判定
+        if (HasActiveLabPotion())
+        {
+            labFragmentUnlocked = true;
+            Debug.Log($"[IntegratedMapSystem] Lab fragment access: Condition B (Active potion: {activeLabPotionName}, remaining: {labPotionEffectTimer:F0}s)");
+            return true;
+        }
+
+        // 条件A：原始智慧属性判定
+        if (stats.wisdom >= labWisdomThreshold)
+        {
+            labFragmentUnlocked = true;
+            Debug.Log($"[IntegratedMapSystem] Lab fragment access: Condition A (Wisdom {stats.wisdom} >= {labWisdomThreshold})");
+            return true;
+        }
+
+        // 条件C：多周目降低门槛
+        if (currentCycle >= labMultiCycleThreshold && stats.wisdom >= labMultiCycleWisdomThreshold)
+        {
+            labFragmentUnlocked = true;
+            Debug.Log($"[IntegratedMapSystem] Lab fragment access: Condition C (Cycle {currentCycle} >= {labMultiCycleThreshold} AND Wisdom {stats.wisdom} >= {labMultiCycleWisdomThreshold})");
+            return true;
+        }
+
+        labFragmentUnlocked = false;
+        Debug.Log($"[IntegratedMapSystem] Lab fragment access denied (Wisdom: {stats.wisdom}, Resonance: {stats.resonance}, Cycle: {currentCycle})");
+        return false;
+    }
+
+    /// <summary>
+    /// 激活药剂效果（"WisdomElixir"或"TruthVisionPotion"）
+    /// </summary>
+    public void ActivateLabPotionEffect(string potionName)
+    {
+        if (string.IsNullOrEmpty(potionName))
+        {
+            Debug.LogWarning("[IntegratedMapSystem] ActivateLabPotionEffect called with empty potion name");
+            return;
+        }
+
+        if (potionName != "WisdomElixir" && potionName != "TruthVisionPotion")
+        {
+            Debug.LogWarning($"[IntegratedMapSystem] Unknown lab potion: {potionName}");
+            return;
+        }
+
+        activeLabPotionName = potionName;
+        labPotionEffectTimer = labPotionEffectDuration;
+        Debug.Log($"[IntegratedMapSystem] Lab potion effect activated: {potionName}, duration: {labPotionEffectDuration}s");
+    }
+
+    /// <summary>
+    /// 检查是否有活跃的药剂效果
+    /// </summary>
+    public bool HasActiveLabPotion()
+    {
+        return labPotionEffectTimer > 0f && !string.IsNullOrEmpty(activeLabPotionName);
+    }
+
+    /// <summary>
+    /// 获取药剂效果剩余时间（秒）
+    /// </summary>
+    public float GetLabPotionRemainingTime()
+    {
+        return labPotionEffectTimer;
+    }
+
+    /// <summary>
+    /// 更新药剂计时器
+    /// </summary>
+    private void UpdateLabPotionTimer()
+    {
+        if (labPotionEffectTimer > 0f)
+        {
+            labPotionEffectTimer -= Time.deltaTime;
+            if (labPotionEffectTimer <= 0f)
+            {
+                labPotionEffectTimer = 0f;
+                Debug.Log($"[IntegratedMapSystem] Lab potion effect expired: {activeLabPotionName}");
+                activeLabPotionName = "";
+            }
+        }
+    }
+
+    /// <summary>
+    /// 返回是否应该在小地图上显示实验室碎片入口图标（紫色烧瓶标记）
+    /// </summary>
+    public bool ShouldShowLabFragmentOnMap()
+    {
+        return enableLabFragmentAccess && CanAccessLabFragment();
+    }
+
+    /// <summary>
+    /// 新周目开始时清零药剂效果
+    /// </summary>
+    public void OnNewCycleStart()
+    {
+        if (labPotionEffectTimer > 0f)
+        {
+            Debug.Log($"[IntegratedMapSystem] New cycle started, clearing potion effect: {activeLabPotionName}");
+        }
+        labPotionEffectTimer = 0f;
+        activeLabPotionName = "";
+        labFragmentUnlocked = false;
     }
 }

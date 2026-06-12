@@ -113,6 +113,68 @@ A Unity 2D top-down Roguelite Action RPG. Read [CLAUDE.md](./CLAUDE.md) for the 
 
 ---
 
+## 智能体调度规则 (Agent Orchestration)
+
+### 每轮对话前置检查
+**每次对话开始前**，Agent 必须执行以下前置检查：
+1. 使用 `LS` 工具列出 `Assets/I-IP markdown/` 文件夹内容，确认当前可用的策划文档清单
+2. 根据任务类型，读取相关策划文档作为上下文参考
+3. 如果任务涉及已有策划案修改，必须先读取对应的 markdown 文件全文
+
+### 子Agent 调用规则
+
+Solo Agent 必须根据任务类型，通过 `Task` 工具或 `Skill` 工具调用对应的专业子Agent：
+
+| 任务类型 | 调用方式 | 触发条件 |
+|---------|---------|---------|
+| **策划案修改** | `Skill` → `AI团队协调` | 任何涉及策划文档内容修改、新增策划案、系统设计变更 |
+| **代码开发/修改** | `Task` → `unity-topdown-developer` | 任何涉及 Unity C# 代码的新增、修改、重构 |
+| **代码审查** | `Task` → `TRAE-code-review` | 代码开发完成后，对所有变更进行审查 |
+| **安全审查** | `Task` → `TRAE-security-review` | 涉及用户数据、存档、网络等敏感代码变更 |
+| **运行时调试** | `Task` → `TRAE-debugger` | 仅通过静态分析无法诊断的 Bug |
+
+### 策划案修改流程
+1. 识别修改范围，确定涉及哪些子系统的策划文档
+2. 调用 `AI策划团队` Skill（`AI团队协调`），将策划任务分发给对应的专业角色Agent
+3. 各角色Agent 以各自专业视角输出修改方案
+4. 主策划AI 汇总各角色意见，进行七维评审
+5. 确认无误后，修改对应的 markdown 文件
+
+### 代码开发流程
+1. 读取相关策划文档（`I-IP markdown/`）和现有代码
+2. 调用 `unity-topdown-developer` Agent 执行代码修改
+3. 代码修改完成后，调用 `GetDiagnostics` 检查编译错误
+4. **主Agent 全内容审查**：代码开发结束后，主Agent 必须进行全内容审查，包括：
+   - 检查所有修改的代码文件，确认代码质量和规范符合性
+   - 检查所有修改的策划文档，确认策划案一致性
+   - 运行 `GetDiagnostics` 确认无编译错误
+   - 输出审查报告，列出所有变更点和潜在风险
+
+### 审查报告模板
+```
+## 全内容审查报告
+
+### 代码变更审查
+- 修改文件列表
+- 代码规范检查（命名、注释、事件驱动架构）
+- 潜在问题（空引用、性能、逻辑错误）
+
+### 策划文档变更审查
+- 修改文件列表
+- 策划一致性检查（跨系统数值、叙事逻辑）
+- 跨系统影响分析
+
+### 编译状态
+- 编译错误数
+- 警告信息
+
+### 风险评估
+- 风险等级：低 / 中 / 高
+- 建议措施
+```
+
+---
+
 ## Agent Workflow
 
 ### Before Any Code Change
@@ -133,7 +195,7 @@ A Unity 2D top-down Roguelite Action RPG. Read [CLAUDE.md](./CLAUDE.md) for the 
 ## Key Constraints
 
 ### DO NOT
-- Modify files in `Assets/I-IP markdown/` — these are read-only design references
+- Modify files in `Assets/I-IP markdown/` without explicit design task context — 代码实现阶段视为只读参考；策划迭代阶段通过 AI策划团队 进行修改
 - Modify the scene during Play Mode
 - Delete or overwrite assets without user confirmation
 - Create new ScriptableObject files unless the user explicitly requests it

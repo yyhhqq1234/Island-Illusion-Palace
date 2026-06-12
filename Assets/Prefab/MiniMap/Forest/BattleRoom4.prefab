@@ -13986,5 +13986,9 @@ MonoBehaviour:
     weight: 40
     name: 
   spawnRadius: 5
-  spawnPointProximityThreshold: 10
-  maxEnemiesPerSpawnPoint: 2
+  spawnPointProximityThreshold: 15
+  maxEnemiesPerSpawnPoint: 1
+  tileWidth: 39
+  tileHeight: 26
+  maxEnemyCountByArea: 5
+  clearZoneCooldown: 8

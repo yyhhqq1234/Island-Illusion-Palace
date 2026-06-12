@@ -2,6 +2,11 @@ using UnityEngine;
 using System;
 
 /// <summary>
+/// 负担等级枚举（供事件驱动架构使用）
+/// </summary>
+public enum BurdenLevel { Normal, High, Critical }
+
+/// <summary>
 /// 全局事件管理器 — Singleton + DontDestroyOnLoad
 /// 所有跨场景事件的总线。任何模块通过 Instance 订阅/触发事件。
 /// </summary>
@@ -88,7 +93,11 @@ public class GlobalEventManager : MonoBehaviour
     public event Action OnBurdenCritical;    // 超过 CriticalThreshold
     public event Action OnBurdenCleared;     // 营火清零
 
+    // 负担等级变化事件（替代各系统直接查询 BurdenSystem）
+    public event Action<BurdenLevel> OnBurdenLevelChanged;
+
     public void TriggerBurdenChanged(float current) => OnBurdenChanged?.Invoke(current);
+    public void TriggerBurdenLevelChanged(BurdenLevel level) => OnBurdenLevelChanged?.Invoke(level);
 
     private float _lastBurdenLevel = -1f;
     public void CheckBurdenThresholds(float currentBurden)
@@ -132,6 +141,37 @@ public class GlobalEventManager : MonoBehaviour
     public event Action<string, float> OnNotification;  // message, duration
 
     public void ShowNotification(string msg, float duration = 3f) => OnNotification?.Invoke(msg, duration);
+
+    // ═══════════════════════════════════════════
+    // 时空裂隙预览（P1-004）
+    // ═══════════════════════════════════════════
+    public event Action<MapType, MapType, float> OnRiftPreviewActivated;        // destA, destB, countdown
+    public event Action<int> OnRiftPreviewHighlightChanged;                      // 0=A, 1=B
+    public event Action<MapType> OnRiftPreviewClosed;                           // 选中的目的地
+    public event Action<MapType> OnRiftPreviewTimeout;                          // 超时选中的目的地
+    public event Action OnRiftPreviewCancelled;                                 // 取消预览
+
+    public void TriggerRiftPreviewActivated(MapType destA, MapType destB, float countdown)
+        => OnRiftPreviewActivated?.Invoke(destA, destB, countdown);
+    public void TriggerRiftPreviewHighlightChanged(int option)
+        => OnRiftPreviewHighlightChanged?.Invoke(option);
+    public void TriggerRiftPreviewClosed(MapType selected)
+        => OnRiftPreviewClosed?.Invoke(selected);
+    public void TriggerRiftPreviewTimeout(MapType selected)
+        => OnRiftPreviewTimeout?.Invoke(selected);
+    public void TriggerRiftPreviewCancelled()
+        => OnRiftPreviewCancelled?.Invoke();
+
+    // ═══════════════════════════════════════════
+    // 营火存档（P0）
+    // ═══════════════════════════════════════════
+    public event Action<Vector3> OnCampfireSaveRequested;  // 存档位置
+    public event Action OnGameSaveCompleted;
+
+    public void TriggerCampfireSaveRequested(Vector3 campfirePos)
+        => OnCampfireSaveRequested?.Invoke(campfirePos);
+    public void TriggerGameSaveCompleted()
+        => OnGameSaveCompleted?.Invoke();
 
     // ═══════════════════════════════════════════
     // Singleton 生命周期

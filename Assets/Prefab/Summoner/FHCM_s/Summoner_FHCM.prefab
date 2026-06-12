@@ -14,7 +14,10 @@ GameObject:
   - component: {fileID: 7822352049658252135}
   - component: {fileID: 2296997107351311511}
   - component: {fileID: 7011325558182015695}
-  - component: {fileID: 3618321060197834830}
+  - component: {fileID: 6751153647652744938}
+  - component: {fileID: 5023851456017165482}
+  - component: {fileID: 8791776299548693410}
+  - component: {fileID: 2918757027253908875}
   m_Layer: 0
   m_Name: Summoner_FHCM
   m_TagString: SummonedCreature
@@ -200,7 +203,7 @@ MonoBehaviour:
   healthSlider: {fileID: 0}
   hitMaterial: {fileID: 2100000, guid: 3bf90e10e4e0da8488a62a5c06b6e8b9, type: 2}
   hitEffectDuration: 0.2
---- !u!114 &3618321060197834830
+--- !u!114 &6751153647652744938
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -209,18 +212,68 @@ MonoBehaviour:
   m_GameObject: {fileID: 7446032499827466202}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4eb783f4db2163439440e4d7e396b30, type: 3}
+  m_Script: {fileID: 11500000, guid: e2b3ae129ba85ec448a1445faf9130d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  followBufferMin: 1.5
+  followBufferMax: 3.5
+  smoothTime: 0.3
+  patrolRadius: 5
+  patrolSpeedMultiplier: 0.6
+  patrolWaitMin: 1
+  patrolWaitMax: 3
+  guardDistance: 2.5
+  guardPatrolRadius: 3
+  moveSpeed: 3
+--- !u!114 &5023851456017165482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7446032499827466202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 757be46a85afe9c4dad138a9908fdcd4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseDamage: 10
+  attackRange: 1.5
+  detectionRange: 8
+  attackCooldown: 1
+  damageBonus: 0
+  critBonus: 0
+  bossDamageBonus: 0
+  cooldownReduction: 0
+--- !u!114 &8791776299548693410
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7446032499827466202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 941656c231813ae408a6204a5518e42b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerLowHealthThreshold: 0.3
+  stateChangeCooldown: 1
+  patrolDistance: 5
+--- !u!114 &2918757027253908875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7446032499827466202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0031f204729fd3d448cb1e0c24e22159, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   creatureType: 0
   currentBehavior: 0
-  moveSpeed: 3
-  attackRange: 1.5
-  detectionRange: 8
-  followDistance: 2
-  patrolDistance: 5
-  playerLowHealthThreshold: 0.3
-  attackCooldown: 1
   scaleMultiplier: 2.5
   deathDestroyDelay: 0.1
   soulCoreData:
@@ -239,9 +292,14 @@ MonoBehaviour:
   healthRegen: 0
   bossDamageBonus: 0
   deathExplosion: 0
+  lifetime: 0
+  isPermanent: 0
   playerTransform: {fileID: 0}
   currentTarget: {fileID: 0}
   enemyInAttackRange: 0
+  movementComponent: {fileID: 6751153647652744938}
+  combatComponent: {fileID: 5023851456017165482}
+  stateComponent: {fileID: 8791776299548693410}
 --- !u!1001 &1623142746187483673
 PrefabInstance:
   m_ObjectHideFlags: 0

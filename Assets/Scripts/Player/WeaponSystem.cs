@@ -5,6 +5,34 @@ public enum WeaponType { Sword, Staff, Scythe, CrystalArm }
 public enum DamageType { Physical, Magic, Mixed }
 public enum ElementType { None, Frost, Water, Fire, Lightning, Soul, Holy }
 
+// 晶能变体类型
+public enum CrystalAspectType
+{
+    // 剑类
+    StandardSword,
+    WindfurySword,
+    HeavySword,
+    ElementalBlade,
+    
+    // 法杖
+    StandardStaff,
+    RapidFireStaff,
+    ChargedStaff,
+    PullStaff,
+    
+    // 镰刀
+    StandardScythe,
+    SweepingScythe,
+    HookScythe,
+    ReaperScythe,
+    
+    // 晶能武装
+    StandardCrystal,
+    SpreadCrystal,
+    FocusCrystal,
+    ResonanceCrystal
+}
+
 public class WeaponSystem : MonoBehaviour, IWeaponProvider
 {
     [Header("武器类型")]
@@ -59,6 +87,18 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
     public float comboResetTime = 1.5f;
     private float lastAttackTime = 0f;
     private float comboTimer = 0f;
+
+    [Header("晶能变体")]
+    [Tooltip("当前激活的晶能变体类型")]
+    public CrystalAspectType currentCrystalAspect = CrystalAspectType.StandardSword;
+    [Tooltip("是否已嵌入晶能核心")]
+    public bool hasCrystalCore = false;
+    [Tooltip("是否在营火处（允许切换变体）")]
+    public bool isAtCampfire = false;
+    [Tooltip("晶能变体基准参数（由InitializeCrystalAspects自动填充）")]
+    private float crystalBaseRange;
+    private float crystalBaseInterval;
+    private float crystalBaseDamage;
 
     private Camera mainCamera;
     private CharacterStats characterStats;
@@ -156,8 +196,9 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
             return;
         }
 
-        // 获取当前攻击间隔值
+        // 获取当前攻击间隔值（应用晶能变体调整）
         float currentAttackInterval = useCustomAttackInterval ? customAttackInterval : attackInterval;
+        currentAttackInterval *= GetCrystalAspectIntervalMultiplier();
         
         if (Input.GetMouseButtonDown(0) && Time.time - lastAttackTime >= currentAttackInterval)
         {
@@ -196,7 +237,38 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         }
         else
         {
-            ExecuteAttack(GetCurrentDamage());
+            float damage = GetCurrentDamage();
+            
+            // 应用晶能变体特殊效果
+            if (hasCrystalCore)
+            {
+                switch (currentCrystalAspect)
+                {
+                    // 散射晶能：发射3枚散射弹
+                    case CrystalAspectType.SpreadCrystal:
+                        ExecuteScatterAttack(damage);
+                        PlayAttackSound();
+                        TriggerAttackAnimation();
+                        return;
+                    
+                    // 牵引法杖/勾爪镰刀：牵引攻击
+                    case CrystalAspectType.PullStaff:
+                    case CrystalAspectType.HookScythe:
+                        ExecutePullAttack(damage);
+                        PlayAttackSound();
+                        TriggerAttackAnimation();
+                        return;
+                    
+                    // 其他变体使用标准ExecuteAttack，但应用范围调整
+                    default:
+                        ExecuteAttackWithAdjustedRange(damage);
+                        break;
+                }
+            }
+            else
+            {
+                ExecuteAttack(damage);
+            }
         }
 
         PlayAttackSound();
@@ -310,6 +382,9 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
 
         damage += Random.Range(0, 6);
 
+        // 应用晶能变体伤害倍率
+        damage *= GetCrystalAspectDamageMultiplier();
+
         return damage * burdenDamageMultiplier;
     }
 
@@ -329,25 +404,28 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         float baseDmg = GetCurrentDamage();
         float multiplier = 1f;
 
-        // 应用弱点抗性
+        // 应用弱点 (弱点倍率=1.8x → 加成+0.8)
         if (enemy.weaknesses.Contains(ConvertElementType(weaponElement)))
         {
-            multiplier *= 1.8f;
-            Debug.Log($"击中弱点！伤害x1.8");
+            multiplier += 0.8f;
+            Debug.Log($"击中弱点！伤害+80%");
         }
+        // 应用抗性 (抗性倍率=0.6x → 加成-0.4)
         else if (enemy.resistances.Contains(ConvertElementType(weaponElement)))
         {
-            multiplier *= 0.4f;
-            multiplier = Mathf.Max(multiplier, baseDmg * 0.1f); // 最低10%伤害保护
-            Debug.Log($"击中抗性！伤害x0.4");
+            multiplier -= 0.4f;  // 底线 0.6x
+            Debug.Log($"击中抗性！伤害-40%");
         }
 
-        // 应用元素克制链
+        // 应用元素克制链 (克制链倍率=1.2x → 加成+0.2，加法叠加)
         if (IsElementalChain(weaponElement, ConvertEnemyElementType(enemy.elementType)))
         {
-            multiplier *= 1.2f;
-            Debug.Log($"元素克制链！额外伤害x1.2");
+            multiplier += 0.2f;
+            Debug.Log($"元素克制链！额外伤害+20%");
         }
+
+        // 加法叠加上限 2.0x，下限 0.1x
+        multiplier = Mathf.Clamp(multiplier, 0.1f, 2.0f);
 
         return baseDmg * multiplier;
     }
@@ -432,6 +510,395 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
             }
         }
     }
+
+    // ==================== 晶能变体系统 ====================
+
+    /// <summary>
+    /// 初始化晶能变体基准参数，记录当前武器的基础属性
+    /// </summary>
+    private void InitializeCrystalAspects()
+    {
+        crystalBaseRange = attackRange;
+        crystalBaseInterval = attackInterval;
+        crystalBaseDamage = baseDamage;
+        Debug.Log($"[WeaponSystem] 晶能变体基准参数已初始化 - 范围:{crystalBaseRange} 间隔:{crystalBaseInterval} 伤害:{crystalBaseDamage}");
+    }
+
+    /// <summary>
+    /// 嵌入晶能核心，激活默认变体
+    /// </summary>
+    public void EmbedCrystalCore()
+    {
+        if (hasCrystalCore)
+        {
+            Debug.Log("[WeaponSystem] 已嵌入晶能核心，无需重复嵌入");
+            return;
+        }
+
+        hasCrystalCore = true;
+        InitializeCrystalAspects();
+        
+        // 根据当前武器类型设置默认变体
+        switch (currentWeaponType)
+        {
+            case WeaponType.Sword:
+                currentCrystalAspect = CrystalAspectType.StandardSword;
+                break;
+            case WeaponType.Staff:
+                currentCrystalAspect = CrystalAspectType.StandardStaff;
+                break;
+            case WeaponType.Scythe:
+                currentCrystalAspect = CrystalAspectType.StandardScythe;
+                break;
+            case WeaponType.CrystalArm:
+                currentCrystalAspect = CrystalAspectType.StandardCrystal;
+                break;
+        }
+
+        Debug.Log($"[WeaponSystem] 晶能核心已嵌入，当前变体: {currentCrystalAspect}");
+    }
+
+    /// <summary>
+    /// 切换晶能变体（需在营火处操作）
+    /// </summary>
+    /// <param name="newAspect">目标变体类型</param>
+    /// <returns>是否切换成功</returns>
+    public bool SwitchCrystalAspect(CrystalAspectType newAspect)
+    {
+        if (!hasCrystalCore)
+        {
+            Debug.Log("[WeaponSystem] 未嵌入晶能核心，无法切换变体");
+            return false;
+        }
+
+        if (!isAtCampfire)
+        {
+            Debug.Log("[WeaponSystem] 切换晶能变体需要在营火处操作");
+            return false;
+        }
+
+        // 验证变体与当前武器类型匹配
+        if (!IsAspectValidForCurrentWeapon(newAspect))
+        {
+            Debug.Log($"[WeaponSystem] 变体 {newAspect} 不适用于当前武器 {currentWeaponType}");
+            return false;
+        }
+
+        currentCrystalAspect = newAspect;
+        Debug.Log($"[WeaponSystem] 晶能变体已切换至: {currentCrystalAspect}");
+        return true;
+    }
+
+    /// <summary>
+    /// 验证变体是否适用于当前武器类型
+    /// </summary>
+    private bool IsAspectValidForCurrentWeapon(CrystalAspectType aspect)
+    {
+        switch (currentWeaponType)
+        {
+            case WeaponType.Sword:
+                return aspect == CrystalAspectType.StandardSword
+                    || aspect == CrystalAspectType.WindfurySword
+                    || aspect == CrystalAspectType.HeavySword
+                    || aspect == CrystalAspectType.ElementalBlade;
+            case WeaponType.Staff:
+                return aspect == CrystalAspectType.StandardStaff
+                    || aspect == CrystalAspectType.RapidFireStaff
+                    || aspect == CrystalAspectType.ChargedStaff
+                    || aspect == CrystalAspectType.PullStaff;
+            case WeaponType.Scythe:
+                return aspect == CrystalAspectType.StandardScythe
+                    || aspect == CrystalAspectType.SweepingScythe
+                    || aspect == CrystalAspectType.HookScythe
+                    || aspect == CrystalAspectType.ReaperScythe;
+            case WeaponType.CrystalArm:
+                return aspect == CrystalAspectType.StandardCrystal
+                    || aspect == CrystalAspectType.SpreadCrystal
+                    || aspect == CrystalAspectType.FocusCrystal
+                    || aspect == CrystalAspectType.ResonanceCrystal;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// 应用晶能变体参数修改器（由外部系统在需要时调用）
+    /// </summary>
+    public void ApplyCrystalAspectModifiers()
+    {
+        if (!hasCrystalCore) return;
+
+        float rangeMultiplier = GetCrystalAspectRangeMultiplier();
+        float intervalMultiplier = GetCrystalAspectIntervalMultiplier();
+
+        Debug.Log($"[WeaponSystem] 应用变体参数 - 范围倍率:{rangeMultiplier} 间隔倍率:{intervalMultiplier} 伤害倍率:{GetCrystalAspectDamageMultiplier()}");
+    }
+
+    /// <summary>
+    /// 获取晶能变体范围倍率
+    /// </summary>
+    public float GetCrystalAspectRangeMultiplier()
+    {
+        if (!hasCrystalCore) return 1f;
+
+        return currentCrystalAspect switch
+        {
+            // 剑类
+            CrystalAspectType.WindfurySword => 1.30f,     // +30%
+            // 法杖
+            CrystalAspectType.ChargedStaff => 1.20f,       // +20%
+            CrystalAspectType.PullStaff => 1.40f,           // +40%
+            // 镰刀
+            CrystalAspectType.SweepingScythe => 1.40f,      // +40%
+            CrystalAspectType.HookScythe => 1.80f,          // +80%
+            // 晶能武装
+            CrystalAspectType.SpreadCrystal => 1.50f,       // +50%
+            CrystalAspectType.FocusCrystal => 0.80f,        // -20%
+            _ => 1f
+        };
+    }
+
+    /// <summary>
+    /// 获取晶能变体攻击间隔倍率
+    /// </summary>
+    public float GetCrystalAspectIntervalMultiplier()
+    {
+        if (!hasCrystalCore) return 1f;
+
+        return currentCrystalAspect switch
+        {
+            // 剑类
+            CrystalAspectType.HeavySword => 1.50f,           // +50%
+            // 法杖
+            CrystalAspectType.RapidFireStaff => 0.65f,       // -35%
+            CrystalAspectType.ChargedStaff => 1.60f,          // +60%
+            // 镰刀
+            CrystalAspectType.HookScythe => 1.30f,            // +30%
+            // 晶能武装
+            CrystalAspectType.FocusCrystal => 1.25f,          // +25%
+            _ => 1f
+        };
+    }
+
+    /// <summary>
+    /// 获取晶能变体伤害倍率
+    /// </summary>
+    public float GetCrystalAspectDamageMultiplier()
+    {
+        if (!hasCrystalCore) return 1f;
+
+        return currentCrystalAspect switch
+        {
+            // 剑类
+            CrystalAspectType.WindfurySword => 0.85f,        // 85%
+            CrystalAspectType.HeavySword => 1.40f,           // 140%
+            // 法杖
+            CrystalAspectType.RapidFireStaff => 0.70f,       // 70%
+            CrystalAspectType.ChargedStaff => 1.60f,          // 160%
+            CrystalAspectType.PullStaff => 0.90f,             // 90%
+            // 镰刀
+            CrystalAspectType.SweepingScythe => 0.85f,        // 85%
+            CrystalAspectType.HookScythe => 1.10f,            // 110%
+            // 晶能武装
+            CrystalAspectType.SpreadCrystal => 0.60f,         // 60%
+            CrystalAspectType.FocusCrystal => 1.50f,          // 150%
+            _ => 1f
+        };
+    }
+
+    /// <summary>
+    /// 使用变体调整后的范围执行攻击
+    /// </summary>
+    private void ExecuteAttackWithAdjustedRange(float damage)
+    {
+        float adjustedRange = attackRange * GetCrystalAspectRangeMultiplier();
+
+        if (swordAttackTriggerPrefab != null && attackTriggerPos != null)
+        {
+            GameObject trigger = Instantiate(swordAttackTriggerPrefab, attackTriggerPos.position, attackTriggerPos.rotation);
+            AttackTrigger attackTrigger = trigger.GetComponent<AttackTrigger>();
+            if (attackTrigger != null)
+            {
+                attackTrigger.SetDamage((int)damage);
+                attackTrigger.SetAttacker(transform.root.gameObject, true, false);
+            }
+        }
+        else
+        {
+            CheckForEnemiesInAttackRangeWithRange(damage, adjustedRange);
+        }
+    }
+
+    /// <summary>
+    /// 使用指定范围检测敌人（变体版本）
+    /// </summary>
+    private void CheckForEnemiesInAttackRangeWithRange(float damage, float range)
+    {
+        ContactFilter2D contactFilter = new ContactFilter2D();
+        contactFilter.SetLayerMask(Physics2D.GetLayerCollisionMask(gameObject.layer));
+        contactFilter.useTriggers = false;
+
+        Collider2D[] hitColliders = new Collider2D[20];
+        int count = Physics2D.OverlapCircle(transform.position, range, contactFilter, hitColliders);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (hitColliders[i].CompareTag("Enemy"))
+            {
+                EnemyAI enemy = hitColliders[i].GetComponent<EnemyAI>();
+                if (enemy != null)
+                {
+                    float finalDamage = CalculateDamageToEnemy(enemy);
+                    
+                    // 应用收割镰刀加成
+                    finalDamage = ApplyReaperBonus(finalDamage, enemy);
+                    
+                    // 应用共鸣晶能加成
+                    finalDamage *= ApplyResonanceBonus();
+                    
+                    hitColliders[i].GetComponent<HealthSystem>()?.TakeDamage(finalDamage);
+                }
+                else
+                {
+                    float finalDamage = damage;
+                    finalDamage *= ApplyResonanceBonus();
+                    hitColliders[i].GetComponent<HealthSystem>()?.TakeDamage(finalDamage);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 散射攻击（晶能武装 - 散射晶能）：发射3枚散射弹，每枚独立伤害判定
+    /// </summary>
+    private void ExecuteScatterAttack(float damage)
+    {
+        int projectileCount = 3;
+        float spreadAngle = 30f; // 总散射角度
+
+        Vector3 mousePos = mainCamera != null ? mainCamera.ScreenToWorldPoint(Input.mousePosition) : transform.position + transform.right * 5f;
+        mousePos.z = 0f;
+        Vector3 baseDirection = (mousePos - transform.position).normalized;
+
+        float startAngle = -spreadAngle / 2f;
+        float angleStep = projectileCount > 1 ? spreadAngle / (projectileCount - 1) : 0f;
+
+        for (int i = 0; i < projectileCount; i++)
+        {
+            float angle = startAngle + angleStep * i;
+            Quaternion rotation = Quaternion.Euler(0, 0, Mathf.Atan2(baseDirection.y, baseDirection.x) * Mathf.Rad2Deg + angle);
+
+            if (swordAttackTriggerPrefab != null && attackTriggerPos != null)
+            {
+                GameObject trigger = Instantiate(swordAttackTriggerPrefab, attackTriggerPos.position, rotation);
+                AttackTrigger attackTrigger = trigger.GetComponent<AttackTrigger>();
+                if (attackTrigger != null)
+                {
+                    attackTrigger.SetDamage((int)damage);
+                    attackTrigger.SetAttacker(transform.root.gameObject, true, false);
+                }
+            }
+        }
+
+        Debug.Log($"[WeaponSystem] 散射攻击：发射{projectileCount}枚散射弹，每枚伤害{damage}");
+    }
+
+    /// <summary>
+    /// 牵引攻击（法杖/镰刀）：将命中敌人向玩家方向牵引
+    /// </summary>
+    private void ExecutePullAttack(float damage)
+    {
+        float pullRange = attackRange * GetCrystalAspectRangeMultiplier();
+        float pullForce = 5f;
+
+        ContactFilter2D contactFilter = new ContactFilter2D();
+        contactFilter.SetLayerMask(Physics2D.GetLayerCollisionMask(gameObject.layer));
+        contactFilter.useTriggers = false;
+
+        Collider2D[] hitColliders = new Collider2D[20];
+        int count = Physics2D.OverlapCircle(transform.position, pullRange, contactFilter, hitColliders);
+
+        for (int i = 0; i < count; i++)
+        {
+            if (hitColliders[i].CompareTag("Enemy"))
+            {
+                EnemyAI enemy = hitColliders[i].GetComponent<EnemyAI>();
+                float finalDamage = damage;
+                
+                if (enemy != null)
+                {
+                    finalDamage = CalculateDamageToEnemy(enemy);
+                    finalDamage = ApplyReaperBonus(finalDamage, enemy);
+                }
+                
+                finalDamage *= ApplyResonanceBonus();
+                hitColliders[i].GetComponent<HealthSystem>()?.TakeDamage(finalDamage);
+
+                // 将敌人向玩家方向牵引
+                Rigidbody2D enemyRb = hitColliders[i].GetComponent<Rigidbody2D>();
+                if (enemyRb != null)
+                {
+                    Vector2 pullDirection = ((Vector2)transform.position - enemyRb.position).normalized;
+                    enemyRb.AddForce(pullDirection * pullForce, ForceMode2D.Impulse);
+                }
+            }
+        }
+
+        Debug.Log($"[WeaponSystem] 牵引攻击：伤害{damage}，牵引力{pullForce}");
+    }
+
+    /// <summary>
+    /// 共鸣加成计算（晶能武装 - 共鸣晶能）：攻击命中时场上每有1个友方召唤物伤害+10%，最多+30%
+    /// </summary>
+    private float ApplyResonanceBonus()
+    {
+        if (!hasCrystalCore || currentCrystalAspect != CrystalAspectType.ResonanceCrystal)
+            return 1f;
+
+        SummonSystem summonSystem = FindObjectOfType<SummonSystem>();
+        if (summonSystem == null) return 1f;
+
+        int activeSummonCount = 0;
+        var activeSummons = summonSystem.GetActiveSummons();
+        if (activeSummons != null)
+        {
+            foreach (var s in activeSummons)
+            {
+                if (s != null)
+                    activeSummonCount++;
+            }
+        }
+
+        float bonus = 1f + Mathf.Min(activeSummonCount * 0.10f, 0.30f);
+        Debug.Log($"[WeaponSystem] 共鸣加成：场上{activeSummonCount}个召唤物，伤害倍率{bonus:P0}");
+        return bonus;
+    }
+
+    /// <summary>
+    /// 收割判定（镰刀 - 收割镰刀）：对生命低于30%的敌人伤害+40%
+    /// </summary>
+    private float ApplyReaperBonus(float damage, EnemyAI enemy)
+    {
+        if (!hasCrystalCore || currentCrystalAspect != CrystalAspectType.ReaperScythe)
+            return damage;
+
+        if (enemy == null) return damage;
+
+        HealthSystem enemyHealth = enemy.GetComponent<HealthSystem>();
+        if (enemyHealth == null) return damage;
+
+        float healthPercent = enemyHealth.currentHealth / enemyHealth.maxHealth;
+        if (healthPercent < 0.30f)
+        {
+            float bonusDamage = damage * 1.40f;
+            Debug.Log($"[WeaponSystem] 收割触发：敌人生命{healthPercent:P0}，伤害+40% ({damage} -> {bonusDamage})");
+            return bonusDamage;
+        }
+
+        return damage;
+    }
+
+    // ==================== 晶能变体系统结束 ====================
 
     void PlayAttackSound()
     {

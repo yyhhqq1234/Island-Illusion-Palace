@@ -14,6 +14,12 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
     public bool resetSummons = true; // 重置召唤物
     public bool resetRoomEnemies = true; // 重置房间敌人
 
+    [Header("存档设置（P0：营火自动存档）")]
+    [Tooltip("是否启用营火自动存档")]
+    public bool enableAutoSave = true;
+    [Tooltip("存档为一次性存档（读取后自动删除）")]
+    public bool oneTimeSave = true;
+
     [Header("动画设置")]
     public Animator campfireAnimator; // 营火动画控制器
     public string idleAnimation = "Idle"; // 未点燃动画
@@ -31,10 +37,24 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
     private SummonSystem summonSystem;
     private IntegratedMapSystem mapSystem;
 
+    // P0: 存档追踪
+    private static CampfireSystem lastVisitedCampfire; // 最近访问的营火
+
     void Start()
     {
         InitializeReferences();
         InitializeVisuals();
+    }
+
+    void OnEnable()
+    {
+        // 订阅游戏退出事件
+        GlobalEventManager.Instance.OnGameQuit += OnGameQuit;
+    }
+
+    void OnDisable()
+    {
+        GlobalEventManager.Instance.OnGameQuit -= OnGameQuit;
     }
 
     void Update()
@@ -161,6 +181,62 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
         {
             // 这里可以添加重置房间敌人的逻辑
             Debug.Log("房间敌人已重置");
+        }
+
+        // P0: 标记为最近访问的营火（用于退出时自动存档）
+        lastVisitedCampfire = this;
+        Debug.Log($"[营火] 已记录为最近访问营火，位置={transform.position}");
+    }
+
+    // ═══════════════════════════════════════════
+    // P0: 营火自动存档机制
+    // ═══════════════════════════════════════════
+
+    /// <summary>
+    /// 游戏退出时的自动存档回调
+    /// 在最近访问过的营火处生成一次性存档
+    /// </summary>
+    void OnGameQuit()
+    {
+        if (!enableAutoSave) return;
+        if (currentState != CampfireState.Burning) return;
+
+        SaveToCampfire();
+    }
+
+    /// <summary>
+    /// 在营火处执行存档
+    /// 存档为一次性——读取后自动删除
+    /// </summary>
+    public void SaveToCampfire()
+    {
+        Debug.Log($"[营火] 自动存档触发，位置={transform.position}");
+
+        // 通知SaveSystem执行存档
+        GlobalEventManager.Instance.TriggerCampfireSaveRequested(transform.position);
+    }
+
+    /// <summary>
+    /// 获取最近访问的营火（全局静态方法）
+    /// </summary>
+    public static CampfireSystem GetLastVisitedCampfire()
+    {
+        return lastVisitedCampfire;
+    }
+
+    /// <summary>
+    /// 在任何营火处主动触发存档
+    /// </summary>
+    public static void ForceSaveAtLastCampfire()
+    {
+        if (lastVisitedCampfire != null && lastVisitedCampfire.currentState == CampfireState.Burning)
+        {
+            lastVisitedCampfire.SaveToCampfire();
+            Debug.Log("[营火] 强制存档完成");
+        }
+        else
+        {
+            Debug.LogWarning("[营火] 无法存档：无可用营火");
         }
     }
 

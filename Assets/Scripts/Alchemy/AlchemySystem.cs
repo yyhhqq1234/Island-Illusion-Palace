@@ -1445,4 +1445,89 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
         }
         pendingProduce.Clear();
     }
+
+    // ═══════════════════════════════════════════
+    // P1: 灵魂→灵魂精华转换（资源经济系统）
+    // 设计文档：幻宫_时空回响_资源与经济系统拆解.md
+    // 灵魂×50 → 灵魂精华×1，单局限10次
+    // ═══════════════════════════════════════════
+
+    [Header("灵魂转换设置")]
+    [Tooltip("灵魂→灵魂精华转换比例")]
+    public int soulToEssenceRatio = 50;
+    [Tooltip("单局最大转换次数")]
+    public int maxConversionPerRun = 10;
+    private int conversionCountThisRun = 0;
+
+    /// <summary>
+    /// 将灵魂转换为灵魂精华
+    /// </summary>
+    /// <param name="soulAmount">要消耗的灵魂数量</param>
+    /// <returns>是否成功转换</returns>
+    public bool ConvertSoulToEssence(int soulAmount)
+    {
+        if (conversionCountThisRun >= maxConversionPerRun)
+        {
+            Debug.LogWarning($"[炼金] 灵魂转换已达上限（{maxConversionPerRun}次/局）");
+            GlobalEventManager.Instance.ShowNotification("灵魂转换次数已达本局上限", 3f);
+            return false;
+        }
+
+        if (soulAmount < soulToEssenceRatio)
+        {
+            Debug.LogWarning($"[炼金] 灵魂不足，需要至少 {soulToEssenceRatio} 灵魂");
+            return false;
+        }
+
+        // 检查灵魂是否足够
+        if (inventorySystem == null)
+        {
+            inventorySystem = FindObjectOfType<InventorySystem>();
+        }
+
+        if (inventorySystem == null)
+        {
+            Debug.LogError("[炼金] InventorySystem 未找到！");
+            return false;
+        }
+
+        int essenceToCreate = soulAmount / soulToEssenceRatio;
+        if (essenceToCreate <= 0) return false;
+
+        int soulCost = essenceToCreate * soulToEssenceRatio;
+
+        // 消耗灵魂
+        if (!inventorySystem.HasEnoughSouls(soulCost))
+        {
+            Debug.LogWarning($"[炼金] 灵魂不足，需要 {soulCost}，当前持有 {inventorySystem.currentSouls}");
+            return false;
+        }
+        inventorySystem.ConsumeSouls(soulCost);
+
+        // 生成灵魂精华
+        AddMaterial(MaterialTypeEnum.SoulEssence, essenceToCreate);
+        conversionCountThisRun++;
+
+        Debug.Log($"[炼金] 灵魂转换: {soulCost}灵魂 → {essenceToCreate}灵魂精华（第{conversionCountThisRun}/{maxConversionPerRun}次）");
+        GlobalEventManager.Instance.ShowNotification($"转换成功：{essenceToCreate}灵魂精华", 2f);
+
+        return true;
+    }
+
+    /// <summary>
+    /// 重置本局转换计数（新周目/新地图开始时调用）
+    /// </summary>
+    public void ResetConversionCount()
+    {
+        conversionCountThisRun = 0;
+        Debug.Log("[炼金] 灵魂转换次数已重置");
+    }
+
+    /// <summary>
+    /// 获取剩余转换次数
+    /// </summary>
+    public int GetRemainingConversions()
+    {
+        return maxConversionPerRun - conversionCountThisRun;
+    }
 }

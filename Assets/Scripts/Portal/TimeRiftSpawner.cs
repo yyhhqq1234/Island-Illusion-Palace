@@ -6,20 +6,27 @@ public class TimeRiftSpawner : MonoBehaviour
     [Header("裂隙生成参数")]
     public GameObject riftPrefab;
 
-    [Header("生成概率设置")]
+    [Header("生成概率设置（P1-006：加法叠加 + 50%硬上限）")]
+    [Tooltip("基础生成概率（%）")]
     [Range(0f, 100f)]
-    public float minSpawnChance = 30f;
+    public float baseSpawnChance = 5f;
+    [Tooltip("最终概率硬上限（%）")]
     [Range(0f, 100f)]
-    public float maxSpawnChance = 60f;
+    public float probabilityCap = 50f;
     public float spawnCheckInterval = 15f;
 
     [Header("生成数量")]
     public int minRiftsPerMap = 1;
     public int maxRiftsPerMap = 3;
 
-    [Header("概率修正（基于游戏状态）")]
-    [Range(0f, 50f)] public float burdenBonus = 5f;
-    [Range(0f, 20f)] public float fragmentBonus = 2f;
+    [Header("概率修正（加法叠加因子）")]
+    [Tooltip("负担>50时概率加成（%）")]
+    [Range(0f, 50f)] public float burdenOver50Bonus = 10f;
+    [Tooltip("负担>70时额外概率加成（%）")]
+    [Range(0f, 50f)] public float burdenOver70Bonus = 10f;
+    [Tooltip("每个记忆碎片的概率加成（%）")]
+    [Range(0f, 20f)] public float fragmentBonus = 3f;
+    [Tooltip("周目>=2时的概率加成（%）")]
     [Range(0f, 20f)] public float cycleBonus = 3f;
 
     [Header("位置生成设置")]
@@ -137,25 +144,37 @@ public class TimeRiftSpawner : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 计算裂隙生成概率（P1-006：加法叠加 + 50%硬上限）
+    /// 公式：MIN(5% + burden>50(+10%) + burden>70(+10%) + 记忆碎片(3%/片) + 周目>=2(+3%), 50%)
+    /// </summary>
     float CalculateSpawnChance()
     {
-        float baseChance = Random.Range(minSpawnChance, maxSpawnChance);
+        float chance = baseSpawnChance;
 
+        // 负担修正：>50 +10%, >70 再+10%（与>50叠加）
         var bs = FindObjectOfType<BurdenSystem>();
         if (bs != null)
         {
-            if (bs.currentBurden > 50f) baseChance += burdenBonus;
-            if (bs.currentBurden > 70f) baseChance += burdenBonus;
+            if (bs.currentBurden > 50f) chance += burdenOver50Bonus;
+            if (bs.currentBurden > 70f) chance += burdenOver70Bonus;
         }
 
+        // 记忆碎片：每片+3%
         var mf = FindObjectOfType<MemoryFragmentSystem>();
         if (mf != null)
-            baseChance += mf.GetFragmentCount() * fragmentBonus;
+            chance += mf.GetFragmentCount() * fragmentBonus;
 
+        // 多周目修正：周目2+ +3%
         if (mapSystem != null && mapSystem.currentCycle >= 2)
-            baseChance += cycleBonus;
+            chance += cycleBonus;
 
-        return Mathf.Clamp(baseChance, 0f, 100f);
+        // 硬上限50%（P1-006）
+        float finalChance = Mathf.Clamp(chance, 0f, probabilityCap);
+
+        Debug.Log($"[TimeRiftSpawner] 裂隙概率计算: 基础={baseSpawnChance}% -> 叠加后={chance}% -> 上限限制={finalChance}%");
+
+        return finalChance;
     }
 
     Vector3 FindValidRiftPosition()
