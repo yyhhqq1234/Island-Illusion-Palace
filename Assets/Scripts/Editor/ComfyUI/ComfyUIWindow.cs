@@ -78,6 +78,8 @@ namespace ComfyUI
         {
             LoadSettings();
             RefreshAssetTypes();
+            // 每次使用 ComfyUI 前自动打开通信面板
+            ComfyUICommunicationPanel.EnsureOpen();
         }
 
         private void OnDisable()
@@ -183,6 +185,12 @@ namespace ComfyUI
                 TestConnectionAsync();
             }
             GUI.enabled = true;
+
+            // 通信面板按钮
+            if (GUILayout.Button("通信面板", GUILayout.Width(80)))
+            {
+                ComfyUICommunicationPanel.EnsureOpen();
+            }
 
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(5);
@@ -400,8 +408,16 @@ namespace ComfyUI
                 return;
 
             string assetType = assetTypeNames[selectedAssetTypeIndex];
-            positivePrompt = ComfyUIPromptTemplates.GetFullPositivePrompt(assetType);
-            negativePrompt = ComfyUIPromptTemplates.GetNegativePrompt(assetType);
+            if (generationStage == 0)
+            {
+                positivePrompt = ComfyUIPromptTemplates.GetConceptPositivePrompt(assetType);
+                negativePrompt = ComfyUIPromptTemplates.GetConceptNegativePrompt(assetType);
+            }
+            else
+            {
+                positivePrompt = ComfyUIPromptTemplates.GetSpritePositivePrompt(assetType);
+                negativePrompt = ComfyUIPromptTemplates.GetSpriteNegativePrompt(assetType);
+            }
         }
 
         private async void TestConnectionAsync()

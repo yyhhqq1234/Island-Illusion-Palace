@@ -73,10 +73,6 @@ namespace ComfyUI
         private const int MaxPollAttempts = 300;       // 最大轮询次数（10分钟）
         private const int RequestTimeout = 30;          // 请求超时（秒）
 
-        // 工作流模板路径
-        private const string T2I_WORKFLOW_PATH = "Assets/Scripts/Editor/ComfyUI/workflows/zimage-text-to-image.json";
-        private const string IMG2IMG_WORKFLOW_PATH = "Assets/Scripts/Editor/ComfyUI/workflows/qwen-edit-img-to-img.json";
-
         public string ServerUrl => serverUrl;
         public string ClientId => clientId;
 
@@ -534,110 +530,273 @@ namespace ComfyUI
         }
 
         // ==========================================
-        // 私有辅助方法
+        // 动态工作流构建
         // ==========================================
 
         /// <summary>
-        /// 加载工作流模板文件
+        /// 获取所有可用节点信息
+        /// GET /api/object_info
         /// </summary>
-        private JObject LoadWorkflowTemplate(string path)
+        public async Task<Dictionary<string, object>> GetObjectInfo()
         {
-            string fullPath = Path.Combine(Application.dataPath, "..", path);
-            fullPath = Path.GetFullPath(fullPath);
-            string json = File.ReadAllText(fullPath);
-            Debug.Log($"[ComfyUI] 加载工作流模板: {path}");
-            return JObject.Parse(json);
+            string url = $"{serverUrl}/api/object_info";
+
+            using (var request = UnityWebRequest.Get(url))
+            {
+                request.timeout = 15;
+
+                var operation = request.SendWebRequest();
+                while (!operation.isDone)
+                    await Task.Yield();
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    throw new Exception($"[ComfyUIClient] 获取 object_info 失败: {request.error}");
+                }
+
+                string json = request.downloadHandler.text;
+                var jObj = JObject.Parse(json);
+                var dict = new Dictionary<string, object>();
+                foreach (var prop in jObj.Properties())
+                {
+                    dict[prop.Name] = prop.Value.ToObject<object>();
+                }
+                Debug.Log($"[ComfyUIClient] 获取到 {dict.Count} 个节点定义");
+                return dict;
+            }
         }
 
         /// <summary>
-        /// 注入文生图参数到 zimage 工作流
-        /// 节点19: 正向提示词 (CLIPTextEncode, zhengmian)
-        /// 节点17: 反向提示词 (CLIPTextEncode, fanmian)
-        /// 节点15: 尺寸 (EmptySD3LatentImage)
-        /// 节点18: KSampler 参数 (seed, steps, cfg)
-        /// 节点21: filename_prefix (SaveImage, baocun)
+        /// 获取特定节点的输入输出定义
+        /// GET /api/object_info/{node_class}
         /// </summary>
-        private JObject InjectTextToImageParameters(JObject workflow,
-            string positivePrompt, string negativePrompt,
-            int width, int height, int seed, int steps, float cfg, string filenamePrefix)
+        public async Task<Dictionary<string, object>> GetObjectInfo(string nodeClass)
         {
-            // 节点19: 正向提示词
-            workflow["19"]["inputs"]["text"] = positivePrompt;
-            // 节点17: 反向提示词
-            workflow["17"]["inputs"]["text"] = negativePrompt;
-            // 节点15: 尺寸
-            workflow["15"]["inputs"]["width"] = width;
-            workflow["15"]["inputs"]["height"] = height;
-            // 节点18: KSampler 参数
-            workflow["18"]["inputs"]["seed"] = seed;
-            workflow["18"]["inputs"]["steps"] = steps;
-            workflow["18"]["inputs"]["cfg"] = cfg;
-            // 节点21: 文件名前缀
-            workflow["21"]["inputs"]["filename_prefix"] = filenamePrefix;
-            return workflow;
+            string url = $"{serverUrl}/api/object_info/{UnityWebRequest.EscapeURL(nodeClass)}";
+
+            using (var request = UnityWebRequest.Get(url))
+            {
+                request.timeout = 15;
+
+                var operation = request.SendWebRequest();
+                while (!operation.isDone)
+                    await Task.Yield();
+
+                if (request.result != UnityWebRequest.Result.Success)
+                {
+                    throw new Exception($"[ComfyUIClient] 获取 object_info/{nodeClass} 失败: {request.error}");
+                }
+
+                string json = request.downloadHandler.text;
+                var jObj = JObject.Parse(json);
+                var dict = new Dictionary<string, object>();
+                foreach (var prop in jObj.Properties())
+                {
+                    dict[prop.Name] = prop.Value.ToObject<object>();
+                }
+                Debug.Log($"[ComfyUIClient] 获取节点 {nodeClass} 定义成功");
+                return dict;
+            }
         }
 
         /// <summary>
-        /// 注入图生图参数到 qwen-edit 工作流
-        /// 节点16: 提示词 + 图片引用 (TextEncodeQwenImageEditPlus, zhengmian)
-        /// 节点10: 输入图片文件名 (LoadImage, charutupian)
-        /// 节点17: 尺寸 (EmptyLatentImage)
-        /// 节点15: KSampler 参数
-        /// 节点19: 改为 SaveImage 并设置 filename_prefix
-        /// </summary>
-        private JObject InjectImageEditParameters(JObject workflow,
-            string prompt, string imageFilename,
-            int width, int height, int seed, int steps, float cfg, string filenamePrefix)
-        {
-            // 节点16: 提示词
-            workflow["16"]["inputs"]["prompt"] = prompt;
-            // 节点10: 输入图片文件名
-            workflow["10"]["inputs"]["image"] = imageFilename;
-            // 节点17: 尺寸
-            workflow["17"]["inputs"]["width"] = width;
-            workflow["17"]["inputs"]["height"] = height;
-            // 节点15: KSampler
-            workflow["15"]["inputs"]["seed"] = seed;
-            workflow["15"]["inputs"]["steps"] = steps;
-            workflow["15"]["inputs"]["cfg"] = cfg;
-
-            // 关键修复：节点19 是 PreviewImage，API 不返回结果，改为 SaveImage
-            workflow["19"]["class_type"] = "SaveImage";
-            workflow["19"]["inputs"]["filename_prefix"] = filenamePrefix;
-            // inputs 中的 "images" 字段与 SaveImage 兼容，无需修改
-
-            return workflow;
-        }
-
-        /// <summary>
-        /// 构建并注入文生图工作流（替代原 BuildWorkflowJson）
+        /// 动态构建文生图工作流 JSON
+        /// 使用标准 ComfyUI 节点：CheckpointLoaderSimple → CLIPTextEncode(+/-) → EmptyLatentImage → KSampler → VAEDecode → SaveImageWebsocket
         /// </summary>
         public string BuildTextToImageWorkflow(string positivePrompt, string negativePrompt,
             int width = 1024, int height = 1024, int seed = -1, int steps = 10, float cfg = 1f,
             string filenamePrefix = "ComfyUI")
         {
             if (seed == -1) seed = UnityEngine.Random.Range(0, int.MaxValue);
-            var workflow = LoadWorkflowTemplate(T2I_WORKFLOW_PATH);
-            InjectTextToImageParameters(workflow, positivePrompt, negativePrompt,
-                width, height, seed, steps, cfg, filenamePrefix);
-            Debug.Log($"[ComfyUI] 文生图工作流已构建, seed={seed}, steps={steps}, cfg={cfg}, prefix={filenamePrefix}");
+
+            var workflow = new JObject
+            {
+                ["1"] = new JObject
+                {
+                    ["class_type"] = "CheckpointLoaderSimple",
+                    ["inputs"] = new JObject
+                    {
+                        ["ckpt_name"] = "动漫 primemix_v21.safetensors"
+                    }
+                },
+                ["2"] = new JObject
+                {
+                    ["class_type"] = "CLIPTextEncode",
+                    ["inputs"] = new JObject
+                    {
+                        ["text"] = positivePrompt,
+                        ["clip"] = new JArray { "1", 1 }
+                    }
+                },
+                ["3"] = new JObject
+                {
+                    ["class_type"] = "CLIPTextEncode",
+                    ["inputs"] = new JObject
+                    {
+                        ["text"] = negativePrompt,
+                        ["clip"] = new JArray { "1", 1 }
+                    }
+                },
+                ["4"] = new JObject
+                {
+                    ["class_type"] = "EmptyLatentImage",
+                    ["inputs"] = new JObject
+                    {
+                        ["width"] = width,
+                        ["height"] = height,
+                        ["batch_size"] = 1
+                    }
+                },
+                ["5"] = new JObject
+                {
+                    ["class_type"] = "KSampler",
+                    ["inputs"] = new JObject
+                    {
+                        ["seed"] = seed,
+                        ["steps"] = steps,
+                        ["cfg"] = cfg,
+                        ["sampler_name"] = "euler_ancestral",
+                        ["scheduler"] = "normal",
+                        ["denoise"] = 1,
+                        ["model"] = new JArray { "1", 0 },
+                        ["positive"] = new JArray { "2", 0 },
+                        ["negative"] = new JArray { "3", 0 },
+                        ["latent_image"] = new JArray { "4", 0 }
+                    }
+                },
+                ["6"] = new JObject
+                {
+                    ["class_type"] = "VAEDecode",
+                    ["inputs"] = new JObject
+                    {
+                        ["samples"] = new JArray { "5", 0 },
+                        ["vae"] = new JArray { "1", 2 }
+                    }
+                },
+                ["7"] = new JObject
+                {
+                    ["class_type"] = "SaveImageWebsocket",
+                    ["inputs"] = new JObject
+                    {
+                        ["images"] = new JArray { "6", 0 }
+                    }
+                }
+            };
+
+            Debug.Log($"[ComfyUIClient] 文生图工作流已动态构建, seed={seed}, steps={steps}, cfg={cfg}, size={width}x{height}");
             return workflow.ToString();
         }
 
         /// <summary>
-        /// 构建并注入图生图工作流（替代原 BuildImageToImageWorkflowJson）
+        /// 动态构建图生图工作流 JSON（使用 Qwen-Image-Edit LoRA）
+        /// 节点结构：CheckpointLoaderSimple → LoraLoader → LoadImage → CLIPTextEncode(+/-) → VAEEncode → KSampler → VAEDecode → SaveImageWebsocket
         /// </summary>
         public string BuildImageEditWorkflow(string prompt, string imageFilename,
             int width = 1024, int height = 1024, int seed = -1, int steps = 4, float cfg = 1f,
             string filenamePrefix = "ComfyUI")
         {
             if (seed == -1) seed = UnityEngine.Random.Range(0, int.MaxValue);
-            var workflow = LoadWorkflowTemplate(IMG2IMG_WORKFLOW_PATH);
-            InjectImageEditParameters(workflow, prompt, imageFilename,
-                width, height, seed, steps, cfg, filenamePrefix);
-            Debug.Log($"[ComfyUI] 图生图工作流已构建, seed={seed}, steps={steps}, cfg={cfg}, prefix={filenamePrefix}");
+
+            var workflow = new JObject
+            {
+                ["1"] = new JObject
+                {
+                    ["class_type"] = "CheckpointLoaderSimple",
+                    ["inputs"] = new JObject
+                    {
+                        ["ckpt_name"] = "动漫 primemix_v21.safetensors"
+                    }
+                },
+                ["2"] = new JObject
+                {
+                    ["class_type"] = "LoraLoader",
+                    ["inputs"] = new JObject
+                    {
+                        ["model"] = new JArray { "1", 0 },
+                        ["clip"] = new JArray { "1", 1 },
+                        ["lora_name"] = "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+                        ["strength_model"] = 1,
+                        ["strength_clip"] = 1
+                    }
+                },
+                ["3"] = new JObject
+                {
+                    ["class_type"] = "LoadImage",
+                    ["inputs"] = new JObject
+                    {
+                        ["image"] = imageFilename
+                    }
+                },
+                ["4"] = new JObject
+                {
+                    ["class_type"] = "CLIPTextEncode",
+                    ["inputs"] = new JObject
+                    {
+                        ["text"] = prompt,
+                        ["clip"] = new JArray { "2", 1 }
+                    }
+                },
+                ["5"] = new JObject
+                {
+                    ["class_type"] = "CLIPTextEncode",
+                    ["inputs"] = new JObject
+                    {
+                        ["text"] = "",
+                        ["clip"] = new JArray { "2", 1 }
+                    }
+                },
+                ["6"] = new JObject
+                {
+                    ["class_type"] = "VAEEncode",
+                    ["inputs"] = new JObject
+                    {
+                        ["pixels"] = new JArray { "3", 0 },
+                        ["vae"] = new JArray { "1", 2 }
+                    }
+                },
+                ["7"] = new JObject
+                {
+                    ["class_type"] = "KSampler",
+                    ["inputs"] = new JObject
+                    {
+                        ["seed"] = seed,
+                        ["steps"] = steps,
+                        ["cfg"] = cfg,
+                        ["sampler_name"] = "euler",
+                        ["scheduler"] = "normal",
+                        ["denoise"] = 0.6,
+                        ["model"] = new JArray { "2", 0 },
+                        ["positive"] = new JArray { "4", 0 },
+                        ["negative"] = new JArray { "5", 0 },
+                        ["latent_image"] = new JArray { "6", 0 }
+                    }
+                },
+                ["8"] = new JObject
+                {
+                    ["class_type"] = "VAEDecode",
+                    ["inputs"] = new JObject
+                    {
+                        ["samples"] = new JArray { "7", 0 },
+                        ["vae"] = new JArray { "1", 2 }
+                    }
+                },
+                ["9"] = new JObject
+                {
+                    ["class_type"] = "SaveImageWebsocket",
+                    ["inputs"] = new JObject
+                    {
+                        ["images"] = new JArray { "8", 0 }
+                    }
+                }
+            };
+
+            Debug.Log($"[ComfyUIClient] 图生图工作流已动态构建, seed={seed}, steps={steps}, cfg={cfg}, image={imageFilename}");
             return workflow.ToString();
         }
+
+        // ==========================================
+        // 私有辅助方法
+        // ==========================================
 
         /// <summary>
         /// 转义 JSON 字符串中的特殊字符
