@@ -51,6 +51,7 @@ namespace ComfyUI
         private const int ReceiveBufferSize = 4096;
         private const int MaxReconnectAttempts = 3;
         private const int ReconnectDelayMs = 2000;
+        private int reconnectCount = 0;
 
         // ==========================================
         // 构造函数
@@ -136,6 +137,20 @@ namespace ComfyUI
             {
                 Debug.LogWarning($"[ComfyUIWebSocket] 断开连接时出错: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 清除所有事件处理器（由外部调用，因为事件不能从外部设为 null）
+        /// </summary>
+        public void ClearAllHandlers()
+        {
+            OnProgress = null;
+            OnImageReady = null;
+            OnExecutionComplete = null;
+            OnExecuting = null;
+            OnError = null;
+            OnConnected = null;
+            OnDisconnected = null;
         }
 
         /// <summary>

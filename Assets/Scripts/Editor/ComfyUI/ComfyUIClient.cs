@@ -359,10 +359,7 @@ namespace ComfyUI
                 // 清理事件监听
                 if (webSocket != null)
                 {
-                    webSocket.OnProgress = null;
-                    webSocket.OnImageReady = null;
-                    webSocket.OnExecutionComplete = null;
-                    webSocket.OnError = null;
+                    webSocket.ClearAllHandlers();
                 }
             }
         }
