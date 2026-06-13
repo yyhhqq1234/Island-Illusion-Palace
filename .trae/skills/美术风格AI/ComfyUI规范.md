@@ -1,27 +1,60 @@
 # ComfyUI 使用规范
 
-> 版本：2.2 | 日期：2026-06-14 | 维护者：美术风格AI
+> 版本：3.0 | 日期：2026-06-14 | 维护者：美术风格AI
 
 本文档是"幻宫：时空回响"项目中 ComfyUI 美术资产生成的操作规范，供美术风格AI在调用 ComfyUI 时参考。
 
+> **重要架构变更 (v3.0)**：ComfyUI 资产生成已从 Unity 中完全剥离，改用独立 Python GUI 客户端（`Scripts/comfyui_client.py`）。Unity 中不再包含任何 ComfyUI 相关代码。
+
 ---
 
-## 0. 强制前置规则
+## 0. 独立客户端使用
 
-> **每次使用 ComfyUI 之前，必须先打开通信面板。**
+### 0.1 客户端信息
+
+| 项目 | 值 |
+|------|-----|
+| 客户端路径 | `Scripts/comfyui_client.py` |
+| 启动方式 | `python Scripts/comfyui_client.py` |
+| 命令行工具 | `python Scripts/comfyui_generate.py "资产名" concept\|sprite [状态]` |
+| 依赖 | Python 3.12+, `requests`, `tkinter`（系统自带） |
+
+### 0.2 强制前置规则
+
+> **每次使用 ComfyUI 之前，必须先启动独立客户端并测试连接。**
 
 | 规则 | 说明 |
 |------|------|
-| **通信面板必须先开** | 打开 ComfyUI 资产生成器窗口时，会自动弹出通信面板。也可通过 `Tools > ComfyUI > 通信面板` 手动打开。 |
-| **连接 8189 端口** | 通信面板通过 WebSocket 连接 `ws://10.150.164.64:8189`，实时显示服务器状态、GPU 显存、队列负载、优化建议。 |
-| **状态确认后再操作** | 确认通信面板显示"已连接"且服务器状态正常后，再进行生成操作。若显存使用率 > 85% 或队列积压 > 3，应等待或优化后再提交任务。 |
+| **先启动客户端** | 运行 `python Scripts/comfyui_client.py` 打开 GUI |
+| **测试连接** | 点击"测试连接"按钮确认服务器状态正常（状态栏显示"已连接"） |
+| **检查队列** | 点击"检查队列"确认无积压任务 |
+| **状态确认后再操作** | 确认连接正常后，再进行生成操作 |
 
-**通信面板功能**：
-- 实时 GPU 显存使用率（进度条 + 数值）
-- 任务队列状态（运行中 / 等待中数量）
-- 已连接客户端数量
-- 服务器运行时间
-- 自动推送优化建议（如启用 NPU/iGPU 加速节点）
+### 0.3 GUI 客户端功能
+
+- **资产选择**：按分类筛选（全部/Player/Enemy/Boss/MapTile/Prop），预填充提示词模板
+- **生成阶段**：概念图 / 精灵帧切换（自动切换提示词和参数）
+- **动画状态**：精灵帧模式下选择 idle/walk/attack/skill/death
+- **参数控制**：宽度、高度、步数、CFG、种子（-1=随机）
+- **提示词预览**：可编辑的正向/反向提示词
+- **生成**：一键提交工作流，实时日志显示进度
+- **连接状态**：顶部状态栏显示服务器连接、队列信息
+
+### 0.4 命令行工具用法
+
+```bash
+# 生成概念图
+python Scripts/comfyui_generate.py "时空守护者" concept
+
+# 生成精灵帧（idle状态）
+python Scripts/comfyui_generate.py "时空守护者" sprite idle
+
+# 批量生成所有状态
+python Scripts/comfyui_generate.py "时空守护者" sprite walk
+python Scripts/comfyui_generate.py "时空守护者" sprite attack
+python Scripts/comfyui_generate.py "时空守护者" sprite skill
+python Scripts/comfyui_generate.py "时空守护者" sprite death
+```
 
 ---
 
@@ -948,19 +981,17 @@ Assets/ArtMaterials/
 
 ---
 
-## 7. 关联代码文件更新提示
+## 7. 关联文件
 
-以下代码文件需根据本文档更新进行同步修改（v2.2 关键变更）：
+以下文件与本文档关联，修改本文档时需同步更新：
 
-| 文件 | 位置 | 需修改内容 |
-|------|------|-----------|
-| `ComfyUIPromptTemplates.cs` | `Assets/Scripts/Editor/ComfyUI/` | ✅ 1. 基础风格词已拆分为概念/精灵两套（v1.2）<br>✅ 2. 模板尺寸已更新为目标生成尺寸（v1.2）<br>✅ 3. 已移除对旧 `EmptySD3LatentImage` 节点的引用（v2.0） |
-| `ComfyUIAssetGenerator.cs` | `Assets/Scripts/Editor/ComfyUI/` | ✅ 1. Nearest Neighbor 降采样已添加（v1.2）<br>✅ 2. 使用 `client.BuildTextToImageWorkflow()` 动态构建（v2.1）<br>✅ 3. 使用 `client.BuildImageEditWorkflow()` 动态构建（v2.1）<br>✅ 4. 已移除对静态 `workflows/*.json` 文件的依赖（v2.1） |
-| `ComfyUIClient.cs` | `Assets/Scripts/Editor/ComfyUI/` | ✅ 1. 已新增 `GetObjectInfo()` / `GetObjectInfo(nodeClass)` 方法（v2.1）<br>✅ 2. `BuildTextToImageWorkflow()` 已改为动态 JObject 构建（v2.1）<br>✅ 3. `BuildImageEditWorkflow()` 已改为动态 JObject 构建（v2.1）<br>✅ 4. 已删除旧 `LoadWorkflowTemplate()`、`InjectXxx()` 静态方法（v2.1） |
-| `ComfyUIWindow.cs` | `Assets/Scripts/Editor/ComfyUI/` | ✅ 1. 已修复废弃方法调用，改用 `GetConceptXxx` / `GetSpriteXxx`（v2.1）<br>✅ 2. `OnEnable` 时自动打开通信面板（v2.2）<br>✅ 3. 新增"通信面板"按钮（v2.2） |
-| `ComfyUICommunicationPanel.cs` | `Assets/Scripts/Editor/ComfyUI/` | ✅ **新增**（v2.2）：通信面板 EditorWindow，连接 `ws://10.150.164.64:8189`，实时显示 GPU 状态、队列、优化建议 |
-| `ComfyUIWebSocket.cs` | `Assets/Scripts/Editor/ComfyUI/` | `SaveImageWebsocket` 节点会将图片直接通过 WebSocket 推送，需确认 `OnImageReady` 事件正确处理此通道 |
-| `workflows/*.json` | `Assets/Scripts/Editor/ComfyUI/workflows/` | 保留作为参考模板，代码不再硬依赖这些文件（可手动清理） |
+| 文件 | 位置 | 说明 |
+|------|------|------|
+| `comfyui_client.py` | `Scripts/` | **独立 GUI 客户端**（v3.0 新增），替代原 Unity Editor 工具。包含完整的 GUI 界面、提示词模板、工作流构建、API 调用逻辑 |
+| `comfyui_generate.py` | `Scripts/` | **命令行生成工具**（v2.2+），用于批量脚本化生成，无 GUI 依赖 |
+| `ComfyUI规范.md` | `.trae/skills/美术风格AI/` | 本文档 |
+
+> **注意 (v3.0)**：原 Unity `Assets/Scripts/Editor/ComfyUI/` 目录下的所有 C# 代码文件（`ComfyUIClient.cs`, `ComfyUIWindow.cs`, `ComfyUIAssetGenerator.cs`, `ComfyUIPromptTemplates.cs`, `ComfyUIWebSocket.cs`, `ComfyUIImageReceiver.cs`, `ComfyUICommunicationPanel.cs`）及其工作流 JSON 文件已全部删除。资产生成的提示词模板和维护逻辑已迁移至 Python 客户端中。
 
 ---
 
@@ -974,3 +1005,4 @@ Assets/ArtMaterials/
 | **2.0** | **2026-06-13** | **主策划AI** | **服务器模型切换 + 动态工作流重构**：<br>1. **服务器模型变更**：Checkpoint 从 Z-Image-Turbo 替换为 `动漫 primemix_v21`<br>2. **重写第 1 章**：更新服务器信息（ComfyUI 0.20.1、PyTorch 2.11.0、RTX 3060、4 个模型）<br>3. **重写第 2 章**：废弃固定 workflow 文件方案，改为动态构建 workflow JSON<br>4. **新增 2.2**：通用文生图工作流模板（CheckpointLoaderSimple + KSampler + SaveImageWebsocket）<br>5. **新增 2.3**：KSampler 参数调优指南<br>6. **新增 2.4**：图生图工作流模板（LoraLoader + Qwen-Image-Edit LoRA）<br>7. **新增 2.5**：工作流构建完整流程（8 步）<br>8. **新增 2.6**：常用节点速查表（11 类）<br>9. **更新第 7 章**：新增 `GetObjectInfo()`、`BuildTextToImageWorkflow()` 等代码同步需求 |
 | **2.1** | **2026-06-14** | **主策划AI** | **代码同步 + 服务器文档更新**：<br>1. **ComfyUIClient.cs**：重写 `BuildTextToImageWorkflow()` / `BuildImageEditWorkflow()` 为动态 JObject 构建，新增 `GetObjectInfo()` 方法，删除旧静态方法<br>2. **ComfyUIWindow.cs**：修复废弃方法警告，改用 `GetConceptXxx` / `GetSpriteXxx`<br>3. **第 1.8 节**：更新实时通信服务文档，新增 `welcome`/`ping`/`pong`/`hot_reload`/`message_history`/`ack` 消息类型<br>4. **第 1.8 节**：新增 `server_status` 数据结构、优化建议规则表、连接流程说明<br>5. **第 1.8 节**：新增 `/history`、`/notify` HTTP 端点<br>6. **第 7 章**：更新代码同步清单，标注已完成项 |
 | **2.2** | **2026-06-14** | **主策划AI** | **通信面板强制规则**：<br>1. **新增第 0 章**：每次使用 ComfyUI 前必须先打开通信面板的强制前置规则<br>2. **新增 `ComfyUICommunicationPanel.cs`**：通信面板 EditorWindow，连接 `ws://10.150.164.64:8189`，实时显示 GPU 状态、队列、优化建议<br>3. **修改 `ComfyUIWindow.cs`**：`OnEnable` 时自动打开通信面板，新增"通信面板"按钮<br>4. **第 7 章**：更新代码同步清单，新增通信面板文件 |
+| **3.0** | **2026-06-14** | **主策划AI** | **从 Unity 完全剥离 ComfyUI**：<br>1. **删除所有 Unity ComfyUI 代码**：移除 `Assets/Scripts/Editor/ComfyUI/` 目录下的 7 个 C# 文件 + 2 个工作流 JSON<br>2. **新增 `Scripts/comfyui_client.py`**：独立 Python GUI 客户端（tkinter），包含资产选择、提示词模板、参数控制、工作流构建、实时日志<br>3. **优化 `Scripts/comfyui_generate.py`**：命令行生成工具（Python），无 GUI 依赖<br>4. **重写第 0 章**：从 Unity 通信面板规则改为独立客户端使用说明<br>5. **重写第 7 章**：从 C# 代码同步清单改为 Python 客户端关联文件 |
