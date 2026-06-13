@@ -82,6 +82,14 @@ namespace ComfyUI
             this.clientId = $"unity-editor-{Guid.NewGuid()}";
         }
 
+        /// <summary>
+        /// 为 UnityWebRequest 配置证书绕过（允许 HTTP 内网连接）
+        /// </summary>
+        private static void ConfigureRequest(UnityWebRequest request)
+        {
+            request.certificateHandler = new BypassCertificate();
+        }
+
         // ==========================================
         // 核心 API 方法
         // ==========================================
@@ -102,6 +110,7 @@ namespace ComfyUI
 
             using (var request = new UnityWebRequest(url, "POST"))
             {
+                ConfigureRequest(request);
                 byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
                 request.uploadHandler = new UploadHandlerRaw(bodyRaw);
                 request.downloadHandler = new DownloadHandlerBuffer();
@@ -138,6 +147,7 @@ namespace ComfyUI
             {
                 using (var request = UnityWebRequest.Get(url))
                 {
+                    ConfigureRequest(request);
                     request.timeout = RequestTimeout;
 
                     var operation = request.SendWebRequest();
@@ -199,6 +209,7 @@ namespace ComfyUI
 
             using (var request = UnityWebRequest.Get(url))
             {
+                ConfigureRequest(request);
                 request.timeout = 60; // 图片下载可能较大
 
                 var operation = request.SendWebRequest();
@@ -393,6 +404,7 @@ namespace ComfyUI
 
             using (var request = UnityWebRequest.Post(url, form))
             {
+                ConfigureRequest(request);
                 request.timeout = 60;
 
                 var operation = request.SendWebRequest();
@@ -428,6 +440,7 @@ namespace ComfyUI
 
             using (var request = new UnityWebRequest(url, "POST"))
             {
+                ConfigureRequest(request);
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.timeout = 10;
 
@@ -459,6 +472,7 @@ namespace ComfyUI
 
             using (var request = UnityWebRequest.Get(url))
             {
+                ConfigureRequest(request);
                 request.timeout = 15;
 
                 var operation = request.SendWebRequest();
@@ -492,6 +506,7 @@ namespace ComfyUI
                 string url = $"{serverUrl}/api/system_stats";
                 using (var request = UnityWebRequest.Get(url))
                 {
+                    ConfigureRequest(request);
                     request.timeout = 10;
                     var operation = request.SendWebRequest();
                     while (!operation.isDone)
@@ -510,6 +525,7 @@ namespace ComfyUI
                         url = $"{serverUrl}/api/prompt";
                         using (var req2 = UnityWebRequest.Get(url))
                         {
+                            ConfigureRequest(req2);
                             req2.timeout = 10;
                             var op2 = req2.SendWebRequest();
                             while (!op2.isDone)
@@ -543,6 +559,7 @@ namespace ComfyUI
 
             using (var request = UnityWebRequest.Get(url))
             {
+                ConfigureRequest(request);
                 request.timeout = 15;
 
                 var operation = request.SendWebRequest();
@@ -576,6 +593,7 @@ namespace ComfyUI
 
             using (var request = UnityWebRequest.Get(url))
             {
+                ConfigureRequest(request);
                 request.timeout = 15;
 
                 var operation = request.SendWebRequest();
@@ -992,6 +1010,17 @@ namespace ComfyUI
             {
                 EditorUtility.DisplayDialog("ComfyUI 连接测试", $"连接失败!\n服务器: {serverUrl}\n请检查服务器是否在线，地址是否正确。", "确定");
             }
+        }
+    }
+
+    /// <summary>
+    /// 绕过 SSL 证书验证，允许 HTTP 内网连接
+    /// </summary>
+    public class BypassCertificate : CertificateHandler
+    {
+        protected override bool ValidateCertificate(byte[] certificateData)
+        {
+            return true; // 信任所有证书（内网环境）
         }
     }
 }
