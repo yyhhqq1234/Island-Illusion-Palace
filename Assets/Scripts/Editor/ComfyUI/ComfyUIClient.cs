@@ -80,6 +80,9 @@ namespace ComfyUI
         {
             this.serverUrl = serverUrl.TrimEnd('/');
             this.clientId = $"unity-editor-{Guid.NewGuid()}";
+
+            // 允许 HTTP 内网连接（ComfyUI 服务器使用 HTTP 协议）
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
         }
 
         /// <summary>
