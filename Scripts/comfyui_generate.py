@@ -85,6 +85,7 @@ def main():
     # Poll
     print("Waiting for completion...")
     max_wait = 600
+    history = None
     for i in range(max_wait):
         time.sleep(2)
         try:

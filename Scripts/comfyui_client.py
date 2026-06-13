@@ -412,6 +412,7 @@ class ComfyUIGenerator:
             self.root.after(0, lambda: self._log(f"已提交: {prompt_id}"))
 
             # 轮询
+            history = None
             for i in range(300):
                 time.sleep(2)
                 try:
