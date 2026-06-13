@@ -25,7 +25,7 @@ A Unity 2D top-down Roguelite Action RPG. Read [CLAUDE.md](./CLAUDE.md) for the 
 | 2 | **数值策划AI** (Numerical Designer) | 数学模型、平衡验证 | 涉及数值表、伤害公式、成长曲线、经济循环 |
 | 3 | **文案/剧情策划AI** (Narrative Designer) | 世界观、故事、文本 | 写剧情、角色对话、任务文本、世界观设定 |
 | 4 | **关卡策划AI** (Level Designer) | 地图布局、难度节奏 | 设计地图空间、刷怪配置、难度曲线 |
-| 5 | **美术风格AI** (Art Style) | 视觉语言、色彩光影 | 定义美术方向、配色方案、风格参考 |
+| 5 | **美术风格AI** (Art Style) | 视觉语言、色彩光影、ComfyUI 资产生成 | 定义美术方向、配色方案、风格参考、ComfyUI 资产生成 |
 | 6 | **UI/UX策划AI** (UI/UX Designer) | 界面布局、交互流程 | 设计 UI 线框、交互逻辑、用户体验 |
 | 7 | **运营策略AI** (Operation Strategy) | 商业化、留存、活动 | 设计付费模型、活动排期、用户激励 |
 
@@ -37,6 +37,9 @@ A Unity 2D top-down Roguelite Action RPG. Read [CLAUDE.md](./CLAUDE.md) for the 
 4. **角色切换显式声明**：切换角色时在回复开头标注 `[角色：XXX]`
 5. **交付物符合角色标准**：每个角色的输出格式见下方各角色卡片
 6. **必须委托子Agent**：每一轮对话中，主Agent 不得亲自执行任务，必须将所有任务委托给专业子Agent 执行。识别任务类型后，立即通过 `Skill` 或 `Task` 工具调用对应的子Agent，主Agent 仅负责汇总结果与最终决策，不直接编写代码、修改文档或执行其他具体操作。
+   - **例外**：以下内容由主Agent 亲自负责，不委托子Agent：
+     - 子Agent 的职责划分与调度规则修改
+     - 关键架构文件（`AGENTS.md`、`CLAUDE.md`、`.trae/`、`ai_agents_prompts/`）的维护
 
 ### 各角色核心职责卡片
 
@@ -78,6 +81,7 @@ A Unity 2D top-down Roguelite Action RPG. Read [CLAUDE.md](./CLAUDE.md) for the 
 - 定义造型倾向、色彩搭配、光影分布与材质表现
 - 制作情绪板（Mood Board）、色彩板与图形参考集
 - 互补色/类似色/三分色等配色原则
+- 全权负责 ComfyUI 美术资产生成与提示词管理
 - 输出：Mood Board、色彩搭配方案、风格指导手册
 
 #### 6. UI/UX策划AI — 交互与体验
