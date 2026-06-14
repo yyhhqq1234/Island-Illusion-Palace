@@ -634,10 +634,11 @@ class ProjectScanner:
 # 模块8: ServerMonitor（服务器实时状态监控）
 # ==========================================
 class ServerMonitor:
-    """ComfyUI 服务器实时状态监控 - WebSocket 连接 + HTTP 轮询降级"""
+    """ComfyUI 服务器实时状态监控 - WebSocket 连接 + HTTP 轮询降级
 
-    # WebSocket 地址
-    WS_URL = "ws://10.150.164.64:8189"
+    服务器地址统一引用配置区常量 SERVER_URL / WS_URL，
+    修改服务器地址只需修改文件顶部的配置区即可。
+    """
 
     # 重连配置
     RECONNECT_INTERVAL = 5  # 秒
@@ -671,7 +672,7 @@ class ServerMonitor:
         try:
             import websocket
             self.ws = websocket.WebSocketApp(
-                self.WS_URL,
+                WS_URL,
                 on_open=self._on_open,
                 on_message=self._on_message,
                 on_error=self._on_error,
@@ -759,7 +760,7 @@ class ServerMonitor:
         def poll():
             while self._polling and self._running:
                 try:
-                    r = requests.get("http://10.150.164.64:8188/api/system_stats", timeout=5)
+                    r = requests.get(f"{SERVER_URL}/api/system_stats", timeout=5)
                     if r.status_code == 200:
                         # 将 HTTP 响应转换为 server_status 格式
                         http_data = r.json()
@@ -966,7 +967,7 @@ class ConfigManager:
             "model_name": ""
         },
         "server": {
-            "url": "http://10.150.164.64:8188",
+            "url": SERVER_URL,
             "output_base": r"d:\Program Files\Unity\U3Dproject\Island-Illusion-Palace\Assets\ArtMaterials"
         },
         "project": {
