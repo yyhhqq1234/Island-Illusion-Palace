@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-ComfyUI 美术素材生产客户端 v4.0
+ComfyUI 美术素材生产客户端 v4.1
 Unity 项目深度集成版 - 支持项目文件分析、需求提取、AI 提示词生成
 
-v4.0 新增功能：
-- 模块5: ProjectScanner（项目扫描器）- 扫描策划文档、代码、美术素材
-- 模块6: 项目分析 Tab - 文件浏览器、资产缺口分析、AI 需求提取
-- 模块7: 增强型 AI 集成 - 基于项目上下文的智能提示词生成
-- 端到端流程：项目文件分析 → 需求提取 → AI 生成提示词 → 生成图片
+v4.1 新增功能：
+- 模块8: ServerMonitor（服务器实时状态监控）- WebSocket 实时连接 + HTTP 轮询降级
+- 增强版顶部工具栏 - VRAM/队列/客户端数/运行时间实时显示
+- 可折叠服务器详情面板 - GPU显存条、已加载模型、优化建议
 
-v3.0 功能保留：
+v4.0 功能保留：
 - 模块1: AI 大模型集成 (LLM Integration) - 提示词优化/生成、工作流推荐
 - 模块2: ComfyUI 服务器资源浏览器 - 模型列表、节点浏览器、自定义节点
 - 模块3: 自定义工作流配置器 - 可视化工作流构建与编辑
@@ -46,8 +45,16 @@ from collections import OrderedDict
 try:
     import requests
 except ImportError:
-    print("请安装依赖: pip install requests websocket-client")
+    print("请安装依赖: pip install requests")
     sys.exit(1)
+
+# WebSocket 客户端（可选，未安装时 ServerMonitor 自动降级为 HTTP 轮询）
+WEBSOCKET_AVAILABLE = False
+try:
+    import websocket
+    WEBSOCKET_AVAILABLE = True
+except ImportError:
+    pass
 
 # ==========================================
 # 配置
@@ -624,6 +631,189 @@ class ProjectScanner:
 
 
 # ==========================================
+# 模块8: ServerMonitor（服务器实时状态监控）
+# ==========================================
+class ServerMonitor:
+    """ComfyUI 服务器实时状态监控 - WebSocket 连接 + HTTP 轮询降级"""
+
+    # WebSocket 地址
+    WS_URL = "ws://10.150.164.64:8189"
+
+    # 重连配置
+    RECONNECT_INTERVAL = 5  # 秒
+
+    def __init__(self, on_status_update_callback=None):
+        self.ws = None
+        self.connected = False
+        self.server_data = {}  # 最新服务器状态数据
+        self.on_status_update = on_status_update_callback
+        self._running = False
+        self._polling = False  # HTTP 轮询模式标志
+
+    def start(self):
+        """启动监控"""
+        self._running = True
+        if WEBSOCKET_AVAILABLE:
+            self._connect_ws()
+        else:
+            # websocket-client 未安装，降级为 HTTP 轮询
+            print("[ServerMonitor] websocket-client 未安装，使用 HTTP 轮询模式")
+            self._start_http_polling()
+
+    def stop(self):
+        """停止监控"""
+        self._running = False
+        self._polling = False
+        self._close_ws()
+
+    def _connect_ws(self):
+        """建立 WebSocket 连接"""
+        try:
+            import websocket
+            self.ws = websocket.WebSocketApp(
+                self.WS_URL,
+                on_open=self._on_open,
+                on_message=self._on_message,
+                on_error=self._on_error,
+                on_close=self._on_close
+            )
+            # 在后台线程运行
+            t = threading.Thread(target=self.ws.run_forever, daemon=True)
+            t.start()
+        except Exception as e:
+            print(f"[ServerMonitor] WebSocket 连接失败: {e}，降级为 HTTP 轮询")
+            self._start_http_polling()
+
+    def _close_ws(self):
+        """关闭 WebSocket"""
+        if self.ws:
+            try:
+                self.ws.close()
+            except Exception:
+                pass
+            self.ws = None
+        self.connected = False
+
+    def _on_open(self, ws):
+        """连接建立回调"""
+        self.connected = True
+        print("[ServerMonitor] WebSocket 已连接")
+        self._send({"type": "ping"})
+
+    def _on_message(self, ws, message):
+        """收到消息回调"""
+        try:
+            data = json.loads(message)
+            msg_type = data.get("type", "")
+
+            if msg_type == "pong":
+                pass  # 心跳响应
+            elif msg_type == "server_status":
+                self.server_data = data.get("data", {})
+                if self.on_status_update:
+                    self.on_status_update(self.server_data)
+            elif msg_type == "welcome":
+                # 服务器欢迎消息，可能包含初始状态
+                if "data" in data and isinstance(data["data"], dict):
+                    self.server_data.update(data["data"])
+                    if self.on_status_update:
+                        self.on_status_update(self.server_data)
+            elif msg_type == "notify":
+                # 通知消息（如任务完成等）
+                if self.on_status_update:
+                    self.on_status_update({"notify": data.get("data", {})})
+
+        except json.JSONDecodeError:
+            pass
+
+    def _on_error(self, ws, error):
+        """错误回调"""
+        print(f"[ServerMonitor] WebSocket 错误: {error}")
+
+    def _on_close(self, ws, close_status_code, close_msg):
+        """连接关闭回调"""
+        self.connected = False
+        print(f"[ServerMonitor] WebSocket 已关闭: {close_status_code} {close_msg}")
+        if self._running:
+            self._schedule_reconnect()
+
+    def _send(self, data):
+        """发送消息"""
+        if self.ws and self.connected:
+            try:
+                self.ws.send(json.dumps(data))
+            except Exception:
+                pass
+
+    def _schedule_reconnect(self):
+        """安排重连"""
+        if self._running:
+            t = threading.Timer(self.RECONNECT_INTERVAL, self._connect_ws)
+            t.daemon = True
+            t.start()
+
+    def _start_http_polling(self):
+        """HTTP 轮询降级方案（当 websocket-client 不可用时）"""
+        self._polling = True
+
+        def poll():
+            while self._polling and self._running:
+                try:
+                    r = requests.get("http://10.150.164.64:8188/api/system_stats", timeout=5)
+                    if r.status_code == 200:
+                        # 将 HTTP 响应转换为 server_status 格式
+                        http_data = r.json()
+                        # 构造兼容格式
+                        self.server_data = {
+                            "comfyui_version": http_data.get("version", "?"),
+                            "pytorch_version": "?",
+                            "gpu": {
+                                "name": http_data.get("device", {}).get("name", "?"),
+                                "vram_total": http_data.get("device", {}).get("vram_total", 0),
+                                "vram_free": http_data.get("device", {}).get("vram_free", 0),
+                                "vram_used": http_data.get("device", {}).get("vram_used", 0),
+                            },
+                            "queue": {
+                                "current": 0,
+                                "pending": 0,
+                            },
+                            "clients": 1,
+                            "uptime_seconds": 0,
+                            "models_loaded": [],
+                            "system_ram": {
+                                "total_gb": http_data.get("system_ram", {}).get("total", 0),
+                                "free_gb": http_data.get("system_ram", {}).get("free", 0),
+                            }
+                        }
+                        if self.on_status_update:
+                            self.on_status_update(self.server_data)
+                except Exception:
+                    pass
+                time.sleep(5)  # 每5秒轮询一次
+
+        t = threading.Thread(target=poll, daemon=True)
+        t.start()
+
+    def get_status_text(self):
+        """获取格式化的状态文本"""
+        d = self.server_data
+        if not d:
+            return "未连接"
+
+        gpu = d.get("gpu", {})
+        vram_free = gpu.get("vram_free", "?")
+        queue = d.get("queue", {})
+        q_current = queue.get("current", "?")
+        clients = d.get("clients", "?")
+        uptime = d.get("uptime_seconds", 0)
+
+        hours = int(uptime // 3600)
+        mins = int((uptime % 3600) // 60)
+
+        return f"VRAM:{vram_free}GB | 队列:{q_current} | 客户端:{clients} | 运行:{hours}h{mins}m"
+
+
+# ==========================================
 # 模块2+3+4: 工作流编辑器 & 服务器资源
 # ==========================================
 class WorkflowEditor:
@@ -887,6 +1077,9 @@ class ComfyUIGenerator:
             project_root = OUTPUT_BASE.replace("\\Assets\\ArtMaterials", "")
         self.project_scanner = ProjectScanner(project_root)
 
+        # 模块8: ServerMonitor 实例（服务器实时监控）
+        self.server_monitor = ServerMonitor(on_status_update_callback=self._on_server_status_update)
+
         # 加载配置
         self.config = ConfigManager.load()
 
@@ -901,22 +1094,98 @@ class ComfyUIGenerator:
         # 测试服务器连接
         self._test_connection()
 
+        # 启动服务器实时监控（WebSocket / HTTP 轮询）
+        self.server_monitor.start()
+
     # ==========================================
     # UI 构建 - Notebook 架构
     # ==========================================
     def _build_ui(self):
-        # 顶部工具栏
+        # ===== 顶部工具栏（增强版 - 含实时服务器状态监控）=====
         toolbar = ttk.Frame(self.root, padding=5)
         toolbar.pack(fill=tk.X)
 
-        self.status_label = ttk.Label(toolbar, text="服务器: 未连接", foreground="red")
+        # 左侧：连接控制区
+        conn_frame = ttk.Frame(toolbar)
+        conn_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.status_label = ttk.Label(conn_frame, text="● 服务器: 未连接", foreground="red", font=("", 10))
         self.status_label.pack(side=tk.LEFT, padx=5)
 
-        self.queue_label = ttk.Label(toolbar, text="队列: -")
-        self.queue_label.pack(side=tk.LEFT, padx=10)
+        # 分隔线
+        ttk.Separator(conn_frame, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=8)
 
-        ttk.Button(toolbar, text="测试连接", command=self._test_connection).pack(side=tk.LEFT, padx=5)
-        ttk.Button(toolbar, text="检查队列", command=self._check_queue).pack(side=tk.LEFT, padx=5)
+        # 实时状态显示区（由 ServerMonitor 更新）
+        self.monitor_vram_label = ttk.Label(conn_frame, text="VRAM: -- GB", font=("Consolas", 9), foreground="gray")
+        self.monitor_vram_label.pack(side=tk.LEFT, padx=5)
+
+        self.monitor_queue_label = ttk.Label(conn_frame, text="队列: --", font=("Consolas", 9), foreground="gray")
+        self.monitor_queue_label.pack(side=tk.LEFT, padx=5)
+
+        self.monitor_clients_label = ttk.Label(conn_frame, text="客户端: --", font=("Consolas", 9), foreground="gray")
+        self.monitor_clients_label.pack(side=tk.LEFT, padx=5)
+
+        self.monitor_uptime_label = ttk.Label(conn_frame, text="运行: --", font=("Consolas", 9), foreground="gray")
+        self.monitor_uptime_label.pack(side=tk.LEFT, padx=5)
+
+        # 右侧：操作按钮
+        btn_frame = ttk.Frame(toolbar)
+        btn_frame.pack(side=tk.RIGHT)
+        ttk.Button(btn_frame, text="🔄 测试连接", command=self._test_connection, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="📋 检查队列", command=self._check_queue, width=12).pack(side=tk.LEFT, padx=2)
+
+        # 可展开的服务器详情按钮
+        self.monitor_detail_btn = ttk.Button(btn_frame, text="📊 详情", command=self._toggle_monitor_detail, width=6)
+        self.monitor_detail_btn.pack(side=tk.LEFT, padx=2)
+
+        # ===== 可折叠的服务器详情面板（默认隐藏）=====
+        self.monitor_detail_frame = ttk.Frame(self.root, padding=5)
+        # 注意：不 pack，通过 toggle 显示/隐藏
+
+        # 详情面板内容
+        detail_grid = ttk.Frame(self.monitor_detail_frame)
+        detail_grid.pack(fill=tk.X)
+
+        # 第一行：GPU 信息
+        row1 = ttk.Frame(detail_grid)
+        row1.pack(fill=tk.X, pady=2)
+        ttk.Label(row1, text="GPU:", font=("", 9, "bold"), width=8).pack(side=tk.LEFT)
+        self.detail_gpu_name = ttk.Label(row1, text="--", foreground="dodgerblue")
+        self.detail_gpu_name.pack(side=tk.LEFT, padx=5)
+        ttk.Label(row1, text="显存:", width=6).pack(side=tk.LEFT)
+        self.detail_vram_bar = ttk.Progressbar(row1, length=200, mode='determinate')
+        self.detail_vram_bar.pack(side=tk.LEFT, padx=5)
+        self.detail_vram_text = ttk.Label(row1, text="-- / -- GB")
+        self.detail_vram_text.pack(side=tk.LEFT)
+
+        # 第二行：系统信息
+        row2 = ttk.Frame(detail_grid)
+        row2.pack(fill=tk.X, pady=2)
+        ttk.Label(row2, text="ComfyUI:", font=("", 9, "bold"), width=8).pack(side=tk.LEFT)
+        self.detail_version = ttk.Label(row2, text="--")
+        self.detail_version.pack(side=tk.LEFT, padx=5)
+        ttk.Label(row2, text="PyTorch:", width=8).pack(side=tk.LEFT)
+        self.detail_pytorch = ttk.Label(row2, text="--")
+        self.detail_pytorch.pack(side=tk.LEFT, padx=5)
+        ttk.Label(row2, text="RAM:", width=6).pack(side=tk.LEFT)
+        self.detail_ram = ttk.Label(row2, text="--")
+        self.detail_ram.pack(side=tk.LEFT, padx=5)
+
+        # 第三行：模型和队列
+        row3 = ttk.Frame(detail_grid)
+        row3.pack(fill=tk.X, pady=2)
+        ttk.Label(row3, text="已加载模型:", font=("", 9, "bold"), width=8).pack(side=tk.LEFT)
+        self.detail_models = ttk.Label(row3, text="--", wraplength=500)
+        self.detail_models.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+
+        # 第四行：优化建议
+        row4 = ttk.Frame(detail_grid)
+        row4.pack(fill=tk.X, pady=2)
+        ttk.Label(row4, text="💡 建议:", font=("", 9, "bold"), width=8).pack(side=tk.LEFT)
+        self.detail_suggestion = ttk.Label(row4, text="--", foreground="orange", wraplength=700)
+        self.detail_suggestion.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+
+        self.monitor_detail_visible = False
 
         ttk.Separator(self.root, orient=tk.HORIZONTAL).pack(fill=tk.X)
 
@@ -1758,6 +2027,110 @@ class ComfyUIGenerator:
         self.concept_preview_label.configure(text="未选择概念图", foreground="gray")
         self._log("已清除参考底图")
 
+    # ------------------------------------------
+    # 模块8: ServerMonitor 回调方法
+    # ------------------------------------------
+    def _on_server_status_update(self, data):
+        """服务器状态更新回调（从 WebSocket 接收，在主线程更新UI）"""
+        def update_ui():
+            gpu = data.get("gpu", {})
+            vram_total = gpu.get("vram_total", 0)
+            vram_free = gpu.get("vram_free", 0)
+            vram_used = gpu.get("vram_used", 0)
+
+            queue = data.get("queue", {})
+            q_current = queue.get("current", 0)
+            q_pending = queue.get("pending", 0)
+
+            clients = data.get("clients", 0)
+            uptime = data.get("uptime_seconds", 0)
+
+            hours = int(uptime // 3600)
+            mins = int((uptime % 3600) // 60)
+
+            # 更新工具栏简明状态
+            self.monitor_vram_label.configure(text=f"VRAM: {vram_free:.1f}GB")
+            self.monitor_queue_label.configure(text=f"队列: {q_current}/{q_pending}")
+            self.monitor_clients_label.configure(text=f"客户端: {clients}")
+            self.monitor_uptime_label.configure(text=f"运行: {hours}h{mins}m")
+
+            # VRAM 颜色提示
+            if vram_total > 0:
+                usage_pct = vram_used / vram_total * 100
+                if usage_pct > 90:
+                    color = "red"
+                elif usage_pct > 70:
+                    color = "orange"
+                else:
+                    color = "green"
+                self.monitor_vram_label.configure(foreground=color)
+
+            # 更新连接状态
+            if not self.server_connected:
+                self.server_connected = True
+                self.status_label.configure(text="● 服务器: 已连接 (实时)", foreground="green")
+
+            # 更新详情面板（如果可见）
+            if self.monitor_detail_visible:
+                self._update_monitor_detail(data)
+
+        # 使用 root.after 确保 UI 更新在主线程
+        self.root.after(0, update_ui)
+
+    def _update_monitor_detail(self, data):
+        """更新详情面板数据"""
+        gpu = data.get("gpu", {})
+        vram_total = gpu.get("vram_total", 0)
+        vram_free = gpu.get("vram_free", 0)
+        vram_used = gpu.get("vram_used", 0)
+
+        self.detail_gpu_name.configure(text=gpu.get("name", "--"))
+
+        if vram_total > 0:
+            self.detail_vram_bar['maximum'] = 100
+            self.detail_vram_bar['value'] = (vram_used / vram_total) * 100
+            self.detail_vram_text.configure(text=f"{vram_used:.1f} / {vram_total:.1f} GB (空闲 {vram_free:.1f})")
+
+        self.detail_version.configure(text=data.get("comfyui_version", "--"))
+        self.detail_pytorch.configure(text=data.get("pytorch_version", "--"))
+
+        ram = data.get("system_ram", {})
+        ram_total = ram.get("total_gb", 0)
+        ram_free = ram.get("free_gb", 0)
+        self.detail_ram.configure(text=f"{ram_free:.1f} / {ram_total:.1f} GB")
+
+        models = data.get("models_loaded", [])
+        self.detail_models.configure(text=", ".join(models) if models else "--")
+
+        # 根据VRAM使用率给建议
+        suggestion = ""
+        if vram_total > 0:
+            usage = vram_used / vram_total * 100
+            if usage > 95:
+                suggestion = "⚠️ 显存几乎耗尽！请等待当前任务完成或考虑减少 batch_size"
+            elif usage > 80:
+                suggestion = "显存使用较高，建议避免同时生成大尺寸图片"
+            elif usage < 30:
+                suggestion = "显存充裕，可以放心进行批量生成任务"
+            else:
+                suggestion = "显存使用正常"
+        self.detail_suggestion.configure(text=suggestion)
+
+    def _toggle_monitor_detail(self):
+        """切换详情面板显示/隐藏"""
+        if self.monitor_detail_visible:
+            self.monitor_detail_frame.forget()
+            self.monitor_detail_visible = False
+            self.monitor_detail_btn.configure(text="📊 详情")
+        else:
+            # 在分隔线后插入详情面板
+            self.monitor_detail_frame.pack(after=self.root.children['!frame2'], fill=tk.X)
+            self.monitor_detail_visible = True
+            self.monitor_detail_btn.configure(text="▲ 收起")
+            # 如果有数据，立即刷新
+            if self.server_monitor.server_data:
+                self._update_monitor_detail(self.server_monitor.server_data)
+
     def _test_connection(self):
         threading.Thread(target=self._do_test_connection, daemon=True).start()
 
@@ -1769,6 +2142,33 @@ class ComfyUIGenerator:
             self.root.after(0, lambda: self._log("连接成功!"))
             self.server_connected = True
             self._check_queue()
+
+            # 同时刷新 ServerMonitor 数据（HTTP 轮询模式下的即时更新）
+            if r.status_code == 200:
+                try:
+                    http_data = r.json()
+                    monitor_data = {
+                        "comfyui_version": http_data.get("version", "?"),
+                        "pytorch_version": "?",
+                        "gpu": {
+                            "name": http_data.get("device", {}).get("name", "?"),
+                            "vram_total": http_data.get("device", {}).get("vram_total", 0),
+                            "vram_free": http_data.get("device", {}).get("vram_free", 0),
+                            "vram_used": http_data.get("device", {}).get("vram_used", 0),
+                        },
+                        "queue": {"current": 0, "pending": 0},
+                        "clients": 1,
+                        "uptime_seconds": 0,
+                        "models_loaded": [],
+                        "system_ram": {
+                            "total_gb": http_data.get("system_ram", {}).get("total", 0),
+                            "free_gb": http_data.get("system_ram", {}).get("free", 0),
+                        }
+                    }
+                    # 直接调用回调更新 UI（已在后台线程，需要用 root.after）
+                    self.root.after(0, lambda d=monitor_data: self._on_server_status_update(d))
+                except Exception:
+                    pass
         except Exception as e:
             self.root.after(0, lambda: self.status_label.configure(text="服务器: 连接失败", foreground="red"))
             self.root.after(0, lambda: self._log(f"连接失败: {e}", "ERROR"))
@@ -3343,6 +3743,14 @@ def main():
         pass
 
     app = ComfyUIGenerator(root)
+
+    # 优雅关闭：在窗口关闭时停止 ServerMonitor
+    def on_closing():
+        if hasattr(app, 'server_monitor') and app.server_monitor:
+            app.server_monitor.stop()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
 
 
