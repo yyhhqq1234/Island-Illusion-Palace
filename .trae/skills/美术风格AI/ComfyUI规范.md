@@ -1,6 +1,6 @@
 # ComfyUI 使用规范
 
-> 版本：3.0 | 日期：2026-06-14 | 维护者：美术风格AI
+> 版本：4.0 | 日期：2026-06-14 | 维护者：美术风格AI
 
 本文档是"幻宫：时空回响"项目中 ComfyUI 美术资产生成的操作规范，供美术风格AI在调用 ComfyUI 时参考。
 
@@ -39,6 +39,10 @@
 - **提示词预览**：可编辑的正向/反向提示词
 - **生成**：一键提交工作流，实时日志显示进度
 - **连接状态**：顶部状态栏显示服务器连接、队列信息
+- **项目深度集成**（v4.0/v4.1）：项目扫描器自动发现 ArtMaterials 资产结构，策划文档分析提取视觉需求
+- **AI 需求提取**（v4.0/v4.1）：从策划文档中自动提取美术资产生成需求，生成提示词队列
+- **服务器实时状态监控**（v4.0/v4.1）：WebSocket + HTTP 轮询降级双模式，可折叠详情面板显示 GPU/系统/模型/智能建议
+- **SDXL 自动适配**（v4.0）：切换 Checkpoint 时自动检测 SDXL 模型，调整编码节点和推荐参数
 
 ### 0.4 命令行工具用法
 
@@ -105,7 +109,8 @@ CPU 24核  →  图像预处理 + 调度 + 备用
 
 | 类别 | 模型名 | 用途 |
 |------|--------|------|
-| **Checkpoint** | `动漫 primemix_v21.safetensors` | 文生图主模型（动漫风格，适合生成像素画参考） |
+| **Checkpoint** | `sd_xl_base_1.0.safetensors` | **SDXL 文生图主模型**（高分辨率、高质量，默认推荐） |
+| **Checkpoint** | `动漫 primemix_v21.safetensors` | 文生图备选模型（动漫风格 SD 1.5） |
 | **LoRA** | `Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors` | 图生图 LoRA（4 步快速推理） |
 | **VAE** | `flux-ae.safetensors` | Flux 系列 VAE |
 | **VAE** | `qwen_image_vae.safetensors` | Qwen 系列 VAE（配合 Qwen LoRA 使用） |
@@ -332,7 +337,9 @@ Invoke-RestMethod -Uri "http://10.150.164.64:8189/health" -Method Get
 | `EmptyLatentImage` | 画布 | 控制输出尺寸 | `width`, `height` |
 | `KSampler` | 采样 | 控制图片质量 | `seed`, `steps`, `cfg`, `sampler_name`, `scheduler` |
 | `VAEDecode` | 解码 | 将潜空间转图片 | — |
-| `SaveImageWebsocket` | 输出 | 通过 WebSocket 回传图片 | — |
+| `SaveImageWebsocket` | 输出 | 通过 WebSocket 回传图片（推荐） | — |
+
+> **SDXL 变体（v4.0 新增）**：当使用 `sd_xl_base_1.0.safetensors` 时，必须将 `CLIPTextEncode` 替换为 `CLIPTextEncodeSDXL`。客户端已实现自动检测逻辑：根据 checkpoint 文件名中是否包含 `sdxl` 或 `xl` 自动选择编码节点类型。推荐参数：steps=30, cfg=7, 尺寸=1024×1024。
 
 ### 2.3 KSampler 参数调优
 
@@ -987,8 +994,8 @@ Assets/ArtMaterials/
 
 | 文件 | 位置 | 说明 |
 |------|------|------|
-| `comfyui_client.py` | `Scripts/` | **独立 GUI 客户端**（v3.0 新增），替代原 Unity Editor 工具。包含完整的 GUI 界面、提示词模板、工作流构建、API 调用逻辑 |
-| `comfyui_generate.py` | `Scripts/` | **命令行生成工具**（v2.2+），用于批量脚本化生成，无 GUI 依赖 |
+| `comfyui_client.py` | `Scripts/` | **独立 GUI 客户端**（v4.1），替代原 Unity Editor 工具。包含完整的 GUI 界面、提示词模板、工作流构建、API 调用逻辑、SDXL 自动适配、项目深度集成、服务器实时状态监控
+| `comfyui_generate.py` | `Scripts/` | **命令行生成工具**（v4.0），用于批量脚本化生成，支持 SDXL 自动检测和 `--sdxl` 强制模式 |
 | `ComfyUI规范.md` | `.trae/skills/美术风格AI/` | 本文档 |
 
 > **注意 (v3.0)**：原 Unity `Assets/Scripts/Editor/ComfyUI/` 目录下的所有 C# 代码文件（`ComfyUIClient.cs`, `ComfyUIWindow.cs`, `ComfyUIAssetGenerator.cs`, `ComfyUIPromptTemplates.cs`, `ComfyUIWebSocket.cs`, `ComfyUIImageReceiver.cs`, `ComfyUICommunicationPanel.cs`）及其工作流 JSON 文件已全部删除。资产生成的提示词模板和维护逻辑已迁移至 Python 客户端中。
@@ -1006,3 +1013,4 @@ Assets/ArtMaterials/
 | **2.1** | **2026-06-14** | **主策划AI** | **代码同步 + 服务器文档更新**：<br>1. **ComfyUIClient.cs**：重写 `BuildTextToImageWorkflow()` / `BuildImageEditWorkflow()` 为动态 JObject 构建，新增 `GetObjectInfo()` 方法，删除旧静态方法<br>2. **ComfyUIWindow.cs**：修复废弃方法警告，改用 `GetConceptXxx` / `GetSpriteXxx`<br>3. **第 1.8 节**：更新实时通信服务文档，新增 `welcome`/`ping`/`pong`/`hot_reload`/`message_history`/`ack` 消息类型<br>4. **第 1.8 节**：新增 `server_status` 数据结构、优化建议规则表、连接流程说明<br>5. **第 1.8 节**：新增 `/history`、`/notify` HTTP 端点<br>6. **第 7 章**：更新代码同步清单，标注已完成项 |
 | **2.2** | **2026-06-14** | **主策划AI** | **通信面板强制规则**：<br>1. **新增第 0 章**：每次使用 ComfyUI 前必须先打开通信面板的强制前置规则<br>2. **新增 `ComfyUICommunicationPanel.cs`**：通信面板 EditorWindow，连接 `ws://10.150.164.64:8189`，实时显示 GPU 状态、队列、优化建议<br>3. **修改 `ComfyUIWindow.cs`**：`OnEnable` 时自动打开通信面板，新增"通信面板"按钮<br>4. **第 7 章**：更新代码同步清单，新增通信面板文件 |
 | **3.0** | **2026-06-14** | **主策划AI** | **从 Unity 完全剥离 ComfyUI**：<br>1. **删除所有 Unity ComfyUI 代码**：移除 `Assets/Scripts/Editor/ComfyUI/` 目录下的 7 个 C# 文件 + 2 个工作流 JSON<br>2. **新增 `Scripts/comfyui_client.py`**：独立 Python GUI 客户端（tkinter），包含资产选择、提示词模板、参数控制、工作流构建、实时日志<br>3. **优化 `Scripts/comfyui_generate.py`**：命令行生成工具（Python），无 GUI 依赖<br>4. **重写第 0 章**：从 Unity 通信面板规则改为独立客户端使用说明<br>5. **重写第 7 章**：从 C# 代码同步清单改为 Python 客户端关联文件 |
+| **4.0** | **2026-06-14** | **主策划AI** | **SDXL 模型支持 + 工作流架构升级**：<br>1. **新增 SDXL 模型**：`sd_xl_base_1.0.safetensors` 作为默认 Checkpoint，原 `动漫 primemix_v21` 改为备选<br>2. **工作流自动检测**：`_build_txt2img_workflow()` / `_build_img2img_workflow()` 根据 checkpoint 名自动选择 `CLIPTextEncode` 或 `CLIPTextEncodeSDXL` 编码节点<br>3. **GUI 自动适配**：切换 Checkpoint 时自动调整 SDXL 推荐参数（steps=30, 尺寸=1024×1024）<br>4. **命令行 --sdxl 参数**：`comfyui_generate.py` 新增 `--sdxl` 强制 SDXL 模式选项<br>5. **第 1.4 节模型表**：新增 SDXL 模型条目<br>6. **第 2.2 节工作流模板**：新增 SDXL 变体说明<br>7. **第 0.3 节 GUI 功能**：补充 v4.0/v4.1 新增功能描述 |

@@ -31,13 +31,16 @@ STATE_PROMPTS = {
 }
 
 def build_workflow(positive, negative, width, height, steps, cfg, batch_size=1, checkpoint=None):
-    """构建 txt2img 工作流（纯文本生图）"""
+    """构建 txt2img 工作流（纯文本生图），自动检测 SDXL 模型并切换编码节点"""
     ckpt = checkpoint or DEFAULT_CHECKPOINT
+    # 根据模型名自动判断是否使用 SDXL 编码节点（SDXL 必须使用 CLIPTextEncodeSDXL）
+    is_sdxl = 'sdxl' in ckpt.lower() or 'xl' in ckpt.lower()
+    encode_class = "CLIPTextEncodeSDXL" if is_sdxl else "CLIPTextEncode"
     seed = random.randint(0, 2147483647)
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt}},
-        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+        "2": {"class_type": encode_class, "inputs": {"text": positive, "clip": ["1", 1]}},
+        "3": {"class_type": encode_class, "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": batch_size}},
         "5": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral", "scheduler": "normal", "denoise": 1, "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0]}},
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
@@ -46,16 +49,19 @@ def build_workflow(positive, negative, width, height, steps, cfg, batch_size=1, 
 
 def build_img2img_workflow(image_filename, positive, negative, width, height, steps, cfg, denoise, seed, batch_size=1, checkpoint=None):
     """
-    构建 img2img 工作流（以参考图为基础进行变换）
+    构建 img2img 工作流（以参考图为基础进行变换），自动检测 SDXL 模型并切换编码节点
 
     节点流程:
     CheckpointLoaderSimple → CLIPTextEncode(x2) → LoadImage → VAEEncode → KSampler(denoise) → VAEDecode → SaveImage
     """
     ckpt = checkpoint or DEFAULT_CHECKPOINT
+    # 根据模型名自动判断是否使用 SDXL 编码节点
+    is_sdxl = 'sdxl' in ckpt.lower() or 'xl' in ckpt.lower()
+    encode_class = "CLIPTextEncodeSDXL" if is_sdxl else "CLIPTextEncode"
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt}},
-        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+        "2": {"class_type": encode_class, "inputs": {"text": positive, "clip": ["1", 1]}},
+        "3": {"class_type": encode_class, "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
         "5": {"class_type": "VAEEncode", "inputs": {"pixels": ["4", 0], "vae": ["1", 2]}},
         "6": {"class_type": "KSampler", "inputs": {
@@ -127,6 +133,7 @@ def main():
     parser.add_argument("--steps", type=int, default=20, help="采样步数 (默认: 20)")
     parser.add_argument("--cfg", type=float, default=7.0, help="CFG 强度 (默认: 7.0)")
     parser.add_argument("--ckpt", type=str, default=None, help=f"指定 Checkpoint 模型 (默认: {DEFAULT_CHECKPOINT})")
+    parser.add_argument("--sdxl", action="store_true", help="强制启用 SDXL 模式（使用 CLIPTextEncodeSDXL 编码节点，推荐 steps=30, 尺寸=1024×1024）")
 
     args = parser.parse_args()
 
@@ -138,6 +145,19 @@ def main():
     denoise = args.denoise
     steps = args.steps
     cfg = args.cfg
+
+    # --sdxl 参数：强制启用 SDXL 模式，自动调整推荐参数
+    if args.sdxl:
+        if steps == 20:  # 仅在用户未手动指定时覆盖默认值
+            steps = 30
+        if cfg == 7.0:
+            cfg = 7  # SDXL 推荐 CFG 范围 5-8
+        print("[SDXL 模式] 已启用 SDXL 自动适配: steps={}, cfg={}".format(steps, cfg))
+
+    # 确定使用的 checkpoint（--sdxl 时优先使用 SDXL 模型）
+    effective_ckpt = args.ckpt or DEFAULT_CHECKPOINT
+    if args.sdxl and 'sdxl' not in effective_ckpt.lower() and 'xl' not in effective_ckpt.lower():
+        print("[SDXL 模式] 注意：当前 checkpoint '{}' 可能不是 SDXL 模型，将强制使用 CLIPTextEncodeSDXL 编码节点".format(effective_ckpt))
 
     # Build prompts
     state_prompt = STATE_PROMPTS.get(state, "idle pose")

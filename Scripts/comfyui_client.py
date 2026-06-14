@@ -1295,8 +1295,33 @@ class ComfyUIGenerator:
         self.checkpoint_var = tk.StringVar(value=DEFAULT_CHECKPOINT)
         self.ckpt_combo = ttk.Combobox(ckpt_frame, textvariable=self.checkpoint_var, width=30, state="readonly")
         self.ckpt_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.ckpt_combo.bind("<<ComboboxSelected>>", self._on_checkpoint_changed)
         ttk.Button(ckpt_frame, text="刷新", width=5, command=self._refresh_checkpoints).pack(side=tk.LEFT, padx=(5, 0))
         ttk.Label(left, text="(文生图推荐 SDXL)", font=("", 8), foreground="gray").pack(anchor=tk.W)
+
+        # --- 工作流选择 ---
+        ttk.Label(left, text="工作流模式", font=("", 10, "bold")).pack(anchor=tk.W, pady=(10, 2))
+        wf_mode_frame = ttk.Frame(left)
+        wf_mode_frame.pack(fill=tk.X)
+
+        self.wf_mode_var = tk.StringVar(value="builtin")
+        ttk.Radiobutton(wf_mode_frame, text="内置", variable=self.wf_mode_var, value="builtin", command=self._on_workflow_mode_changed).pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(wf_mode_frame, text="服务器", variable=self.wf_mode_var, value="server", command=self._on_workflow_mode_changed).pack(side=tk.LEFT, padx=5)
+        ttk.Radiobutton(wf_mode_frame, text="本地", variable=self.wf_mode_var, value="local", command=self._on_workflow_mode_changed).pack(side=tk.LEFT, padx=5)
+
+        # 工作流列表（服务器/本地模式下显示）
+        self.wf_select_frame = ttk.Frame(left)
+        self.wf_select_frame.pack(fill=tk.X, pady=(5, 0))
+        # 初始隐藏
+        self.wf_select_frame.pack_forget()
+
+        self.server_wf_var = tk.StringVar()
+        self.server_wf_combo = ttk.Combobox(self.wf_select_frame, textvariable=self.server_wf_var, width=28)
+        self.server_wf_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(self.wf_select_frame, text="刷新", width=5, command=self._refresh_server_workflows).pack(side=tk.LEFT, padx=(5, 0))
+
+        self.wf_hint_label = ttk.Label(self.wf_select_frame, text="", font=("", 8), foreground="gray")
+        self.wf_hint_label.pack(fill=tk.X)
 
         # --- 参数设置 ---
         ttk.Label(left, text="生成参数", font=("", 10, "bold")).pack(anchor=tk.W, pady=(10, 2))
@@ -1949,6 +1974,225 @@ class ComfyUIGenerator:
         except Exception as e:
             self._log(f"获取 Checkpoint 列表失败: {e}", "ERROR")
 
+    def _on_checkpoint_changed(self, event=None):
+        """Checkpoint 变更时自动调整 SDXL 相关参数
+
+        SDXL 模型与 SD 1.5 模型的最佳参数不同：
+        - SDXL 推荐：steps=30, cfg=7, 尺寸=1024×1024（训练分辨率更高）
+        - SD 1.5 默认：steps=20, cfg=7, 尺寸=512×512
+        """
+        ckpt = self.checkpoint_var.get()
+        is_sdxl = 'sdxl' in ckpt.lower() or 'xl' in ckpt.lower()
+
+        if is_sdxl:
+            # SDXL 推荐参数：更高步数、更大分辨率
+            self.param_vars["steps_var"].set("30")
+            self.param_vars["cfg_var"].set("7")
+            self.param_vars["width_var"].set("1024")
+            self.param_vars["height_var"].set("1024")
+            self._log(f"已切换到 SDXL 模型，自动调整参数: steps=30, 尺寸=1024×1024")
+        else:
+            # SD 1.5 默认参数
+            self.param_vars["steps_var"].set("20")
+            self.param_vars["cfg_var"].set("7")
+            self.param_vars["width_var"].set("512")
+            self.param_vars["height_var"].set("512")
+            self._log(f"已切换到 SD 1.5 模型，自动调整参数: steps=20, 尺寸=512×512")
+
+    def _on_workflow_mode_changed(self):
+        """工作流模式切换回调：显示/隐藏工作流选择器"""
+        mode = self.wf_mode_var.get()
+        if mode == "builtin":
+            # 内置模式：隐藏选择器
+            self.wf_select_frame.pack_forget()
+            self._log("工作流模式: 内置（客户端自动构建）")
+        elif mode == "server":
+            # 服务器模式：显示选择器并刷新列表
+            self.wf_select_frame.pack(fill=tk.X, pady=(5, 0))
+            self._refresh_server_workflows()
+        elif mode == "local":
+            # 本地模式：显示选择器并加载本地列表
+            self.wf_select_frame.pack(fill=tk.X, pady=(5, 0))
+            self._load_local_workflows()
+
+    def _refresh_server_workflows(self):
+        """刷新服务器工作流列表
+
+        ComfyUI REST API 不提供列出已保存工作流的功能。
+        策略：
+        1. 从生成历史记录中提取可用的工作流（作为可复用选项）
+        2. 已知文件名探测（/api/workflow?filename=xxx）
+        3. 若均无结果，提示用户手动输入文件名或使用内置模式
+
+        用户也可直接在输入框中手动键入工作流文件名（如 my-workflow.json）
+        """
+        try:
+            server_url = self.config.get("server", {}).get("url", SERVER_URL)
+            workflow_names = []
+
+            # 方法A：从历史记录中提取最近用过的工作流
+            try:
+                r = requests.get(f"{server_url}/api/history?max_items=10", timeout=10)
+                if r.status_code == 200:
+                    history_data = r.json()
+                    if isinstance(history_data, dict) and history_data:
+                        # 从历史记录的 prompt 中提取节点信息，标记为 "历史: {id[:8]}"
+                        for hid, hval in list(history_data.items())[:5]:
+                            prompt = hval.get("prompt", {})
+                            if prompt and isinstance(prompt, dict):
+                                node_count = len(prompt)
+                                has_save = any(
+                                    nd.get("class_type") in ("SaveImage", "SaveImageWebsocket")
+                                    for nd in prompt.values() if isinstance(nd, dict)
+                                )
+                                label = f"📋 历史 {hid[:8]} ({node_count}节点)"
+                                if not has_save:
+                                    label += " ⚠"
+                                workflow_names.append((label, hid))
+            except Exception:
+                pass
+
+            # 方法B：已知工作流文件名探测
+            known_workflows = [
+                "zimage-text-to-image.json",
+                "qwen-edit-img-to-img.json",
+                "default_workflow.json",
+            ]
+            for name in known_workflows:
+                try:
+                    tr = requests.get(f"{server_url}/api/workflow?filename={name}", timeout=5)
+                    if tr.status_code == 200:
+                        workflow_names.append((name, name))
+                except Exception:
+                    pass
+
+            # 更新 UI
+            if workflow_names:
+                display_names = [item[0] for item in workflow_names]
+                self.server_wf_combo["values"] = display_names
+                self.server_wf_var.set(display_names[0])
+                # 存储映射：显示名 -> 实际值
+                self._server_wf_map = {item[0]: item[1] for item in workflow_names}
+                count_hist = sum(1 for _, v in workflow_names if len(v) > 20)  # 历史记录ID较长
+                count_file = len(workflow_names) - count_hist
+                hints = []
+                if count_hist > 0:
+                    hints.append(f"{count_hist}个历史工作流")
+                if count_file > 0:
+                    hints.append(f"{count_file}个已保存文件")
+                self.wf_hint_label.configure(text=" | ".join(hints))
+                self._log("info", f"获取到 {len(workflow_names)} 个服务器工作流（{', '.join(hints)}）")
+            else:
+                self.server_wf_combo["values"] = []
+                self.server_wf_var.set("")
+                self._server_wf_map = {}
+                self.wf_hint_label.configure(text="可直接输入文件名 (如 my-workflow.json)")
+                self._log("info", "无已保存工作流 — 可在上方输入框中手动输入文件名，或切换到「内置」模式")
+
+        except Exception as e:
+            self._log("error", f"获取服务器工作流失败: {e}")
+            self.server_wf_combo["values"] = []
+            self.server_wf_var.set("")
+            self.wf_hint_label.configure(text=f"连接失败: {e}")
+
+    def _load_local_workflows(self):
+        """读取本地 workflows/ 目录中的 JSON 文件列表"""
+        try:
+            if not os.path.isdir(WORKFLOW_DIR):
+                os.makedirs(WORKFLOW_DIR, exist_ok=True)
+                self.server_wf_combo["values"] = ["(目录为空)"]
+                self.server_wf_var.set("(目录为空)")
+                self._log(f"info", f"本地工作流目录已创建: {WORKFLOW_DIR}")
+                return
+
+            json_files = sorted(
+                f for f in os.listdir(WORKFLOW_DIR)
+                if f.endswith(".json") and os.path.isfile(os.path.join(WORKFLOW_DIR, f))
+            )
+
+            if json_files:
+                self.server_wf_combo["values"] = json_files
+                current = self.server_wf_var.get()
+                if not current or current not in json_files:
+                    self.server_wf_var.set(json_files[0])
+                self._log(f"info", f"加载到 {len(json_files)} 个本地工作流")
+            else:
+                self.server_wf_combo["values"] = ["(无文件)"]
+                self.server_wf_var.set("(无文件)")
+                self._log("warning", "本地工作流目录中没有 JSON 文件")
+
+        except Exception as e:
+            self._log("error", f"加载本地工作流列表失败: {e}")
+            self.server_wf_combo["values"] = ["(加载失败)"]
+            self.server_wf_var.set("(加载失败)")
+
+    def _load_server_workflow(self, display_name):
+        """从 ComfyUI 服务器加载工作流
+
+        支持三种来源：
+        1. 历史记录（显示名以 "📋 历史" 开头）→ 从 /api/history/{id} 加载
+        2. 已保存文件（文件名）→ 从 /api/workflow?filename= 加载
+        3. 手动输入的文件名 → 同上
+
+        Args:
+            display_name: 用户选择的显示名或手动输入的文本
+
+        Returns:
+            工作流字典，失败返回 None
+        """
+        if not display_name or display_name.startswith("("):
+            return None
+
+        try:
+            server_url = self.config.get("server", {}).get("url", SERVER_URL)
+
+            # 通过映射解析实际值（历史记录ID 或 文件名）
+            actual = getattr(self, '_server_wf_map', {}).get(display_name, display_name)
+
+            # 判断是历史记录还是文件名
+            if actual.startswith("📋") or (len(actual) > 20 and not actual.endswith(".json")):
+                # 历史记录：从 /api/history/{id} 获取 prompt
+                r = requests.get(f"{server_url}/api/history/{actual}", timeout=15)
+                if r.status_code == 200:
+                    data = r.json()
+                    wf = data.get("prompt", {})
+                    if wf:
+                        self._log("info", f"已加载历史工作流: {actual[:8]}...")
+                        return wf
+                raise Exception(f"历史记录 {actual[:8]} 不存在")
+            else:
+                # 文件名：从 /api/workflow?filename= 加载
+                r = requests.get(f"{server_url}/api/workflow?filename={actual}", timeout=15)
+                r.raise_for_status()
+                wf = r.json()
+                self._log("info", f"已加载服务器工作流: {actual}")
+                return wf
+
+        except Exception as e:
+            self._log("error", f"加载服务器工作流 '{display_name}' 失败: {e}")
+            return None
+
+    def _load_local_workflow(self, filename):
+        """从本地 workflows/ 目录加载指定工作流 JSON
+
+        Args:
+            filename: 文件名
+
+        Returns:
+            工作流字典，失败返回 None
+        """
+        if not filename or filename.startswith("("):
+            return None
+        try:
+            filepath = os.path.join(WORKFLOW_DIR, filename)
+            with open(filepath, "r", encoding="utf-8") as f:
+                wf = json.load(f)
+            self._log(f"info", f"已加载本地工作流: {filename}")
+            return wf
+        except Exception as e:
+            self._log("error", f"加载本地工作流 '{filename}' 失败: {e}")
+            return None
+
     def _on_asset_changed(self):
         name = self.asset_var.get()
         if name not in ASSET_TEMPLATES:
@@ -2185,7 +2429,7 @@ class ComfyUIGenerator:
             data = r.json()
             running = len(data.get("queue_running", []))
             pending = len(data.get("queue_pending", []))
-            self.root.after(0, lambda: self.queue_label.configure(text=f"队列: {running} 运行 / {pending} 等待"))
+            self.root.after(0, lambda: self.monitor_queue_label.configure(text=f"队列: {running}/{pending}"))
         except Exception as e:
             self.root.after(0, lambda: self._log(f"队列检查失败: {e}", "ERROR"))
 
@@ -2240,14 +2484,55 @@ class ComfyUIGenerator:
 
             server_url = self.config.get("server", {}).get("url", SERVER_URL)
 
-            if stage == "sprite" and self.ref_image_path:
-                self.root.after(0, lambda: self._log(f"模式: img2img (参考图: {os.path.basename(self.ref_image_path)})"))
-                uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
-                if not uploaded_filename:
-                    return
-                workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
+            # 根据工作流模式决定如何构建 workflow
+            wf_mode = self.wf_mode_var.get()
+            workflow = None
+
+            if wf_mode == "builtin":
+                # 内置模式：客户端自动构建标准工作流
+                if stage == "sprite" and self.ref_image_path:
+                    self.root.after(0, lambda: self._log(f"模式: img2img 内置 (参考图: {os.path.basename(self.ref_image_path)})"))
+                    uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
+                    if not uploaded_filename:
+                        return
+                    workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
+                else:
+                    self.root.after(0, lambda: self._log("模式: txt2img 内置 (概念图生成)"))
+                    workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
+
+            elif wf_mode == "server":
+                # 服务器工作流模式：从 ComfyUI 服务器加载已保存的工作流
+                selected_wf = self.server_wf_var.get()
+                self.root.after(0, lambda: self._log(f"模式: 服务器工作流 ({selected_wf})"))
+                workflow = self._load_server_workflow(selected_wf)
+                if workflow is None:
+                    self.root.after(0, lambda: self._log("warning", "服务器工作流加载失败，回退到内置模式"))
+                    if stage == "sprite" and self.ref_image_path:
+                        uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
+                        if not uploaded_filename:
+                            return
+                        workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
+                    else:
+                        workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
+
+            elif wf_mode == "local":
+                # 本地工作流模式：从本地 workflows/ 目录加载
+                selected_wf = self.server_wf_var.get()
+                self.root.after(0, lambda: self._log(f"模式: 本地工作流 ({selected_wf})"))
+                workflow = self._load_local_workflow(selected_wf)
+                if workflow is None:
+                    self.root.after(0, lambda: self._log("warning", "本地工作流加载失败，回退到内置模式"))
+                    if stage == "sprite" and self.ref_image_path:
+                        uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
+                        if not uploaded_filename:
+                            return
+                        workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
+                    else:
+                        workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
+
             else:
-                self.root.after(0, lambda: self._log("模式: txt2img (概念图生成)"))
+                # 兜底：使用内置 txt2img
+                self.root.after(0, lambda: self._log("模式: txt2img 内置 (默认兜底)"))
                 workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
 
             body = {"prompt": workflow, "client_id": "comfyui-client-gui"}
@@ -2318,25 +2603,36 @@ class ComfyUIGenerator:
             self.root.after(0, lambda: self.progress.stop())
 
     def _build_txt2img_workflow(self, positive, negative, width, height, steps, cfg, seed, batch_size=1):
+        # 根据模型名自动判断是否使用 SDXL 编码节点（SDXL 必须使用 CLIPTextEncodeSDXL）
+        ckpt = self.checkpoint_var.get() or DEFAULT_CHECKPOINT
+        is_sdxl = 'sdxl' in ckpt.lower() or 'xl' in ckpt.lower()
+        encode_class = "CLIPTextEncodeSDXL" if is_sdxl else "CLIPTextEncode"
         return {
-            "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": self.checkpoint_var.get() or DEFAULT_CHECKPOINT}},
-            "2": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["1", 1]}},
-            "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+            "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt}},
+            "2": {"class_type": encode_class, "inputs": {"text": positive, "clip": ["1", 1]}},
+            "3": {"class_type": encode_class, "inputs": {"text": negative, "clip": ["1", 1]}},
             "4": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": batch_size}},
             "5": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral", "scheduler": "normal", "denoise": 1, "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0]}},
             "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
+            # 注意：使用 SaveImage 而非 SaveImageWebsocket，因为当前客户端通过 /api/history + /api/view 下载流程已可正常工作
+            # 如需改用 SaveImageWebsocket（通过 WebSocket 回传二进制图片），需额外实现 WebSocket 监听逻辑
             "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "ComfyUI"}},
         }
 
     def _build_img2img_workflow(self, image_filename, positive, negative, width, height, steps, cfg, denoise, seed, batch_size=1):
+        # 根据模型名自动判断是否使用 SDXL 编码节点（SDXL 必须使用 CLIPTextEncodeSDXL）
+        ckpt = self.checkpoint_var.get() or DEFAULT_CHECKPOINT
+        is_sdxl = 'sdxl' in ckpt.lower() or 'xl' in ckpt.lower()
+        encode_class = "CLIPTextEncodeSDXL" if is_sdxl else "CLIPTextEncode"
         return {
-            "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": self.checkpoint_var.get() or DEFAULT_CHECKPOINT}},
-            "2": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["1", 1]}},
-            "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+            "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt}},
+            "2": {"class_type": encode_class, "inputs": {"text": positive, "clip": ["1", 1]}},
+            "3": {"class_type": encode_class, "inputs": {"text": negative, "clip": ["1", 1]}},
             "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
             "5": {"class_type": "VAEEncode", "inputs": {"pixels": ["4", 0], "vae": ["1", 2]}},
             "6": {"class_type": "KSampler", "inputs": {"seed": seed, "steps": steps, "cfg": cfg, "sampler_name": "euler_ancestral", "scheduler": "normal", "denoise": denoise, "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["5", 0]}},
             "7": {"class_type": "VAEDecode", "inputs": {"samples": ["6", 0], "vae": ["1", 2]}},
+            # 注意：使用 SaveImage 而非 SaveImageWebsocket，因为当前客户端通过 /api/history + /api/view 下载流程已可正常工作
             "8": {"class_type": "SaveImage", "inputs": {"images": ["7", 0], "filename_prefix": "ComfyUI_img2img"}},
         }
 
