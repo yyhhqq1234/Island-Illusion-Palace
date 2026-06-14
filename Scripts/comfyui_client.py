@@ -2150,7 +2150,8 @@ class ComfyUIGenerator:
             actual = getattr(self, '_server_wf_map', {}).get(display_name, display_name)
 
             # 判断来源：display_name 前缀 "📋" 表示历史记录
-            if display_name.startswith("📋"):
+            # 兼容：无前缀但实际值为长字符串（UUID格式历史ID）时也走历史分支
+            if display_name.startswith("📋") or (len(actual) > 20 and not actual.endswith(".json")):
                 # 历史记录：从 /api/history/{id} 获取 prompt
                 r = requests.get(f"{server_url}/api/history/{actual}", timeout=15)
                 if r.status_code == 200:
