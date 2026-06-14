@@ -10,7 +10,7 @@ from urllib.parse import urlencode, quote
 
 SERVER_URL = "http://10.150.164.64:8188"
 OUTPUT_BASE = r"d:\Program Files\Unity\U3Dproject\Island-Illusion-Palace\Assets\ArtMaterials"
-DEFAULT_CHECKPOINT = "Z-Image-Turbo.safetensors"  # 文生图默认使用 Z-Image
+DEFAULT_CHECKPOINT = "sd_xl_base_1.0.safetensors"  # 文生图默认使用 SDXL
 
 CONCEPT_BASE_POSITIVE = "(dark fantasy concept art:1.3), (digital painting:1.2), dramatic lighting, (soul glow: blue-purple luminescence #4A3A8C), (crystal erosion: geometric cyan crystals #00D4FF), rim light, high contrast, detailed texture, atmospheric perspective"
 

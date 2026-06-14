@@ -62,7 +62,7 @@ except ImportError:
 SERVER_URL = "http://10.150.164.64:8188"
 WS_URL = "ws://10.150.164.64:8189"
 OUTPUT_BASE = r"d:\Program Files\Unity\U3Dproject\Island-Illusion-Palace\Assets\ArtMaterials"
-DEFAULT_CHECKPOINT = "Z-Image-Turbo.safetensors"  # 文生图默认使用 Z-Image
+DEFAULT_CHECKPOINT = "sd_xl_base_1.0.safetensors"  # 文生图默认使用 SDXL
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "comfyui_client_config.json")
 WORKFLOW_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workflows")
 
@@ -1296,7 +1296,7 @@ class ComfyUIGenerator:
         self.ckpt_combo = ttk.Combobox(ckpt_frame, textvariable=self.checkpoint_var, width=30, state="readonly")
         self.ckpt_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
         ttk.Button(ckpt_frame, text="刷新", width=5, command=self._refresh_checkpoints).pack(side=tk.LEFT, padx=(5, 0))
-        ttk.Label(left, text="(文生图推荐 Z-Image)", font=("", 8), foreground="gray").pack(anchor=tk.W)
+        ttk.Label(left, text="(文生图推荐 SDXL)", font=("", 8), foreground="gray").pack(anchor=tk.W)
 
         # --- 参数设置 ---
         ttk.Label(left, text="生成参数", font=("", 10, "bold")).pack(anchor=tk.W, pady=(10, 2))
