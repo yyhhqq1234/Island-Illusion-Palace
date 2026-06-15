@@ -184,9 +184,15 @@ LLM_OPTIMIZE_PROMPT = """你是一个专业的游戏美术 AI 提示词工程师
 - 四方向：正面(Down)/侧面(Left,Right)/背面(Up)
 - 统一视觉语言：dark fantasy, soul glow blue-purple #4A3A8C, crystal erosion cyan #00D4FF
 
+## 📖 项目上下文（如果有提供，优先使用）
+如果用户消息中包含"项目上下文"部分，请仔细阅读其中的：
+- 策划文档中的角色/场景描述 → 用于精确描述角色外观
+- 视觉风格指导 → 确定正确的色彩、材质、氛围
+- 已定义的资产模板 → 确保参数匹配
+
 ## 规则：
-1. 正向提示词使用英文，权重语法 (tag:weight)
-2. 精灵帧必须包含：(simple pixel art), (minimalist game sprite), clean pixel lines, flat color blocks, no anti-aliasing
+1. 正向提示词使用自然语言（逗号分隔），不要使用 SD 权重语法 (tag:weight)
+2. 精灵帧必须包含：simple pixel art, minimalist game sprite, clean pixel lines, flat color blocks, no anti-aliasing
 3. 概念图可以保留数字绘画风格标签
 4. 反向提示词必须排除手绘/插画风格：hand-drawn lineart, smooth outline, cel-shading, painterly texture
 
@@ -205,8 +211,14 @@ LLM_GENERATE_PROMPT = """你是一个专业的游戏美术 AI 提示词工程师
 - 四方向：正面(Down)/侧面(Left,Right)/背面(Up)
 - 统一视觉语言：dark fantasy, soul glow blue-purple #4A3A8C, crystal erosion cyan #00D4FF
 
+## 📖 项目上下文（如果有提供，优先使用）
+如果用户消息中包含"项目上下文"部分：
+- 策划文档中的角色描述 → 用于精确描述角色的外观、装备、姿态
+- 视觉风格指导 → 确定正确的色彩方案、材质、氛围
+- 已定义的资产模板 → 确保生成的参数和目标尺寸匹配
+
 ## 规则：
-1. 正向提示词使用英文，权重语法 (tag:weight)
+1. 正向提示词使用自然语言（逗号分隔），不要使用 SD 权重语法 (tag:weight)
 2. 概念图阶段：注重整体氛围、构图、光影、数字绘画质感
 3. 精灵帧阶段：注重简约像素风格、像素线条、扁平色块、纯白背景、单帧动作姿态
 4. 根据资产类型选择合适的角色描述、姿态、头身比例
@@ -380,6 +392,7 @@ class ProjectScanner:
     def __init__(self, project_root):
         self.project_root = project_root
         self.design_docs = {}      # {filename: content} 策划文档缓存
+        self.guidance_docs = {}    # {filename: content} 指导/规范文档 (.trae/skills/ 等)
         self.script_files = []     # 脚本文件列表
         self.asset_inventory = {}  # 现有资产清单 {category: [files]}
         self.knowledge_base = ""   # 构建好的项目知识库文本
@@ -409,6 +422,7 @@ class ProjectScanner:
 
             self.project_root = root
             self._scan_design_docs()
+            self._scan_guidance_docs()
             self._scan_script_files()
             self._scan_asset_inventory()
             self.build_knowledge_base()
@@ -439,6 +453,32 @@ class ProjectScanner:
                             }
                     except Exception:
                         pass
+
+    def _scan_guidance_docs(self):
+        """扫描指导规范文档 (.trae/skills/ 等)"""
+        self.guidance_docs = {}
+        guidance_dirs = [
+            os.path.join(self.project_root, ".trae", "skills"),
+            os.path.join(self.project_root, "ai_agents_prompts"),
+        ]
+        for gdir in guidance_dirs:
+            if not os.path.exists(gdir):
+                continue
+            for root, dirs, files in os.walk(gdir):
+                for file in files:
+                    if any(file.lower().endswith(ext) for ext in self.SUPPORTED_EXTENSIONS):
+                        filepath = os.path.join(root, file)
+                        rel_path = os.path.relpath(filepath, self.project_root)
+                        try:
+                            content = self._read_file_safe(filepath)
+                            if content:
+                                self.guidance_docs[rel_path] = {
+                                    "path": filepath,
+                                    "content": content,
+                                    "size": len(content)
+                                }
+                        except Exception:
+                            pass
 
     def _scan_script_files(self):
         """扫描脚本文件"""
@@ -553,6 +593,14 @@ class ProjectScanner:
         parts.append(f"=== 项目名称: 幻宫：时空回响 (Island: Illusion Palace) ===\n")
         parts.append(f"项目根目录: {self.project_root}\n")
 
+        # 添加指导规范文档摘要
+        parts.append("\n=== 项目指导规范文档 ===\n")
+        for doc_name, doc_info in sorted(self.guidance_docs.items()):
+            # 提取文档的核心要点（前300字符）
+            preview = doc_info["content"][:300].replace('\n', ' ')
+            parts.append(f"• [{doc_name}] ({doc_info['size']} 字符)")
+            parts.append(f"  内容: {preview}...")
+
         # 添加策划文档摘要
         parts.append("\n=== 策划文档列表 ===\n")
         for doc_name, doc_info in self.design_docs.items():
@@ -579,6 +627,46 @@ class ProjectScanner:
 
         self.knowledge_base = full_text
         return self.knowledge_base
+
+    def get_context_for_asset(self, asset_name):
+        """获取特定资产的上下文：相关指导文档 + 策划文档中该资产的描述"""
+        if not self.scan_complete:
+            return "（项目尚未扫描完成）"
+
+        context_parts = []
+        context_parts.append(f"=== 资产: {asset_name} ===")
+
+        # 1. 查找策划文档中关于该资产的描述
+        context_parts.append("\n## 策划文档中的相关描述")
+        found = 0
+        for doc_name, doc_info in self.design_docs.items():
+            content = doc_info["content"]
+            if asset_name in content:
+                # 找到包含资产名称的段落
+                lines = content.split('\n')
+                relevant_lines = []
+                for i, line in enumerate(lines):
+                    if asset_name in line:
+                        start = max(0, i - 2)
+                        end = min(len(lines), i + 5)
+                        relevant_lines.extend(lines[start:end])
+                        relevant_lines.append("---")
+                if relevant_lines:
+                    context_parts.append(f"\n### {doc_name}")
+                    snippet = "\n".join(relevant_lines[:15])  # 限制长度
+                    context_parts.append(snippet[:800])
+                    found += 1
+        if found == 0:
+            context_parts.append("（未在策划文档中找到直接引用）")
+
+        # 2. 视觉风格指导
+        context_parts.append("\n\n## 项目视觉风格指导")
+        for doc_name, doc_info in self.guidance_docs.items():
+            if any(kw in doc_name.lower() for kw in ['风格', '视觉', '美术', 'style', 'art', 'visual', 'comfyui']):
+                context_parts.append(f"\n### {doc_name}")
+                context_parts.append(doc_info["content"][:600])
+
+        return "\n".join(context_parts)
 
     def extract_requirements_from_doc(self, doc_name):
         """从指定策划文档中提取美术资产生成需求的原始文本"""
@@ -1151,6 +1239,8 @@ class ComfyUIGenerator:
         btn_frame.pack(side=tk.RIGHT)
         ttk.Button(btn_frame, text="🔄 测试连接", command=self._test_connection, width=12).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="📋 检查队列", command=self._check_queue, width=12).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="⏹ 中断", command=self._interrupt_task, width=8).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="🧹 释放显存", command=self._free_vram, width=10).pack(side=tk.LEFT, padx=2)
 
         # 可展开的服务器详情按钮
         self.monitor_detail_btn = ttk.Button(btn_frame, text="📊 详情", command=self._toggle_monitor_detail, width=6)
@@ -2638,6 +2728,32 @@ class ComfyUIGenerator:
         except Exception as e:
             self.root.after(0, lambda: self._log(f"队列检查失败: {e}", "ERROR"))
 
+    def _interrupt_task(self):
+        """v3.2: 中断当前运行的任务（POST /comfy/interrupt）"""
+        if not messagebox.askyesno("确认", "确定要中断当前正在运行的任务吗？"):
+            return
+        try:
+            r = requests.post(f"{COMFY_URL}/comfy/interrupt", timeout=5)
+            if r.status_code == 200:
+                self.root.after(0, lambda: self._log("已发送中断请求"))
+            else:
+                self.root.after(0, lambda: self._log(f"中断请求失败: HTTP {r.status_code}", "ERROR"))
+        except Exception as e:
+            self.root.after(0, lambda: self._log(f"中断异常: {e}", "ERROR"))
+
+    def _free_vram(self):
+        """v3.2: 卸载模型释放显存（POST /comfy/free）"""
+        if not messagebox.askyesno("确认", "确定要卸载所有模型释放显存吗？\n这会使下一个任务加载变慢。"):
+            return
+        try:
+            r = requests.post(f"{COMFY_URL}/comfy/free", timeout=5)
+            if r.status_code == 200:
+                self.root.after(0, lambda: self._log("显存已释放"))
+            else:
+                self.root.after(0, lambda: self._log(f"释放显存失败: HTTP {r.status_code}", "ERROR"))
+        except Exception as e:
+            self.root.after(0, lambda: self._log(f"释放显存异常: {e}", "ERROR"))
+
     def _generate(self):
         if self.generating:
             messagebox.showwarning("提示", "正在生成中，请等待完成")
@@ -2736,21 +2852,30 @@ class ComfyUIGenerator:
                         "workflow_id": workflow_id,
                         "params": params
                     }
-                    # 调试：记录完整请求
-                    self.root.after(0, lambda p=payload: self._log(f"[DEBUG] 请求: {json.dumps(p, ensure_ascii=False)[:500]}"))
                     r = requests.post(f"{SERVER_URL}/workflows/execute", json=payload, timeout=30)
-                    # 调试：记录状态码和原始响应
-                    self.root.after(0, lambda s=r.status_code, t=r.text[:500]: self._log(f"[DEBUG] 响应 status={s}, body={t}"))
                     r.raise_for_status()
                     result = r.json()
 
-                # 调试：记录 API 解析后返回
-                self.root.after(0, lambda res=result: self._log(f"[DEBUG] API 返回: {json.dumps(res, ensure_ascii=False)[:300]}, type={type(result).__name__}"))
-
                 if "error" in result:
-                    raise Exception(result["error"])
+                    # API 返回业务错误 (8189 可用但 ComfyUI/工作流有问题)
+                    self.root.after(0, lambda err=result["error"]: self._log(f"服务器错误: {err}", "ERROR"))
+                    return
+            except requests.exceptions.ConnectionError as e:
+                # 8189 通信服务不可用 → 回退到 8188 直连
+                self.root.after(0, lambda: self._log("8189 通信服务不可用，回退到 8188 直连模式"))
+                use_fallback = True
+            except requests.exceptions.Timeout:
+                self.root.after(0, lambda: self._log("服务器响应超时 — 检查网络或重启服务", "ERROR"))
+                return
+            except requests.exceptions.HTTPError as e:
+                self.root.after(0, lambda err=e: self._log(f"服务器返回错误: HTTP {err.response.status_code if hasattr(err, 'response') else '?'}", "ERROR"))
+                return
             except Exception as e:
-                self.root.after(0, lambda err=e: self._log(f"warning: 8189 API 失败 ({err})，回退到 8188 直接模式"))
+                err_str = str(e)
+                if "Connection refused" in err_str or "WinError 10061" in err_str:
+                    self.root.after(0, lambda: self._log("8189 通信服务未运行 — 请在服务器上执行 run_comfyui.bat 启动", "ERROR"))
+                else:
+                    self.root.after(0, lambda err=e: self._log(f"8189 API 调用失败 ({err_str[:200]})", "ERROR"))
                 use_fallback = True
 
             # 8189 回退：使用旧的 8188 直连模式
@@ -2846,19 +2971,32 @@ class ComfyUIGenerator:
 
     def _handle_completed(self, history_entry):
         """v3.2: 处理已完成的任务（下载文件并保存）"""
-        # 检查执行状态
+        # 检查执行状态 (per README section 3.3)
         status_info = history_entry.get("status", {})
         status_str = status_info.get("status_str", "")
 
         if status_str == "error":
-            # 提取错误信息
             msgs = status_info.get("messages", [])
             err_msg = "未知错误"
             for msg_type, msg_data in reversed(msgs):
                 if msg_type == "execution_error":
                     node_type = msg_data.get("node_type", "?")
                     exc_msg = msg_data.get("exception_message", "?")
-                    err_msg = f"节点 [{node_type}] 错误: {exc_msg}"
+                    # 分类错误信息 (per README section 9)
+                    if "CUDA out of memory" in exc_msg:
+                        err_msg = f"节点 [{node_type}] 显存不足(OOM) — 建议用「释放显存」按钮卸载模型后重试"
+                    elif "Cannot handle this data type" in exc_msg:
+                        err_msg = f"节点 [{node_type}] 输出格式异常 — 服务器工作流需修复"
+                    elif "tokenize" in exc_msg.lower():
+                        err_msg = f"节点 [{node_type}] NPU 节点故障 — 服务器工作流需修复 NPU 节点"
+                    elif "Connection refused" in exc_msg or "WinError 10061" in exc_msg:
+                        err_msg = f"ComfyUI 主服务(8188)未运行 — 等待 monitor_service 自动重启(最多180秒)"
+                    elif "timeout" in exc_msg.lower():
+                        err_msg = f"节点 [{node_type}] 超时 — 模型加载或推理预估时间不足"
+                    elif "500" in exc_msg or "HTTP 500" in exc_msg:
+                        err_msg = f"节点 [{node_type}] ComfyUI 500 错误 — 模型可能未安装或节点类型不兼容"
+                    else:
+                        err_msg = f"节点 [{node_type}] 错误: {exc_msg[:300]}"
                     break
             self.root.after(0, lambda em=err_msg: self._log(f"执行失败: {em}", "ERROR"))
             self._finish_generate()
@@ -3188,7 +3326,7 @@ class ComfyUIGenerator:
             self.ai_busy_label.configure(text="")
 
     def _ai_optimize_prompts(self):
-        """AI 优化当前提示词"""
+        """AI 优化当前提示词（自动注入项目上下文）"""
         self._update_llm_client_from_ui()
         if not self.llm_client.model_name:
             messagebox.showwarning("提示", "请先配置并选择 LLM 模型名称")
@@ -3200,6 +3338,17 @@ class ComfyUIGenerator:
             messagebox.showwarning("提示", "正向提示词为空")
             return
 
+        asset_name = self.asset_var.get()
+        stage = self.stage_var.get()
+
+        # 自动注入项目上下文
+        project_context = ""
+        if self.project_scanner and self.project_scanner.scan_complete:
+            asset_context = self.project_scanner.get_context_for_asset(asset_name)
+            if asset_context:
+                project_context = f"\n\n## 📖 项目上下文（自动注入）\n{asset_context[:2500]}"
+            self.root.after(0, lambda: self._log("已注入项目上下文"))
+
         user_msg = f"""请优化以下提示词，使其更适合高质量的游戏美术素材生成：
 
 当前正向提示词:
@@ -3208,14 +3357,15 @@ class ComfyUIGenerator:
 当前反向提示词:
 {negative}
 
-资产类型: {self.asset_var.get()}
-生成阶段: {self.stage_var.get()}"""
+资产类型: {asset_name}
+生成阶段: {stage}
+{project_context}"""
 
         self._set_ai_busy(True)
         threading.Thread(target=self._do_ai_chat, args=(LLM_OPTIMIZE_PROMPT, user_msg, "optimize"), daemon=True).start()
 
     def _ai_generate_prompts(self):
-        """AI 生成提示词"""
+        """AI 生成提示词（自动注入项目上下文）"""
         self._update_llm_client_from_ui()
         if not self.llm_client.model_name:
             messagebox.showwarning("提示", "请先配置并选择 LLM 模型名称")
@@ -3225,12 +3375,21 @@ class ComfyUIGenerator:
         stage = self.stage_var.get()
         state = self.state_var.get() if stage == "sprite" else ""
 
+        # 自动注入项目上下文
+        project_context = ""
+        if self.project_scanner and self.project_scanner.scan_complete:
+            asset_context = self.project_scanner.get_context_for_asset(name)
+            if asset_context:
+                project_context = f"\n\n## 📖 项目上下文（自动注入）\n{asset_context[:2500]}"
+            self.root.after(0, lambda: self._log("已注入项目上下文"))
+
         user_msg = f"""请为以下资产生成完整的 Stable Diffusion 提示词：
 
 资产名称: {name}
 资产类别: {ASSET_TEMPLATES.get(name, {}).get('cat', '未知')}
 生成阶段: {stage}
-动画状态: {state if state else 'N/A'}"""
+动画状态: {state if state else 'N/A'}
+{project_context}"""
 
         self._set_ai_busy(True)
         threading.Thread(target=self._do_ai_chat, args=(LLM_GENERATE_PROMPT, user_msg, "generate"), daemon=True).start()
@@ -3250,7 +3409,7 @@ class ComfyUIGenerator:
         threading.Thread(target=self._do_ai_recommend_workflow, args=(requirement,), daemon=True).start()
 
     def _ai_custom_chat(self):
-        """自定义对话"""
+        """自定义对话（含项目上下文）"""
         self._update_llm_client_from_ui()
         if not self.llm_client.model_name:
             messagebox.showwarning("提示", "请先配置并选择 LLM 模型名称")
@@ -3261,11 +3420,29 @@ class ComfyUIGenerator:
             messagebox.showwarning("提示", "请输入内容")
             return
 
+        # 如果涉及提示词/资产生成相关，自动注入项目上下文
+        is_prompt_related = any(kw in msg.lower() for kw in
+            ['提示词', 'prompt', '生成', 'generate', '图片', 'image',
+             '概念图', '精灵', 'sprite', '资产', 'asset', '角色', 'character'])
+
+        project_context = ""
+        if is_prompt_related and self.project_scanner and self.project_scanner.scan_complete:
+            asset_name = self.asset_var.get()
+            if asset_name:
+                asset_context = self.project_scanner.get_context_for_asset(asset_name)
+                if asset_context:
+                    project_context = f"\n\n## 📖 当前项目上下文（自动注入）\n{asset_context[:2500]}"
+            else:
+                project_context = f"\n\n## 📖 项目概览\n{self.project_scanner.knowledge_base[:2000]}"
+            self.root.after(0, lambda: self._log("已注入项目上下文"))
+
         system_prompt = """你是一个专业的 ComfyUI 和 Stable Diffusion 助手，专门帮助游戏美术资产生成。
-你可以帮助用户优化提示词、设计工作流、解决技术问题等。请用中文回答。"""
+你可以帮助用户优化提示词、设计工作流、解决技术问题等。请用中文回答。
+
+如果用户消息中包含"项目上下文"部分，请优先使用其中的信息来回答。"""
 
         self._set_ai_busy(True)
-        threading.Thread(target=self._do_ai_chat, args=(system_prompt, msg, "chat"), daemon=True).start()
+        threading.Thread(target=self._do_ai_chat, args=(system_prompt, msg + project_context, "chat"), daemon=True).start()
 
     def _do_ai_chat(self, system_prompt, user_msg, mode):
         """执行 AI 对话（后台线程）"""
