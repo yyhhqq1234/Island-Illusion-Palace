@@ -59,12 +59,24 @@ except ImportError:
 # ==========================================
 # 配置
 # ==========================================
-SERVER_URL = "http://10.150.164.64:8188"
-WS_URL = "ws://10.150.164.64:8189"
+SERVER_URL = "http://10.150.164.64:8189"  # 统一 API 入口（v3.2 服务器）
+COMFY_URL = "http://10.150.164.64:8189"   # ComfyUI 通过 8189 代理
+WS_URL = "ws://10.150.164.64:8189"        # WebSocket 实时通信
+FALLBACK_URL = "http://10.150.164.64:8188"  # 回退：直接访问 ComfyUI 8188
+
 OUTPUT_BASE = r"d:\Program Files\Unity\U3Dproject\Island-Illusion-Palace\Assets\ArtMaterials"
-DEFAULT_CHECKPOINT = "sd_xl_base_1.0.safetensors"  # 文生图默认使用 SDXL
+# [已弃用] DEFAULT_CHECKPOINT — 服务器 v3.2 统一管理模型，客户端不再需要手动指定
+DEFAULT_CHECKPOINT = "sd_xl_base_1.0.safetensors"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "comfyui_client_config.json")
 WORKFLOW_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workflows")
+
+# 导入服务器 SDK（v3.2 统一 API 客户端）
+try:
+    from comms_client import CommsClient
+    HAS_COMMS_SDK = True
+except ImportError:
+    HAS_COMMS_SDK = False
+    print("[ComfyUIClient] comms_client.py 未找到，将使用 HTTP 直接调用 8189 API")
 
 # ==========================================
 # 提示词模板 (基于项目现有素材风格分析 v3)
@@ -79,8 +91,8 @@ WORKFLOW_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workflo
 #
 
 CONCEPT_BASE_POSITIVE = (
-    "(dark fantasy concept art:1.3), (digital painting:1.2), dramatic lighting, "
-    "(soul glow: blue-purple luminescence #4A3A8C), (crystal erosion: geometric cyan crystals #00D4FF), "
+    "dark fantasy concept art, digital painting, dramatic lighting, "
+    "blue-purple soul glow luminescence, geometric cyan crystal erosion, "
     "rim light, high contrast, detailed texture, atmospheric perspective"
 )
 
@@ -92,26 +104,26 @@ CONCEPT_NEGATIVE = (
 
 # ====== 精灵帧提示词 (简约像素画风格) ======
 SPRITE_BASE_POSITIVE = (
-    "(simple pixel art:1.4), (minimalist game sprite:1.3), dark fantasy, "
-    "(soul glow: blue-purple luminescence #4A3A8C), (crystal erosion: geometric cyan crystals #00D4FF), "
+    "simple pixel art, minimalist game sprite, dark fantasy, "
+    "blue-purple soul glow luminescence, geometric cyan crystal erosion, "
     "clean pixel lines, flat color blocks, no anti-aliasing, no gradients, "
     "white background, centered composition, simple shading, limited color palette"
 )
 
 SPRITE_NEGATIVE = (
     "photorealistic, 3D render, CGI, smooth vector art, flat design, bright sunny, "
-    "(hand-drawn lineart:1.3), (smooth outline:1.3), (cel-shading:1.3), painterly texture, "
+    "hand-drawn lineart, smooth outline, cel-shading, painterly texture, "
     "visible brushstrokes, anti-aliasing, smooth edges, gradient shading, complex lighting, "
     "blurry, watermark, text, signature, ugly, distorted, bad anatomy, extra limbs, "
     "fused fingers, low quality, jpeg artifacts, crowded composition, background detail"
 )
 
 STATE_PROMPTS = {
-    "idle":   "(front-facing view:1.2), standing idle pose, neutral stance, arms at sides",
-    "walk":   "(front-facing view:1.2), walking pose, one foot forward mid-step",
-    "attack": "(front-facing view:1.2), attack pose, weapon raised mid-swing, dynamic action stance",
-    "skill":  "(front-facing view:1.2), casting spell pose, hands channeling energy",
-    "death":  "(front-facing view:1.2), defeated pose, collapsing forward, body tilting",
+    "idle":   "front-facing view, standing idle pose, neutral stance, arms at sides",
+    "walk":   "front-facing view, walking pose, one foot forward mid-step",
+    "attack": "front-facing view, attack pose, weapon raised mid-swing, dynamic action stance",
+    "skill":  "front-facing view, casting spell pose, hands channeling energy",
+    "death":  "front-facing view, defeated pose, collapsing forward, body tilting",
 }
 
 # 方向提示词（用于四方向精灵帧生成）
@@ -126,36 +138,36 @@ DIRECTION_PROMPTS = {
 ASSET_TEMPLATES = OrderedDict()
 
 # ========== 玩家 (简约像素画, ~2.5头身) ==========
-ASSET_TEMPLATES["墨语"] =      {"prompt": "(Mo Yu:1.3), (dark blue-black short hair:1.2), purple eyes, neutral expression, dark blue-gray outfit, subtle soul aura glow, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["莎娜"] =      {"prompt": "(Shana:1.3), (crimson long hair:1.2), warm gentle eyes, kind smile, elegant mage robe with scarlet accents, soft red energy aura, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["墨语"] =      {"prompt": "Mo Yu, dark blue-black short hair, purple eyes, neutral expression, dark blue-gray outfit, subtle soul aura glow, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["莎娜"] =      {"prompt": "Shana, crimson long hair, warm gentle eyes, kind smile, elegant mage robe with scarlet accents, soft red energy aura, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512}
 
 # ========== 普通敌人 (简约像素画, ~2头身) ==========
-ASSET_TEMPLATES["腐化村民"] =  {"prompt": "(corrupted villager:1.3), (gray-green sickly skin:1.2), messy dark hair, (glowing red eyes:1.3), tattered brown clothing, hunched posture, emaciated build, pixel art style, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["暗影之刃"] =  {"prompt": "(shadow blade assassin:1.3), dark hooded figure, dual daggers, (cyan energy trail:1.1), shadowy cloak, agile stance, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["水晶寄生体"] = {"prompt": "(crystal parasite monster:1.3), insectoid creature, (cyan crystal growth on body:1.2), scuttling legs, unnatural movement, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["沼泽潜伏者"] = {"prompt": "(swamp lurker monster:1.3), amphibious creature, half-submerged in mud, slimy skin, (yellow-green toxic mist:1.1), webbed hands, bulging eyes, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["腐化村民"] =  {"prompt": "corrupted villager, gray-green sickly skin, messy dark hair, glowing red eyes, tattered brown clothing, hunched posture, emaciated build, pixel art style, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["暗影之刃"] =  {"prompt": "shadow blade assassin, dark hooded figure, dual daggers, cyan energy trail, shadowy cloak, agile stance, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["水晶寄生体"] = {"prompt": "crystal parasite monster, insectoid creature, cyan crystal growth on body, scuttling legs, unnatural movement, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["沼泽潜伏者"] = {"prompt": "swamp lurker monster, amphibious creature, half-submerged in mud, slimy skin, yellow-green toxic mist, webbed hands, bulging eyes, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
 
 # ========== 精英 (48x48 target) ==========
-ASSET_TEMPLATES["灵魂吞噬者"] = {"prompt": "(soul devourer monster:1.3), large floating entity, (swirling souls around it:1.2), dark void body, multiple eyes, tentacle-like appendages, 3-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
-ASSET_TEMPLATES["熔岩元素"] =   {"prompt": "(lava elemental:1.3), humanoid magma creature, molten rock body, (orange-yellow lava veins:1.2), heat distortion, volcanic rock texture, 3.5-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
-ASSET_TEMPLATES["机械构造体"] = {"prompt": "(mechanical construct:1.3), large humanoid robot, brass and steel body, (cyan energy core in chest:1.2), steam pipes, gear mechanisms visible, 3.5-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
+ASSET_TEMPLATES["灵魂吞噬者"] = {"prompt": "soul devourer monster, large floating entity, swirling souls around it, dark void body, multiple eyes, tentacle-like appendages, 3-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
+ASSET_TEMPLATES["熔岩元素"] =   {"prompt": "lava elemental, humanoid magma creature, molten rock body, orange-yellow lava veins, heat distortion, volcanic rock texture, 3.5-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
+ASSET_TEMPLATES["机械构造体"] = {"prompt": "mechanical construct, large humanoid robot, brass and steel body, cyan energy core in chest, steam pipes, gear mechanisms visible, 3.5-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
 
 # ========== BOSS (简约像素画, ~2.5-3头身) ==========
-ASSET_TEMPLATES["时空守护者"] = {"prompt": "(time guardian boss:1.4), (armored entity:1.3), (clockwork mechanisms embedded in armor:1.2), (golden #C8A848 sacred markings:1.2), floating time gears, hourglass core, imposing stance, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Boss", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["记忆守护者"] = {"prompt": "(memory guardian boss:1.4), ethereal humanoid figure, (fragmented body made of memory shards:1.3), blue-purple soul glow, translucent, floating, 4-heads-tall", "targetW": 80, "targetH": 80, "cat": "Boss", "genW": 640, "genH": 640}
-ASSET_TEMPLATES["S-SN"] =       {"prompt": "(Scarlet Soul Shana:1.4), divine female figure, (crimson red #C41E3A and blue-purple #4A3A8C dual energy:1.3), floating, crystalline wings, elegant battle dress, 4-heads-tall", "targetW": 96, "targetH": 96, "cat": "Boss", "genW": 768, "genH": 768}
+ASSET_TEMPLATES["时空守护者"] = {"prompt": "time guardian boss, armored entity, clockwork mechanisms embedded in armor, golden sacred markings, floating time gears, hourglass core, imposing stance, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Boss", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["记忆守护者"] = {"prompt": "memory guardian boss, ethereal humanoid figure, fragmented body made of memory shards, blue-purple soul glow, translucent, floating, 4-heads-tall", "targetW": 80, "targetH": 80, "cat": "Boss", "genW": 640, "genH": 640}
+ASSET_TEMPLATES["S-SN"] =       {"prompt": "Scarlet Soul Shana, divine female figure, crimson red and blue-purple dual energy, floating, crystalline wings, elegant battle dress, 4-heads-tall", "targetW": 96, "targetH": 96, "cat": "Boss", "genW": 768, "genH": 768}
 
 # ========== 地图 Tile ==========
-ASSET_TEMPLATES["废墟都市Tile"] = {"prompt": "(ruined city tileset:1.3), collapsed buildings, broken streets, (cyan neon signs still glowing:1.2), rusted metal, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["遗忘庄园Tile"] = {"prompt": "(forgotten manor tileset:1.3), decaying noble mansion interior, (faded gold #C8A848 decorations:1.1), cracked marble floors, Victorian gothic, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["古代神殿Tile"] = {"prompt": "(ancient temple tileset:1.3), white stone temple, (golden sacred engravings:1.2), cracked stone pillars, divine rays from ceiling, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["实验室碎片Tile"] = {"prompt": "(laboratory tileset:1.3), sterile white sci-fi lab, (cyan glowing specimen tanks:1.2), metal floors, holographic displays, abandoned research facility, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["废墟都市Tile"] = {"prompt": "ruined city tileset, collapsed buildings, broken streets, cyan neon signs still glowing, rusted metal, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["遗忘庄园Tile"] = {"prompt": "forgotten manor tileset, decaying noble mansion interior, faded gold decorations, cracked marble floors, Victorian gothic, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["古代神殿Tile"] = {"prompt": "ancient temple tileset, white stone temple, golden sacred engravings, cracked stone pillars, divine rays from ceiling, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["实验室碎片Tile"] = {"prompt": "laboratory tileset, sterile white sci-fi lab, cyan glowing specimen tanks, metal floors, holographic displays, abandoned research facility, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
 
 # ========== 道具 (32x32 target) ==========
-ASSET_TEMPLATES["营火"] =   {"prompt": "(campfire:1.3), (blue-purple soul flame:1.4), stone circle, glowing embers, warm light radius, safe haven, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["炼药锅"] = {"prompt": "(alchemy cauldron:1.3), large iron cauldron, (blue-purple bubbling liquid:1.2), crystal decorations on rim, alchemy symbols, glowing runes, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["时空门"] = {"prompt": "(time portal:1.3), (cyan and blue-purple swirling vortex:1.4), floating crystal fragments around portal, energy rings, dimensional gateway, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["时空裂隙"] = {"prompt": "(time rift:1.3), (unstable dimensional tear:1.3), jagged edges, (cyan and blue-purple energy leaking:1.2), reality distortion, random sparks, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["营火"] =   {"prompt": "campfire, blue-purple soul flame, stone circle, glowing embers, warm light radius, safe haven, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["炼药锅"] = {"prompt": "alchemy cauldron, large iron cauldron, blue-purple bubbling liquid, crystal decorations on rim, alchemy symbols, glowing runes, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["时空门"] = {"prompt": "time portal, cyan and blue-purple swirling vortex, floating crystal fragments around portal, energy rings, dimensional gateway, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["时空裂隙"] = {"prompt": "time rift, unstable dimensional tear, jagged edges, cyan and blue-purple energy leaking, reality distortion, random sparks, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
 
 
 # ==========================================
@@ -760,30 +772,31 @@ class ServerMonitor:
         def poll():
             while self._polling and self._running:
                 try:
-                    r = requests.get(f"{SERVER_URL}/api/system_stats", timeout=5)
+                    # v3.2: 使用 8189 /status 获取服务器状态
+                    r = requests.get(f"{SERVER_URL}/status", timeout=5)
                     if r.status_code == 200:
-                        # 将 HTTP 响应转换为 server_status 格式
                         http_data = r.json()
-                        # 构造兼容格式
+                        gpu_info = http_data.get("gpu", {})
+                        queue_info = http_data.get("queue", {})
                         self.server_data = {
-                            "comfyui_version": http_data.get("version", "?"),
-                            "pytorch_version": "?",
+                            "comfyui_version": http_data.get("comfyui_version", http_data.get("version", "?")),
+                            "pytorch_version": http_data.get("pytorch_version", "?"),
                             "gpu": {
-                                "name": http_data.get("device", {}).get("name", "?"),
-                                "vram_total": http_data.get("device", {}).get("vram_total", 0),
-                                "vram_free": http_data.get("device", {}).get("vram_free", 0),
-                                "vram_used": http_data.get("device", {}).get("vram_used", 0),
+                                "name": gpu_info.get("name", "?"),
+                                "vram_total": gpu_info.get("vram_total", 0),
+                                "vram_free": gpu_info.get("vram_free", 0),
+                                "vram_used": gpu_info.get("vram_used", 0),
                             },
                             "queue": {
-                                "current": 0,
-                                "pending": 0,
+                                "current": len(queue_info.get("queue_running", [])),
+                                "pending": len(queue_info.get("queue_pending", [])),
                             },
-                            "clients": 1,
-                            "uptime_seconds": 0,
-                            "models_loaded": [],
+                            "clients": http_data.get("clients", 1),
+                            "uptime_seconds": http_data.get("uptime_seconds", 0),
+                            "models_loaded": http_data.get("models_loaded", []),
                             "system_ram": {
-                                "total_gb": http_data.get("system_ram", {}).get("total", 0),
-                                "free_gb": http_data.get("system_ram", {}).get("free", 0),
+                                "total_gb": http_data.get("system_ram", {}).get("total_gb", 0),
+                                "free_gb": http_data.get("system_ram", {}).get("free_gb", 0),
                             }
                         }
                         if self.on_status_update:
@@ -1084,6 +1097,10 @@ class ComfyUIGenerator:
         # 加载配置
         self.config = ConfigManager.load()
 
+        # [已弃用] checkpoint 变量保留用于 8188 回退兼容
+        self.checkpoint_var = tk.StringVar(value=DEFAULT_CHECKPOINT)
+        self.ckpt_combo = None  # 不再渲染，仅保留属性避免回退代码崩溃
+
         # 构建 UI
         self._build_ui()
         self._load_config_to_ui()
@@ -1288,40 +1305,25 @@ class ComfyUIGenerator:
         self.concept_preview_label = ttk.Label(self.concept_frame, text="未选择概念图", foreground="gray")
         self.concept_preview_label.pack(anchor=tk.W, pady=(5, 0))
 
-        # --- 模型选择 ---
-        ttk.Label(left, text="模型 (Checkpoint)", font=("", 10, "bold")).pack(anchor=tk.W, pady=(10, 2))
-        ckpt_frame = ttk.Frame(left)
-        ckpt_frame.pack(fill=tk.X)
-        self.checkpoint_var = tk.StringVar(value=DEFAULT_CHECKPOINT)
-        self.ckpt_combo = ttk.Combobox(ckpt_frame, textvariable=self.checkpoint_var, width=30, state="readonly")
-        self.ckpt_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.ckpt_combo.bind("<<ComboboxSelected>>", self._on_checkpoint_changed)
-        ttk.Button(ckpt_frame, text="刷新", width=5, command=self._refresh_checkpoints).pack(side=tk.LEFT, padx=(5, 0))
-        ttk.Label(left, text="(文生图推荐 SDXL)", font=("", 8), foreground="gray").pack(anchor=tk.W)
+        # --- 服务器工作流选择（v3.2 统一 API）---
+        ttk.Label(left, text="工作流选择", font=("", 10, "bold")).pack(anchor=tk.W, pady=(10, 2))
+        wf_select_frame = ttk.Frame(left)
+        wf_select_frame.pack(fill=tk.X)
 
-        # --- 工作流选择 ---
-        ttk.Label(left, text="工作流模式", font=("", 10, "bold")).pack(anchor=tk.W, pady=(10, 2))
-        wf_mode_frame = ttk.Frame(left)
-        wf_mode_frame.pack(fill=tk.X)
+        self.server_workflow_var = tk.StringVar()
+        self.server_workflow_combo = ttk.Combobox(wf_select_frame, textvariable=self.server_workflow_var, width=26, state="readonly")
+        self.server_workflow_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.server_workflow_combo.bind("<<ComboboxSelected>>", self._on_server_workflow_selected)
+        ttk.Button(wf_select_frame, text="刷新", width=5, command=self._refresh_server_workflows_v2).pack(side=tk.LEFT, padx=(5, 0))
 
-        self.wf_mode_var = tk.StringVar(value="builtin")
-        ttk.Radiobutton(wf_mode_frame, text="内置", variable=self.wf_mode_var, value="builtin", command=self._on_workflow_mode_changed).pack(side=tk.LEFT, padx=5)
-        ttk.Radiobutton(wf_mode_frame, text="服务器", variable=self.wf_mode_var, value="server", command=self._on_workflow_mode_changed).pack(side=tk.LEFT, padx=5)
-        ttk.Radiobutton(wf_mode_frame, text="本地", variable=self.wf_mode_var, value="local", command=self._on_workflow_mode_changed).pack(side=tk.LEFT, padx=5)
+        self.server_wf_info_label = ttk.Label(wf_select_frame, text="点击「刷新」加载服务器工作流", font=("", 8), foreground="gray")
+        self.server_wf_info_label.pack(fill=tk.X)
 
-        # 工作流列表（服务器/本地模式下显示）
-        self.wf_select_frame = ttk.Frame(left)
-        self.wf_select_frame.pack(fill=tk.X, pady=(5, 0))
-        # 初始隐藏
-        self.wf_select_frame.pack_forget()
-
-        self.server_wf_var = tk.StringVar()
-        self.server_wf_combo = ttk.Combobox(self.wf_select_frame, textvariable=self.server_wf_var, width=28)
-        self.server_wf_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(self.wf_select_frame, text="刷新", width=5, command=self._refresh_server_workflows).pack(side=tk.LEFT, padx=(5, 0))
-
-        self.wf_hint_label = ttk.Label(self.wf_select_frame, text="", font=("", 8), foreground="gray")
-        self.wf_hint_label.pack(fill=tk.X)
+        # [已弃用] 工作流模式选择 — v3.2 服务器统一管理，保留用于向后兼容
+        # self.wf_mode_var 和 _on_workflow_mode_changed 仍可用，但默认不再显示
+        self.wf_mode_var = tk.StringVar(value="server")  # 默认使用服务器模式
+        # 保留旧的 _server_wf_map 兼容性
+        self._server_wf_map = {}
 
         # --- 参数设置 ---
         ttk.Label(left, text="生成参数", font=("", 10, "bold")).pack(anchor=tk.W, pady=(10, 2))
@@ -1954,21 +1956,205 @@ class ComfyUIGenerator:
             self.asset_combo.current(0)
             self._on_asset_changed()
 
-    def _refresh_checkpoints(self):
-        """从服务器获取可用 checkpoint 列表"""
+    # ==========================================
+    # v3.2: 服务器工作流管理（8189 统一 API）
+    # ==========================================
+    def _refresh_server_workflows_v2(self):
+        """从服务器 8189 API 加载工作流列表（41 个工作流：11 注册 + 30 蓝图）"""
         try:
-            r = requests.get(f"{SERVER_URL}/api/object_info/CheckpointLoaderSimple", timeout=10)
+            if HAS_COMMS_SDK:
+                data = CommsClient.http_list_workflows(SERVER_URL)
+            else:
+                r = requests.get(f"{SERVER_URL}/workflows", timeout=10)
+                r.raise_for_status()
+                data = r.json()
+
+            if "error" in data:
+                raise Exception(data["error"])
+
+            # 构建 (显示名, workflow_id) 列表
+            items = []
+            # 注册工作流
+            for wf_id, wf in data.get("workflows", {}).items():
+                items.append((f"[注册] {wf.get('name','?')} ({wf.get('speed','?')})", wf_id))
+            # 蓝图
+            for bp_id, bp in data.get("blueprints", {}).items():
+                items.append((f"[蓝图] {bp.get('name','?')} [{bp.get('category','?')}]", bp_id))
+
+            display_names = [item[0] for item in items]
+            self.server_workflow_combo['values'] = display_names
+            self._server_workflow_map = {item[0]: item[1] for item in items}
+
+            # 默认选中 "text-to-image-z-image-turbo"（蓝图，参数可控）
+            default_idx = 0
+            for i, (name, wid) in enumerate(items):
+                if wid == "text-to-image-z-image-turbo":
+                    default_idx = i
+                    break
+            if display_names:
+                self.server_workflow_var.set(display_names[default_idx])
+
+            self.server_wf_info_label.configure(text=f"共 {len(items)} 个工作流可用")
+            self._log("info", f"加载了 {len(items)} 个服务器工作流")
+        except Exception as e:
+            self._log("error", f"加载工作流失败: {e}")
+            self.server_wf_info_label.configure(text=f"连接失败: {e}，将尝试回退到 8188")
+
+    def _on_server_workflow_selected(self, event=None):
+        """服务器工作流选择变更回调"""
+        display_name = self.server_workflow_var.get()
+        wf_id = self._server_workflow_map.get(display_name, "")
+        if wf_id:
+            self._log("info", f"已选择工作流: {display_name} → {wf_id}")
+
+    def _get_logical_workflow_id(self):
+        """根据资产类型和阶段自动选择最合适的服务器工作流"""
+        # 先检查用户是否手动选择了工作流
+        display_name = self.server_workflow_var.get()
+        manual_wf_id = self._server_workflow_map.get(display_name, "")
+        if manual_wf_id and not display_name.startswith("[蓝图] text-to-image-z-image-turbo"):
+            # 用户手动选择了非默认工作流，尊重用户选择
+            return manual_wf_id
+
+        asset_type = self.asset_type_var.get().lower()
+        is_concept = self.stage_var.get() == "concept"
+
+        if is_concept:
+            # 概念图使用 Z-Image 蓝图（轻量模型，适配12GB显存，提示词用自然语言）
+            return "text-to-image-z-image-turbo"
+
+        # 精灵帧映射
+        mapping = {
+            "boss": "unity-2d-character-sprite",
+            "enemy": "unity-2d-character-sprite",
+            "player": "unity-2d-character-sprite",
+            "npc": "unity-2d-character-sprite",
+            "item": "game-item-fast",
+            "map_tile": "unity-2d-tilemap",
+            "background": "game-env-background",
+            "ui": "unity-2d-ui-element",
+        }
+        return mapping.get(asset_type, "zimage-text-to-image")
+
+    def _fetch_workflow_params(self, workflow_id):
+        """获取服务器工作流的参数 schema（字段名和类型）
+
+        查询顺序：
+        1. /blueprints/{id} — 蓝图有明确的 params schema
+        2. /workflows 返回的 registered workflows 列表 — 注册工作流的基本信息
+
+        Args:
+            workflow_id: 工作流 ID（如 text-to-image-z-image-turbo, game-character-design）
+
+        Returns:
+            dict 参数 schema，如 {"text": {"type": "string"}, "width": {"type": "int", ...}}
+        """
+        # 策略1: 尝试蓝图端点（有完整 params schema）
+        try:
+            r = requests.get(f"{SERVER_URL}/blueprints/{workflow_id}", timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                params = data.get("params", {})
+                if params:
+                    return params
+        except Exception:
+            pass
+
+        # 策略2: 从 /workflows 全量列表中查找注册工作流信息
+        try:
+            r = requests.get(f"{SERVER_URL}/workflows", timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                reg_wfs = data.get("workflows", {})
+                if workflow_id in reg_wfs:
+                    wf_info = reg_wfs[workflow_id]
+                    # 注册工作流通常没有显式 params schema，
+                    # 返回包含 name/speed 等基本信息的字典作为标识
+                    return {"_type": "registered", "_info": wf_info}
+        except Exception:
+            pass
+
+        # 均失败
+        self._log("warning", f"未找到 {workflow_id} 的参数 schema，使用默认映射")
+        return {}
+
+    def _map_params_to_workflow(self, raw_params, wf_schema):
+        """将客户端内部参数映射为服务器工作流期望的字段名
+
+        映射规则：
+        - positive → 查找 type=string 且 description 含 "prompt" 的字段（通常是 "text"）
+        - negative → 同上但优先级低
+        - width/height/steps/cfg/seed → 直接匹配同名或同义字段
+
+        Args:
+            raw_params: 客户端内部标准参数 {"positive": ..., "width": ...}
+            wf_schema: 工作流参数 schema
+
+        Returns:
+            适配后的参数字典
+        """
+        if not wf_schema or wf_schema.get("_type") == "registered":
+            # 无 schema 或注册工作流 → 使用默认映射
+            return {
+                "text": raw_params["positive"],
+                "width": raw_params["width"],
+                "height": raw_params["height"],
+            }
+
+        result = {}
+        # 建立反向映射：从 schema 字段名推断用途
+        string_fields = []  # 可能是 prompt 的文本字段
+        for field_name, field_info in wf_schema.items():
+            ftype = field_info.get("type", "")
+            desc = (field_info.get("description") or "").lower()
+
+            if ftype == "string":
+                string_fields.append(field_name)
+
+        # 将 positive 提示词填入第一个 string 字段（通常是 "text" 或 "prompt"）
+        if string_fields:
+            result[string_fields[0]] = raw_params["positive"]
+            # 如果有第二个 string 字段且工作流支持 negative，填入
+            if len(string_fields) > 1 and raw_params["negative"]:
+                result[string_fields[1]] = raw_params["negative"]
+
+        # 数值字段直接匹配
+        numeric_map = {
+            "width": "width",
+            "height": "height",
+            "steps": "steps",
+            "cfg": ("cfg", "cfg_scale", "guidance_scale"),
+            "seed": "seed",
+        }
+        for client_key, server_keys in numeric_map.items():
+            val = raw_params.get(client_key)
+            if val is None:
+                continue
+            if isinstance(server_keys, str):
+                server_keys = [server_keys]
+            for sk in server_keys:
+                if sk in wf_schema:
+                    result[sk] = val
+                    break
+
+        return result
+
+    # [已弃用] v3.2 服务器统一管理模型，以下方法保留用于向后兼容
+    def _refresh_checkpoints(self):
+        """[已弃用] 从服务器获取可用 checkpoint 列表 — v3.2 不再使用"""
+        try:
+            r = requests.get(f"{FALLBACK_URL}/api/object_info/CheckpointLoaderSimple", timeout=10)
             r.raise_for_status()
             data = r.json()
             node_info = data.get("CheckpointLoaderSimple", {})
             ckpt_list = node_info.get("input", {}).get("required", {}).get("ckpt_name", [[]])[0]
             if ckpt_list:
-                self.ckpt_combo["values"] = ckpt_list
-                # 如果当前值不在列表中，选第一个
+                if self.ckpt_combo is not None:
+                    self.ckpt_combo["values"] = ckpt_list
                 current = self.checkpoint_var.get()
                 if current not in ckpt_list:
                     self.checkpoint_var.set(ckpt_list[0])
-                self._log(f"获取到 {len(ckpt_list)} 个 Checkpoint")
+                self._log(f"获取到 {len(ckpt_list)} 个 Checkpoint (8188回退)")
             else:
                 self._log("未获取到 Checkpoint 列表，使用默认值")
         except Exception as e:
@@ -2369,8 +2555,8 @@ class ComfyUIGenerator:
             self.monitor_detail_visible = False
             self.monitor_detail_btn.configure(text="📊 详情")
         else:
-            # 在分隔线后插入详情面板
-            self.monitor_detail_frame.pack(after=self.root.children['!frame2'], fill=tk.X)
+            # 在工具栏后插入详情面板
+            self.monitor_detail_frame.pack(fill=tk.X)
             self.monitor_detail_visible = True
             self.monitor_detail_btn.configure(text="▲ 收起")
             # 如果有数据，立即刷新
@@ -2381,52 +2567,70 @@ class ComfyUIGenerator:
         threading.Thread(target=self._do_test_connection, daemon=True).start()
 
     def _do_test_connection(self):
+        """v3.2: 优先测试 8189 连接，失败回退到 8188"""
         try:
-            server_url = self.config.get("server", {}).get("url", SERVER_URL)
-            r = requests.get(f"{server_url}/api/system_stats", timeout=10)
-            self.root.after(0, lambda: self.status_label.configure(text=f"服务器: 已连接 (ComfyUI)", foreground="green"))
-            self.root.after(0, lambda: self._log("连接成功!"))
-            self.server_connected = True
-            self._check_queue()
-
-            # 同时刷新 ServerMonitor 数据（HTTP 轮询模式下的即时更新）
+            # 先尝试 8189 /status
+            r = requests.get(f"{SERVER_URL}/status", timeout=10)
             if r.status_code == 200:
-                try:
-                    http_data = r.json()
+                http_data = r.json()
+                if http_data.get("server") or http_data.get("gpu"):
+                    self.root.after(0, lambda: self.status_label.configure(
+                        text="服务器: 已连接 (v3.2)", foreground="green"))
+                    self.root.after(0, lambda: self._log("8189 v3.2 API 连接成功!"))
+                    self.server_connected = True
+                    self._check_queue()
+
+                    # 更新监控数据
+                    gpu_info = http_data.get("gpu", {})
+                    queue_info = http_data.get("queue", {})
                     monitor_data = {
-                        "comfyui_version": http_data.get("version", "?"),
-                        "pytorch_version": "?",
+                        "comfyui_version": http_data.get("comfyui_version", "?"),
+                        "pytorch_version": http_data.get("pytorch_version", "?"),
                         "gpu": {
-                            "name": http_data.get("device", {}).get("name", "?"),
-                            "vram_total": http_data.get("device", {}).get("vram_total", 0),
-                            "vram_free": http_data.get("device", {}).get("vram_free", 0),
-                            "vram_used": http_data.get("device", {}).get("vram_used", 0),
+                            "name": gpu_info.get("name", "?"),
+                            "vram_total": gpu_info.get("vram_total", 0),
+                            "vram_free": gpu_info.get("vram_free", 0),
+                            "vram_used": gpu_info.get("vram_used", 0),
                         },
-                        "queue": {"current": 0, "pending": 0},
-                        "clients": 1,
-                        "uptime_seconds": 0,
-                        "models_loaded": [],
+                        "queue": {
+                            "current": len(queue_info.get("queue_running", [])),
+                            "pending": len(queue_info.get("queue_pending", [])),
+                        },
+                        "clients": http_data.get("clients", 1),
+                        "uptime_seconds": http_data.get("uptime_seconds", 0),
+                        "models_loaded": http_data.get("models_loaded", []),
                         "system_ram": {
-                            "total_gb": http_data.get("system_ram", {}).get("total", 0),
-                            "free_gb": http_data.get("system_ram", {}).get("free", 0),
+                            "total_gb": http_data.get("system_ram", {}).get("total_gb", 0),
+                            "free_gb": http_data.get("system_ram", {}).get("free_gb", 0),
                         }
                     }
-                    # 直接调用回调更新 UI（已在后台线程，需要用 root.after）
                     self.root.after(0, lambda d=monitor_data: self._on_server_status_update(d))
-                except Exception:
-                    pass
-        except Exception as e:
-            self.root.after(0, lambda: self.status_label.configure(text="服务器: 连接失败", foreground="red"))
-            self.root.after(0, lambda: self._log(f"连接失败: {e}", "ERROR"))
-            self.server_connected = False
+                    # 加载工作流列表
+                    self.root.after(0, self._refresh_server_workflows_v2)
+                    return
+
+            # 8189 无响应或无有效数据，尝试 8188
+            raise Exception("8189 无有效响应")
+        except Exception as e1:
+            try:
+                r = requests.get(f"{FALLBACK_URL}/api/system_stats", timeout=10)
+                self.root.after(0, lambda: self.status_label.configure(
+                    text="服务器: 已连接 (8188回退)", foreground="orange"))
+                self.root.after(0, lambda e1=str(e1): self._log(f"8189 不可用 ({e1})，已回退到 8188 直连模式"))
+                self.server_connected = True
+            except Exception as e2:
+                self.root.after(0, lambda: self.status_label.configure(
+                    text="服务器: 连接失败", foreground="red"))
+                self.root.after(0, lambda e1=str(e1), e2=str(e2): self._log(f"连接失败: 8189={e1}, 8188={e2}", "ERROR"))
+                self.server_connected = False
 
     def _check_queue(self):
         threading.Thread(target=self._do_check_queue, daemon=True).start()
 
     def _do_check_queue(self):
+        """v3.2: 通过 8189 /comfy/queue 检查队列"""
         try:
-            server_url = self.config.get("server", {}).get("url", SERVER_URL)
-            r = requests.get(f"{server_url}/api/queue", timeout=5)
+            r = requests.get(f"{COMFY_URL}/comfy/queue", timeout=5)
             data = r.json()
             running = len(data.get("queue_running", []))
             pending = len(data.get("queue_pending", []))
@@ -2456,6 +2660,7 @@ class ComfyUIGenerator:
         threading.Thread(target=self._do_generate, daemon=True).start()
 
     def _do_generate(self):
+        """v3.2: 通过 8189 统一 API 提交流程，自动回退到 8188 旧模式"""
         try:
             name = self.asset_var.get()
             tmpl = ASSET_TEMPLATES[name]
@@ -2483,64 +2688,256 @@ class ComfyUIGenerator:
             self.root.after(0, lambda: self._log(f"尺寸: {width}x{height}, 步数: {steps}, CFG: {cfg}, 种子: {seed}"))
             self.root.after(0, lambda: self._log(f"数量: {count}, 去噪强度: {denoise}"))
 
-            server_url = self.config.get("server", {}).get("url", SERVER_URL)
+            # 优先尝试 8189 v3.2 API
+            workflow_id = self._get_logical_workflow_id()
+            self.root.after(0, lambda: self._log(f"工作流: {workflow_id}"))
 
-            # 根据工作流模式决定如何构建 workflow
-            wf_mode = self.wf_mode_var.get()
-            workflow = None
+            # 获取工作流参数 schema，用于字段名映射
+            wf_schema = self._fetch_workflow_params(workflow_id)
 
-            if wf_mode == "builtin":
-                # 内置模式：客户端自动构建标准工作流
-                if stage == "sprite" and self.ref_image_path:
-                    self.root.after(0, lambda: self._log(f"模式: img2img 内置 (参考图: {os.path.basename(self.ref_image_path)})"))
-                    uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
-                    if not uploaded_filename:
-                        return
-                    workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
+            # 构建内部参数（客户端标准字段）
+            raw_params = {
+                "positive": positive,
+                "negative": negative,
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "width": width,
+                "height": height,
+            }
+
+            # 根据服务器工作流 schema 映射为实际参数
+            params = self._map_params_to_workflow(raw_params, wf_schema)
+
+            # 如果有参考底图（精灵帧模式），尝试上传后使用 img2img
+            has_concept_ref = (stage == "sprite" and self.ref_image_path)
+            if has_concept_ref:
+                # v3.2: 若服务器支持 base64 图片参数，传递概念图
+                try:
+                    import base64
+                    with open(self.ref_image_path, "rb") as imgf:
+                        concept_base64 = base64.b64encode(imgf.read()).decode()
+                    params["image"] = concept_base64
+                    # img2img 场景使用对应的编辑工作流
+                    if workflow_id in ("zimage-text-to-image", "game-character-design"):
+                        workflow_id = "qwen-edit-img-to-img"
+                    self.root.after(0, lambda: self._log("模式: img2img (含概念底图)"))
+                except Exception as e:
+                    self.root.after(0, lambda: self._log(f"warning: 概念图编码失败: {e}，使用纯文生图"))
+
+            # 通过 8189 统一入口提交
+            result = None
+            use_fallback = False
+            try:
+                if HAS_COMMS_SDK:
+                    result = CommsClient.http_execute_workflow(workflow_id, params, SERVER_URL)
                 else:
-                    self.root.after(0, lambda: self._log("模式: txt2img 内置 (概念图生成)"))
-                    workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
+                    payload = {
+                        "workflow_id": workflow_id,
+                        "params": params
+                    }
+                    # 调试：记录完整请求
+                    self.root.after(0, lambda p=payload: self._log(f"[DEBUG] 请求: {json.dumps(p, ensure_ascii=False)[:500]}"))
+                    r = requests.post(f"{SERVER_URL}/workflows/execute", json=payload, timeout=30)
+                    # 调试：记录状态码和原始响应
+                    self.root.after(0, lambda s=r.status_code, t=r.text[:500]: self._log(f"[DEBUG] 响应 status={s}, body={t}"))
+                    r.raise_for_status()
+                    result = r.json()
 
-            elif wf_mode == "server":
-                # 服务器工作流模式：从 ComfyUI 服务器加载已保存的工作流
-                selected_wf = self.server_wf_var.get()
-                self.root.after(0, lambda: self._log(f"模式: 服务器工作流 ({selected_wf})"))
-                workflow = self._load_server_workflow(selected_wf)
-                if workflow is None:
-                    self.root.after(0, lambda: self._log("warning", "服务器工作流加载失败，回退到内置模式"))
-                    if stage == "sprite" and self.ref_image_path:
-                        uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
-                        if not uploaded_filename:
-                            return
-                        workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
-                    else:
-                        workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
+                # 调试：记录 API 解析后返回
+                self.root.after(0, lambda res=result: self._log(f"[DEBUG] API 返回: {json.dumps(res, ensure_ascii=False)[:300]}, type={type(result).__name__}"))
 
-            elif wf_mode == "local":
-                # 本地工作流模式：从本地 workflows/ 目录加载
-                selected_wf = self.server_wf_var.get()
-                self.root.after(0, lambda: self._log(f"模式: 本地工作流 ({selected_wf})"))
-                workflow = self._load_local_workflow(selected_wf)
-                if workflow is None:
-                    self.root.after(0, lambda: self._log("warning", "本地工作流加载失败，回退到内置模式"))
-                    if stage == "sprite" and self.ref_image_path:
-                        uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
-                        if not uploaded_filename:
-                            return
-                        workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
-                    else:
-                        workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
+                if "error" in result:
+                    raise Exception(result["error"])
+            except Exception as e:
+                self.root.after(0, lambda err=e: self._log(f"warning: 8189 API 失败 ({err})，回退到 8188 直接模式"))
+                use_fallback = True
 
+            # 8189 回退：使用旧的 8188 直连模式
+            if use_fallback:
+                self._do_generate_fallback(name, tmpl, stage, state, positive, negative,
+                                           width, height, steps, cfg, seed, count, denoise, output_dir)
+                return
+
+            prompt_id = result.get("prompt_id", "")
+            wf_name = result.get("workflow_name", workflow_id)
+            self.root.after(0, lambda: self._log(f"已提交: {wf_name} (prompt_id: {prompt_id})"))
+
+            if not prompt_id:
+                self.root.after(0, lambda: self._log("未获取到 prompt_id", "ERROR"))
+                return
+
+            # 轮询等待结果
+            self._current_prompt_id = prompt_id
+            self._current_output_dir = output_dir
+            self._current_name = name
+            self._current_stage = stage
+            self._current_state = state
+            self._current_ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            self._poll_attempt = 0
+            self._poll_result()
+
+        except Exception as e:
+            self.root.after(0, lambda err=e: self._log(f"错误: {err}", "ERROR"))
+        finally:
+            # note: generating flag + button restore handled in _handle_completed / _do_generate_fallback
+            pass
+
+    def _poll_result(self):
+        """v3.2: 通过 8189 轮询等待任务完成"""
+        pid = getattr(self, '_current_prompt_id', None)
+        if not pid:
+            self._finish_generate()
+            return
+
+        self._poll_attempt += 1
+        try:
+            # 检查队列
+            if HAS_COMMS_SDK:
+                queue = CommsClient.http_queue(COMFY_URL)
             else:
-                # 兜底：使用内置 txt2img
-                self.root.after(0, lambda: self._log("模式: txt2img 内置 (默认兜底)"))
+                r = requests.get(f"{COMFY_URL}/comfy/queue", timeout=5)
+                queue = r.json() if r.status_code == 200 else {}
+
+            in_queue = False
+            running_list = queue.get("queue_running", [])
+            pending_list = queue.get("queue_pending", [])
+            for item in running_list:
+                if isinstance(item, list) and len(item) > 1 and item[1] == pid:
+                    in_queue = True; break
+            if not in_queue:
+                for item in pending_list:
+                    if isinstance(item, list) and len(item) > 1 and item[1] == pid:
+                        in_queue = True; break
+
+            if not in_queue:
+                # 任务可能已完成，查历史
+                if HAS_COMMS_SDK:
+                    hist = CommsClient.http_history(pid, COMFY_URL)
+                else:
+                    r = requests.get(f"{COMFY_URL}/comfy/history/{pid}", timeout=5)
+                    hist = r.json() if r.status_code == 200 else {}
+
+                if pid in hist:
+                    self._handle_completed(hist[pid])
+                    return
+
+            # 输出进度日志
+            if self._poll_attempt % 5 == 0:
+                running_desc = f"运行中({len(running_list)})" if running_list else ""
+                pending_desc = f"等待({len(pending_list)})" if pending_list else ""
+                qdesc = " | ".join(filter(None, [running_desc, pending_desc])) or "队列空"
+                self.root.after(0, lambda: self._log(f"轮询 #{self._poll_attempt}: {qdesc}"))
+
+            # 超时检查 (最多 10 分钟)
+            if self._poll_attempt >= 200:
+                self.root.after(0, lambda: self._log("生成超时!", "ERROR"))
+                self._finish_generate()
+                return
+
+            self.root.after(3000, self._poll_result)
+
+        except Exception as e:
+            self.root.after(0, lambda err=e: self._log(f"轮询失败: {err}", "ERROR"))
+            if self._poll_attempt >= 200:
+                self._finish_generate()
+                return
+            self.root.after(5000, self._poll_result)
+
+    def _handle_completed(self, history_entry):
+        """v3.2: 处理已完成的任务（下载文件并保存）"""
+        # 检查执行状态
+        status_info = history_entry.get("status", {})
+        status_str = status_info.get("status_str", "")
+
+        if status_str == "error":
+            # 提取错误信息
+            msgs = status_info.get("messages", [])
+            err_msg = "未知错误"
+            for msg_type, msg_data in reversed(msgs):
+                if msg_type == "execution_error":
+                    node_type = msg_data.get("node_type", "?")
+                    exc_msg = msg_data.get("exception_message", "?")
+                    err_msg = f"节点 [{node_type}] 错误: {exc_msg}"
+                    break
+            self.root.after(0, lambda em=err_msg: self._log(f"执行失败: {em}", "ERROR"))
+            self._finish_generate()
+            return
+
+        self.root.after(0, lambda: self._log("生成完成!"))
+        outputs = history_entry.get("outputs", {})
+        images = []
+        for node_id, node_data in outputs.items():
+            for img in node_data.get("images", []):
+                images.append(img)
+
+        if not images:
+            self.root.after(0, lambda: self._log("无输出图片", "ERROR"))
+            self._finish_generate()
+            return
+
+        self.root.after(0, lambda: self._log(f"获取到 {len(images)} 张图片"))
+        name = getattr(self, '_current_name', 'unknown')
+        stage = getattr(self, '_current_stage', 'concept')
+        state = getattr(self, '_current_state', 'idle')
+        output_dir = getattr(self, '_current_output_dir', OUTPUT_BASE)
+        ts = getattr(self, '_current_ts', datetime.datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+        saved_paths = []
+        for i, img in enumerate(images):
+            params_str = {"filename": img["filename"], "subfolder": img.get("subfolder", ""),
+                          "type": img.get("type", "output")}
+            # v3.2: 通过 8189 代理下载
+            dl_url = f"{COMFY_URL}/comfy/view?{urlencode(params_str)}"
+
+            if stage == "concept":
+                save_name = f"{name}_Concept_{ts}.png"
+            else:
+                save_name = f"{name}_{state}_{i + 1}.png"
+
+            save_path = os.path.join(output_dir, save_name)
+            try:
+                r = requests.get(dl_url, timeout=60)
+                r.raise_for_status()
+                with open(save_path, "wb") as f:
+                    f.write(r.content)
+                saved_paths.append(save_path)
+                self.root.after(0, lambda p=save_path: self._log(f"已保存: {p}"))
+            except Exception as e:
+                self.root.after(0, lambda err=e: self._log(f"下载失败: {err}", "ERROR"))
+
+        self.root.after(0, lambda: self._update_result_preview(saved_paths))
+        self.root.after(0, lambda: self._log("全部完成!"))
+        self._finish_generate()
+
+    def _finish_generate(self):
+        """清理生成状态"""
+        self.generating = False
+        self._current_prompt_id = None
+        self.root.after(0, lambda: self.generate_btn.configure(state=tk.NORMAL, text="生成"))
+        self.root.after(0, lambda: self.progress.stop())
+
+    def _do_generate_fallback(self, name, tmpl, stage, state, positive, negative,
+                               width, height, steps, cfg, seed, count, denoise, output_dir):
+        """回退模式：直接使用 8188 ComfyUI API（保留向后兼容）"""
+        try:
+            server_url = FALLBACK_URL
+
+            # 上传参考图（如果需要）
+            if stage == "sprite" and self.ref_image_path:
+                uploaded_filename = self._upload_image_to_comfyui(self.ref_image_path, server_url)
+                if not uploaded_filename:
+                    self._finish_generate()
+                    return
+                workflow = self._build_img2img_workflow(uploaded_filename, positive, negative, width, height, steps, cfg, denoise, seed, count)
+            else:
                 workflow = self._build_txt2img_workflow(positive, negative, width, height, steps, cfg, seed, count)
 
             body = {"prompt": workflow, "client_id": "comfyui-client-gui"}
             r = requests.post(f"{server_url}/api/prompt", json=body, timeout=30)
             r.raise_for_status()
             prompt_id = r.json().get("prompt_id")
-            self.root.after(0, lambda: self._log(f"已提交: {prompt_id}"))
+            self.root.after(0, lambda: self._log(f"已提交(回退): {prompt_id}"))
 
             history = None
             for i in range(300):
@@ -2557,10 +2954,10 @@ class ComfyUIGenerator:
                     self.root.after(0, lambda cnt=i: self._log(f"等待中... {(cnt + 1) * 2}s"))
             else:
                 self.root.after(0, lambda: self._log("生成超时!", "ERROR"))
+                self._finish_generate()
                 return
 
-            self.root.after(0, lambda: self._log("生成完成!"))
-
+            self.root.after(0, lambda: self._log("生成完成! (回退模式)"))
             history_data = history.get(prompt_id, {})
             outputs = history_data.get("outputs", {})
             images = []
@@ -2570,21 +2967,18 @@ class ComfyUIGenerator:
 
             if not images:
                 self.root.after(0, lambda: self._log("无输出图片", "ERROR"))
+                self._finish_generate()
                 return
-
-            self.root.after(0, lambda: self._log(f"获取到 {len(images)} 张图片"))
 
             ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             saved_paths = []
             for i, img in enumerate(images):
                 params_str = {"filename": img["filename"], "subfolder": img.get("subfolder", ""), "type": img.get("type", "output")}
                 dl_url = f"{server_url}/api/view?{urlencode(params_str)}"
-
                 if stage == "concept":
                     save_name = f"{name}_Concept_{ts}.png"
                 else:
                     save_name = f"{name}_{state}_{i + 1}.png"
-
                 save_path = os.path.join(output_dir, save_name)
                 r = requests.get(dl_url, timeout=60)
                 r.raise_for_status()
@@ -2597,12 +2991,11 @@ class ComfyUIGenerator:
             self.root.after(0, lambda: self._log("全部完成!"))
 
         except Exception as e:
-            self.root.after(0, lambda err=e: self._log(f"错误: {err}", "ERROR"))
+            self.root.after(0, lambda err=e: self._log(f"回退模式错误: {err}", "ERROR"))
         finally:
-            self.generating = False
-            self.root.after(0, lambda: self.generate_btn.configure(state=tk.NORMAL, text="生成"))
-            self.root.after(0, lambda: self.progress.stop())
+            self._finish_generate()
 
+    # [已弃用] _build_txt2img_workflow — v3.2 服务器统一管理模型，保留用于 8188 回退
     def _build_txt2img_workflow(self, positive, negative, width, height, steps, cfg, seed, batch_size=1):
         # 根据模型名自动判断是否使用 SDXL 编码节点（SDXL 必须使用 CLIPTextEncodeSDXL）
         ckpt = self.checkpoint_var.get() or DEFAULT_CHECKPOINT
@@ -2620,6 +3013,7 @@ class ComfyUIGenerator:
             "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "ComfyUI"}},
         }
 
+    # [已弃用] _build_img2img_workflow — v3.2 服务器统一管理模型，保留用于 8188 回退
     def _build_img2img_workflow(self, image_filename, positive, negative, width, height, steps, cfg, denoise, seed, batch_size=1):
         # 根据模型名自动判断是否使用 SDXL 编码节点（SDXL 必须使用 CLIPTextEncodeSDXL）
         ckpt = self.checkpoint_var.get() or DEFAULT_CHECKPOINT

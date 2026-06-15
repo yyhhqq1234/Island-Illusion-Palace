@@ -1,12 +1,16 @@
 {
   "llm": {
-    "provider": "lm_studio",
-    "base_url": "http://localhost:1234/v1",
-    "api_key": "",
-    "model_name": "qwen/qwen3-vl-8b"
+    "provider": "custom",
+    "base_url": "https://api.deepseek.com/v1",
+    "api_key": "sk-f9f5f2d2a2f14627a4bc9960f8834efa",
+    "model_name": "deepseek-v4-flash"
   },
   "server": {
     "url": "http://10.150.164.64:8188",
     "output_base": "d:\\Program Files\\Unity\\U3Dproject\\Island-Illusion-Palace\\Assets\\ArtMaterials"
+  },
+  "project": {
+    "root_path": "",
+    "auto_scan": true
   }
 }
