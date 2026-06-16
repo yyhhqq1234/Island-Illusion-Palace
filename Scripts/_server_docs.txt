@@ -1,0 +1,1810 @@
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿================================================================================
+  游戏美术素材生产服务器 - 客户端使用文档 v5.2
+================================================================================
+
+  服务器: 10.150.164.64
+  通信服务: http://10.150.164.64:8189  (HTTP REST + WebSocket + 蓝图展平)
+  ComfyUI:   http://10.150.164.64:8188  (原生 API — 不推荐客户端直接访问，请使用 8189 代理)
+  ★ 统一入口: http://10.150.164.64:8189  (所有功能一站式)
+  ★ 在线文档: http://10.150.164.64:8189/docs  (本文档, 浏览器可直接访问)
+  硬件: NVIDIA RTX 3060 (12GB VRAM) + NPU Intel AI Boost (13 TOPS) + CPU Core Ultra 9 275HX
+  加速: CLIP 嵌入卸载 (NPU/CPU) + CPU VAE 解码 (--cpu-vae 标志)
+  已安装模型: ~97GB（SDXL旗舰：NoobAI-XL / SD1.5品质：AOM3 / 极速：Z-Image / Flux / ControlNet / Depth）
+
+  Python SDK:  d:\ComfyUI-P\src\comms_client.py     (复制到客户端项目即可, 零依赖HTTP模式)
+  测试工具:    d:\ComfyUI-P\tests\test_runner.py       (工作流/蓝图自动化测试 + 日志)
+  蓝图展平器:  d:\ComfyUI-P\src\blueprint_flattener.py  (蓝图→API格式转换)
+  注册表:      d:\ComfyUI-P\workflows\registry.json  (所有工作流定义)
+  配置管理:    d:\ComfyUI-P\tools\config_manager.py       (网络配置集中管理, 支持多环境)
+
+
+================================================================================
+  ★ 局域网客户端快速入门 (3 步即可调用) ★
+================================================================================
+
+  前提: 客户端与服务器在同一局域网内, 能 ping 通 10.150.164.64
+  所有接口支持 CORS, 无需任何额外配置!
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │  Step 1: 复制 SDK                                           │
+  │                                                             │
+  │    从浏览器一键下载:                                          │
+  │      http://10.150.164.64:8189/client-sdk                   │
+  │    仅 HTTP 模式无需安装任何依赖!                              │
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │  Step 2: 列出可用工作流                                      │
+  │                                                             │
+  │    Python (推荐):                                           │
+  │      from comms_client import CommsClient                    │
+  │      data = CommsClient.http_list_workflows()               │
+  │      print(f"Total: {data['total']}")                      │
+  │      for wid, w in data['workflows'].items():              │
+  │          print(f"  {wid}: {w['name']}")                    │
+  │      for bid, b in data['blueprints'].items():             │
+  │          print(f"  {bid}: {b['name']} [{b.get('category')}]")
+  │                                                             │
+  │    curl:                                                    │
+  │      curl http://10.150.164.64:8189/workflows               │
+  │                                                             │
+  │    浏览器:                                                  │
+  │      http://10.150.164.64:8189/workflows                   │
+  └─────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │  Step 3: 执行工作流 / 蓝图                                   │
+  │                                                             │
+  │    --- 最简方式 (一行代码) ---                               │
+  │                                                             │
+  │    from comms_client import generate                        │
+  │                                                             │
+  │    # 文生图 (Z-Image Turbo, 极速)                           │
+  │    files = generate("game-item-icon",                       │
+  │        {"prompt": "a dragon flying over mountains"},          │
+  │        save_dir="./output")                                   │
+  │    # → 自动提交 + 等待完成 + 下载到 ./output/                │
+  │                                                               │
+  │    # 图像滤镜 (锐化)                                          │
+  │    files = generate("image-sharpen",                          │
+  │        {}, save_dir="./output")                               │
+  │                                                               │
+  │    # 角色立绘                                                 │
+  │    files = generate("game-character-design",                  │
+  │        {"prompt": "a knight in armor, pixel art"})          │
+  │                                                             │
+  │    --- 分步控制 ---                                         │
+  │                                                             │
+  │    from comms_client import CommsClient                     │
+  │                                                             │
+  │    # 提交任务                                               │
+  │    r = CommsClient.http_execute_workflow(                   │
+  │        "game-item-icon",                                      │
+  │        {"prompt": "sunset over mountains",                    │
+  │         "width": 1024, "height": 1024})                       │
+  │    prompt_id = r["prompt_id"]                               │
+  │                                                             │
+  │    # 等待完成                                               │
+  │    result = CommsClient.wait_for_result(prompt_id)          │
+  │    for f in result["outputs"]:                              │
+  │        print(f"{f['filename']} -> {f['url']}")             │
+  │                                                             │
+  │    # 下载文件                                               │
+  │    data = CommsClient.http_view(f["filename"])              │
+  │    with open(f["filename"], "wb") as fp:                    │
+  │        fp.write(data)                                       │
+  └─────────────────────────────────────────────────────────────┘
+
+  常用工作流 ID (8个, 完整列表请 GET /workflows):
+  ┌──────────────────────────────┬──────────────────────────────┐
+  │ ID                           │ 用途                         │
+  ├──────────────────────────────┼──────────────────────────────┤
+  │ game-sprite-sheet-sdxl       │ SDXL精灵帧动画(NoobAI,35步) │
+  │ game-character-design-sdxl   │ SDXL角色立绘(NoobAI,28步)   │
+  │ game-concept-art-sdxl        │ SDXL概念图(NoobAI,35步)     │
+  │ game-character-design        │ 角色立绘 (AOM3,20步)        │
+  │ game-item-icon               │ 道具图标 (Z-Image,4步)      │
+  │ game-environment             │ 场景背景 (AOM3,20步)        │
+  │ game-concept-art             │ 概念图 (AOM3,30步)          │
+  │ game-sprite-sheet            │ 精灵动画 (AOM3,25步)        │
+  └──────────────────────────────┴──────────────────────────────┘
+
+  工具蓝图 (4个):
+  ┌──────────────────────────┬──────────────────────────────────┐
+  │ image-inpainting         │ 局部重绘/修复 (Flux Fill)        │
+  │ image-depth-map          │ 深度图生成 (Lotus)               │
+  │ image-blur               │ 图像模糊                         │
+  │ image-sharpen            │ 图像锐化                         │
+  └──────────────────────────┴──────────────────────────────────┘
+
+
+================================================================================
+  目录
+================================================================================
+  1. 架构概述
+  2. 快速上手 (5 分钟)
+  3. API 完整参考
+    3.1 HTTP REST API (8189 端口) — 含每个端点的请求/响应示例
+    3.2 WebSocket API (8189 端口) — 所有消息类型详解
+    3.3 ComfyUI 原生 API (8188 端口) — 队列/历史/文件管理
+  4. 工作流完整目录 (41 个)
+  5. Python SDK 详细用法
+    5.1 安装与导入
+    5.2 HTTP 方式 (最简单, 单次调用)
+    5.3 WebSocket 方式 (实时监听, 长期运行)
+    5.4 蓝图操作 (HTTP + WebSocket)
+    5.5 获取生成结果 (轮询 / 文件下载)
+    5.6 批量生产流程
+    5.7 自动化管道 (空闲时自动提交)
+  6. 多语言客户端示例
+    6.1 curl (命令行)
+    6.2 Python (requests)
+    6.3 JavaScript / Node.js
+    6.4 C# / Unity
+  7. 结果获取与文件管理
+  8. 状态监控
+  9. 错误处理与常见问题
+  10. 完整脚本示例
+
+
+================================================================================
+  1. 架构概述
+================================================================================
+
+  ★ 客户端只需访问 8189 一个端口! ★
+
+  ┌──────────┐  HTTP REST / WebSocket  ┌──────────────────────────────┐
+  │  客户端   │ ◄──────────────────────►│ 通信服务 (8189) 统一入口      │
+  │ (任意语言)│                         │                              │
+  └──────────┘                         │ - 工作流发现 (8个)           │
+                                       │ - 参数注入 / 蓝图展平         │
+                                       │ - ComfyUI API 代理            │
+                                       │ - WebSocket 实时推送          │
+                                       └──────────┬───────────────────┘
+                                                  │ 内部调用
+                                                  ▼
+                                       ┌──────────────────────────┐
+                                       │ ComfyUI (8188)           │
+                                       │ GPU: RTX 3060 12GB       │
+                                       │ NPU: AI Boost 13 TOPS    │
+                                       │  (CLIP 嵌入卸载)          │
+                                       │ CPU: Core Ultra 9        │
+                                       │  (VAE 解码, 备选嵌入)     │
+                                       └──────────────────────────┘
+
+  8189 端口提供完整功能:
+  - 工作流管理:  /workflows (8个), /workflows/registered (4个), /workflows/execute
+  - ComfyUI 代理: /comfy/queue, /comfy/history/{id}, /comfy/view, ...
+  - 实时通信:    ws://10.150.164.64:8189 (WebSocket 状态推送)
+  - 状态监控:    /status, /health, /clients
+
+  不再需要同时访问 8188 和 8189 两个端口! 所有操作统一通过 8189 完成。
+
+
+================================================================================
+  2. 快速上手 (5 分钟)
+================================================================================
+
+  步骤 1 — 查看服务器状态:
+
+    curl http://10.150.164.64:8189/status
+    返回 GPU 显存、队列、在线客户端、优化建议。
+
+  步骤 2 — 列出所有可用工作流:
+
+    curl http://10.150.164.64:8189/workflows             # 全部 8 个 (4 工作流 + 4 蓝图)
+  curl http://10.150.164.64:8189/workflows/registered   # 仅 4 个工作流
+  curl http://10.150.164.64:8189/workflows/all         # 兼容旧版: 全部 (8个)
+  curl http://10.150.164.64:8189/blueprints            # 仅蓝图 (4个)
+
+  步骤 3 — 执行工作流 (统一入口，推荐):
+
+    :: Windows CMD
+    curl -X POST http://10.150.164.64:8189/workflows/execute ^
+      -H "Content-Type: application/json" ^
+      -d "{\"workflow_id\":\"game-character-design\",\"params\":{\"prompt\":\"1girl, fantasy mage, blue robe, standing\"}}"
+
+  步骤 4 — 执行蓝图 (工具):
+
+    curl -X POST http://10.150.164.64:8189/workflows/execute ^
+      -H "Content-Type: application/json" ^
+      -d "{\"workflow_id\":\"image-sharpen\",\"params\":{}}"
+
+  步骤 5 — 等待完成并获取结果 (全部通过 8189) :
+
+    :: 用返回的 prompt_id 查询历史 (通过 8189 代理)
+    curl http://10.150.164.64:8189/comfy/history/abc123-def456
+    :: 返回 outputs 中包含生成的文件名和路径
+
+    :: 下载文件
+    curl -o output.png "http://10.150.164.64:8189/comfy/view?filename=ComfyUI_00001_.png&type=output"
+
+
+================================================================================
+  3. API 完整参考
+================================================================================
+
+  ================================================================
+  3.1 HTTP REST API (端口 8189) — 通信服务
+  ================================================================
+
+  所有接口支持 CORS (Access-Control-Allow-Origin: *)。
+
+  ┌──────────────────────────┬────────┬──────────────────────────────────────────┐
+  │ 端点                      │ 方法   │ 说明                                     │
+  ├──────────────────────────┼────────┼──────────────────────────────────────────┤
+  │ /                        │ GET    │ API 索引，列出所有可用端点                │
+  │ /status                  │ GET    │ 服务器完整状态 (GPU/队列/客户端/建议)     │
+  │ /health                  │ GET    │ 健康检查 {"status":"ok","uptime":3600}    │
+  │ /docs                    │ GET    │ ★ 线上说明文档 (本文档全文, text/plain)  │
+  │ /clients                 │ GET    │ 在线客户端列表                            │
+  │ /history                 │ GET    │ 消息历史 (最近 100 条)                    │
+  │ /workflows               │ GET    │ ★ 列出全部 8 个 (工作流+蓝图, 客户端标准入口) │
+  │ /workflows/all           │ GET    │ 向后兼容别名，同 /workflows                    │
+  │ /workflows/registered    │ GET    │ 仅列出 4 个注册工作流 (不含蓝图)              │
+  │ /workflows/{id}          │ GET    │ 单个工作流详情 (自动查找工作流→蓝图)           │
+  │ /workflows/execute       │ POST   │ ★ 统一入口: 提交工作流/蓝图到队列              │
+  │ /blueprints              │ GET    │ 列出所有蓝图 (4个)                            │
+  │ /blueprints/{id}         │ GET    │ 单个蓝图详情 (含完整蓝图 JSON + 参数)          │
+  │ /blueprints/execute      │ POST   │ 执行蓝图 (自动展平子图→提交 ComfyUI)           │
+  │ /notify                  │ POST   │ 热更新通知 (内部使用)                          │
+  │ /client-sdk              │ GET    │ ★ 下载最新客户端 SDK (comms_client.py)          │
+  └──────────────────────────┴────────┴──────────────────────────────────────────┘
+
+  --- ComfyUI API 代理 (统一入口) ---
+  以下端点自动代理到 ComfyUI 8188，客户端无需直接访问 8188:
+
+  ┌──────────────────────────┬────────┬──────────────────────────────────────────┐
+  │ 端点                      │ 方法   │ 说明                                     │
+  ├──────────────────────────┼────────┼──────────────────────────────────────────┤
+  │ /comfy/queue             │ GET    │ 队列状态 (running + pending)              │
+  │ /comfy/history           │ GET    │ 历史记录 (支持 ?max_items=&offset=)       │
+  │ /comfy/history/{id}      │ GET    │ 指定任务结果 ★ 含 outputs 文件路径        │
+  │ /comfy/view              │ GET    │ 下载/查看生成文件 (支持 ?filename=&type=) │
+  │ /comfy/interrupt         │ POST   │ 中断当前任务                              │
+  │ /comfy/free              │ POST   │ 卸载模型释放显存                          │
+  │ /comfy/system_stats      │ GET    │ GPU 系统统计                              │
+  │ /comfy/prompt            │ POST   │ 提交原始工作流 JSON (高级用户)            │
+  │ /comfy/embeddings        │ GET    │ 可用 Embedding 列表                       │
+  │ /comfy/extensions        │ GET    │ 可用扩展列表                              │
+  │ /comfy/object_info       │ GET    │ 节点信息列表                              │
+  └──────────────────────────┴────────┴──────────────────────────────────────────┘
+
+  示例:
+    curl http://10.150.164.64:8189/comfy/queue                    # 查看队列
+    curl http://10.150.164.64:8189/comfy/history/abc123            # 查看结果
+    curl -o img.png "http://10.150.164.64:8189/comfy/view?filename=ComfyUI_00001_.png&type=output"
+    curl -X POST http://10.150.164.64:8189/comfy/interrupt          # 中断任务
+
+
+  --- ★ POST /workflows/execute (统一入口) ---
+  这是最推荐的方式。自动查找工作流注册表 → 蓝图注册表，智能路由。
+
+  请求:
+  {
+    "workflow_id": "game-character-design",  // 必填: 工作流或蓝图 ID
+    "params": {                                   // 参数, 依工作流而定
+      "prompt": "a brave knight",                 // 正向提示词 (大多数需要)
+      "negative_prompt": "bad quality, blurry",   // 可选: 负面提示词
+      "seed": 42,                                 // 可选: 随机种子
+      "steps": 10,                                // 可选: 覆盖默认步数
+      "cfg": 7.0,                                 // 可选: CFG scale
+      "width": 1024,                              // 可选: 画布宽度
+      "height": 1024                              // 可选: 画布高度
+    }
+  }
+
+  成功响应 (200):
+  {
+    "prompt_id": "abc123-def456",
+    "number": 1,
+    "workflow_id": "game-character-design",
+    "workflow_name": "Unity 2D 角色精灵",
+    "client_id": "random-uuid",
+    "node_errors": {}
+  }
+
+  蓝图执行成功响应:
+  {
+    "prompt_id": "xyz789",
+    "blueprint_id": "game-item-icon",
+    "blueprint_name": "Text to Image (Z-Image-Turbo)",
+    "client_id": "random-uuid",
+    "node_count": 10
+  }
+
+  失败响应 (200, 含 error):
+  {"error": "工作流不存在: xxx"}
+  {"error": "蓝图不存在: xxx"}
+  {"error": "ComfyUI API 调用失败: ..."}
+
+  参数注入规则 (仅注册工作流，服务端自动处理):
+
+  所有工作流统一使用 "prompt" 传参。服务端根据工作流类型自动选择注入方式：
+
+  ┌─ SDXL 工作流 (ID 含 -sdxl) ──────────────────────────────────────┐
+  │ prompt:           → CLIPTextEncodeSDXLNPU 的 text_g + text_l       │
+  │ negative_prompt:  → 标记"负面"的 CLIPTextEncodeSDXLNPU             │
+  │                     (text_g + text_l 同时设置)                       │
+  │ ★ 客户端只需传 "prompt"，无需区分 text_g 和 text_l                 │
+  └──────────────────────────────────────────────────────────────────┘
+  ┌─ SD1.5 工作流 ────────────────────────────────────────────────────┐
+  │ prompt:           → CLIPTextEncodeNPU 的 text                      │
+  │ negative_prompt:  → 标记"负面"的 CLIPTextEncodeNPU 的 text          │
+  └──────────────────────────────────────────────────────────────────┘
+  ┌─ 通用参数 (所有工作流) ───────────────────────────────────────────┐
+  │ seed:             → KSampler/RandomNoise 的 seed/noise_seed        │
+  │ steps:            → KSampler/SamplerCustom 的 steps                │
+  │ cfg:              → KSampler 的 cfg                                │
+  │ width/height:     → EmptyLatentImage/EmptySD3LatentImage 的对应字段 │
+  └──────────────────────────────────────────────────────────────────┘
+
+
+  === ═══ 参数管理 API (v3.3 新增) ═══
+
+  --- GET /workflows/{id}/params ---
+  获取工作流当前参数 (默认值 + 用户覆盖合并):
+  curl http://10.150.164.64:8189/workflows/game-character-design/params
+
+  响应:
+  {
+    "workflow_id": "game-character-design",
+    "name": "角色立绘设计",
+    "defaults": {"steps": 20, "cfg": 7.0, "seed": -1},
+    "overrides": {"steps": 25},
+    "current": {"steps": 25, "cfg": 7.0, "seed": -1},
+    "schema": {
+      "steps": {"type":"int","default":20,"min":10,"max":50,"description":"采样步数"},
+      "cfg": {"type":"float","default":7.0,"min":1.0,"max":15.0,"description":"CFG"},
+      ...
+    }
+  }
+
+  --- PUT /workflows/{id}/params ---
+  更新工作流参数 (自动验证+记录历史):
+  curl -X PUT http://10.150.164.64:8189/workflows/game-character-design/params \
+    -H "Content-Type: application/json" \
+    -d '{"params": {"steps": 25, "cfg": 6.5}, "user": "dev"}'
+
+  成功响应:
+  {
+    "success": true,
+    "message": "参数已保存",
+    "workflow_id": "game-character-design",
+    "current": {"steps": 25, "cfg": 6.5, ...},
+    ...
+  }
+
+  验证失败响应:
+  {
+    "success": false,
+    "message": "参数验证失败",
+    "errors": ["steps: 最小值 10, 收到 5", "未知参数: xxx"]
+  }
+
+  --- GET /workflows/{id}/params/history ---
+  获取参数变更历史:
+  curl http://10.150.164.64:8189/workflows/game-character-design/params/history
+
+  响应:
+  {
+    "workflow_id": "game-character-design",
+    "history": [
+      {"timestamp": "2026-06-16 15:30:00", "user": "dev", "params": {"steps": 25}},
+      {"timestamp": "2026-06-16 15:00:00", "user": "admin", "params": {"cfg": 6.5}}
+    ],
+    "count": 2
+  }
+
+  ─────────────────────────────────────────────
+
+  Client SDK 用法 (Python):
+  from comms_client import CommsClient
+
+  # 查看当前参数
+  p = CommsClient.http_get_params("game-character-design")
+  print(p["current"])  # {"steps": 20, "cfg": 7.0, ...}
+
+  # 更新参数 (含验证)
+  r = CommsClient.http_update_params("game-character-design",
+        {"steps": 25, "cfg": 6.5}, user="admin")
+  if r["success"]:
+      print("已更新")
+
+  # 查看历史
+  h = CommsClient.http_params_history("game-character-design")
+
+
+  --- GET /status ---
+  curl http://10.150.164.64:8189/status
+
+  响应:
+  {
+    "timestamp": 1700000000.0,
+    "uptime": 3600.0,
+    "gpu": {
+      "name": "NVIDIA GeForce RTX 3060",
+      "vram_used": 4096,
+      "vram_total": 12288,
+      "vram_free": 8192
+    },
+    "queue": {
+      "running": [],
+      "pending": []
+    },
+    "connected_clients": 2,
+    "optimization_tips": [
+      {"level": "success", "category": "general", "message": "服务器运行状态良好"}
+    ]
+  }
+
+
+  --- GET /clients ---
+  {"count": 2, "clients": [{"id": "client_1_xxx", "connected_at": 1700000000.0, "metadata": {"platform": "python"}}]}
+
+
+  --- GET /workflows ---
+  ★ 客户端标准入口。返回全部 12 个工作流(含蓝图):
+  {
+    "workflows": {<8个注册工作流>},
+    "blueprints": {<4个蓝图>},
+    "categories": {...},
+    "speed_levels": {...},
+    "models_available": {...},
+    "total_workflows": 4,
+    "total_blueprints": 4,
+    "total": 8
+  }
+
+  --- GET /workflows/registered ---
+  仅返回 4 个注册工作流(不含蓝图)，包含 categories/speed_levels/models_available 元数据。
+
+  --- GET /workflows/all ---
+  向后兼容别名，行为同 /workflows（返回全部 8 个）。
+
+  --- GET /workflows/{id} ---
+  获取工作流详情 (自动查找流程: 工作流 → 蓝图):
+  curl http://10.150.164.64:8189/workflows/game-character-design      # 注册工作流
+  curl http://10.150.164.64:8189/workflows/game-item-icon  # 蓝图 (自动回退查找)
+
+
+  --- GET /blueprints ---
+  列出 4 个蓝图:
+  {"blueprints": {"image-blur": {...}, ...}, "total": 4}
+
+
+  --- GET /blueprints/{id} ---
+  获取蓝图详情 (含 blueprint_json 和参数列表):
+  curl http://10.150.164.64:8189/blueprints/game-item-icon
+
+  响应示例:
+  {
+    "file": "Text to Image (Z-Image-Turbo).json",
+    "name": "Text to Image (Z-Image-Turbo)",
+    "category": "text-to-image",
+    "description": "Blueprint: Text to Image (Z-Image-Turbo)",
+    "params": {
+      "prompt": {"type": "string", "description": "prompt"},
+      "width": {"type": "int", "description": "width", "default": 1024},
+      "height": {"type": "int", "description": "height", "default": 1024},
+      "unet_name": {"type": "string", "description": "unet_name", "default": "z_image_turbo_bf16.safetensors"},
+      "clip_name": {"type": "string", "description": "clip_name", "default": "qwen_2.5_vl_7b_fp8_scaled.safetensors"},
+      "vae_name": {"type": "string", "description": "vae_name", "default": "z_image_vae_bf16.safetensors"}
+    },
+    "output_type": "IMAGE",
+    "is_blueprint": true,
+    "blueprint_json": {<原始蓝图 JSON>}
+  }
+
+
+  --- POST /blueprints/execute ---
+  执行蓝图 (自动展平子图 → 提交 ComfyUI):
+
+  请求:
+  {
+    "blueprint_id": "game-item-icon",
+    "params": {"prompt": "a cat", "width": 1024, "height": 1024}
+  }
+
+  响应:
+  {
+    "prompt_id": "abc123...",
+    "blueprint_id": "game-item-icon",
+    "blueprint_name": "Text to Image (Z-Image-Turbo)",
+    "client_id": "random-uuid",
+    "node_count": 10
+  }
+
+
+  ================================================================
+  3.2 WebSocket API (端口 8189) — 实时通信
+  ================================================================
+
+  地址: ws://10.150.164.64:8189
+
+  所有消息格式: {"type": "<类型>", "data": {...}, "timestamp": <Unix秒>}
+
+  === 客户端 → 服务器 ===
+
+  ping               心跳
+    发送: {"type":"ping", "data":{}}
+    返回: {"type":"pong", "data":{"server_time":1700000000.0}}
+
+  request_status     请求状态 (GPU/队列/建议)
+    发送: {"type":"request_status", "data":{}}
+    返回: {"type":"server_status", "data":{<同 GET /status>}}
+
+  get_history        获取消息历史
+    发送: {"type":"get_history", "data":{"count":50}}
+    返回: {"type":"message_history", "data":{"messages":[...]}}
+
+  register           注册客户端元数据
+    发送: {"type":"register", "data":{"metadata":{"platform":"unity","version":"2.0"}}}
+    返回: {"type":"ack", "data":{"message":"注册成功, ID: client_1_xxx"}}
+
+  chat               广播消息
+    发送: {"type":"chat", "data":{"message":"Hello"}}
+    广播: {"type":"chat", "data":{"from":"client_1","message":"Hello","time":...}}
+
+  submit_priority    请求优先执行
+    发送: {"type":"submit_priority", "data":{"reason":"urgent"}}
+    返回: {"type":"ack", "data":{"message":"优先请求已接收"}}
+
+  hot_reload         热更新通知 (内部)
+    发送: {"type":"hot_reload", "data":{"message":"...","level":"info"}}
+    广播: {"type":"hot_reload", "data":{...}}
+
+  === 工作流管理 (WebSocket) ===
+
+  list_workflows     列出工作流 (可按类别筛选)
+    发送: {"type":"list_workflows", "data":{"category":"unity-2d"}}
+    返回: {"type":"workflow_list", "data":{<含 total/categories/speed_levels>}}
+
+  get_workflow       获取单个工作流详情 (含 workflow_json)
+    发送: {"type":"get_workflow", "data":{"workflow_id":"game-character-design"}}
+    返回: {"type":"workflow_detail", "data":{<含 params/workflow_json>}}
+
+  execute_workflow   执行工作流 ★ 统一入口 (自动识别工作流/蓝图)
+    发送: {
+      "type":"execute_workflow",
+      "data":{"workflow_id":"game-character-design", "params":{"prompt":"a knight","seed":42}}
+    }
+    返回: {"type":"workflow_executed", "data":{"prompt_id":"...", "workflow_name":"...", "number":1}}
+    广播: 向其他客户端广播 {"type":"workflow_executed", "data":{...}}
+
+  === 蓝图管理 (WebSocket) ===
+
+  list_blueprints    列出蓝图 (可按类别筛选)
+    发送: {"type":"list_blueprints", "data":{"category":"image-edit"}}
+    返回: {"type":"blueprint_list", "data":{"blueprints":{...}, "total":30}}
+
+  get_blueprint      获取蓝图详情 (含 blueprint_json + 参数列表)
+    发送: {"type":"get_blueprint", "data":{"blueprint_id":"image-blur"}}
+    返回: {"type":"blueprint_detail", "data":{<含 params/blueprint_json>}}
+
+  execute_blueprint  执行蓝图 (展平子图 → 提交)
+    发送: {
+      "type":"execute_blueprint",
+      "data":{"blueprint_id":"game-item-icon", "params":{"text":"game environment description","width":1024}}
+    }
+    返回: {"type":"blueprint_executed", "data":{"prompt_id":"...", "blueprint_name":"...", "node_count":10}}
+
+  === 服务器 → 客户端 (推送) ===
+
+  welcome            连接成功 (自动)
+    {"type":"welcome","data":{"client_id":"client_1","initial_status":{...},"supported_commands":[...]}}
+
+  server_status      定期广播 (每5秒, 有客户端在线时)
+    {"type":"server_status","data":{<同 GET /status>}}
+
+  workflow_executed  工作流执行通知 (广播)
+  blueprint_executed 蓝图执行通知 (广播)
+
+  hot_reload         热更新通知 (广播)
+  chat               聊天广播
+  error              错误消息: {"type":"error", "data":{"message":"..."}}
+
+
+  ================================================================
+  3.3 ComfyUI 原生 API (端口 8188) — 高级用途
+  ================================================================
+
+  ┌──────────────────────┬────────┬────────────────────────────────────────┐
+  │ 端点                  │ 方法   │ 说明                                   │
+  ├──────────────────────┼────────┼────────────────────────────────────────┤
+  │ /prompt              │ POST   │ 提交原始工作流 JSON (无参数注入)        │
+  │ /queue               │ GET    │ 获取队列 (running + pending)            │
+  │ /queue               │ POST   │ 清空队列 / 删除指定任务 {"delete":[...]}│
+  │ /history             │ GET    │ 历史记录 (支持 ?max_items=&offset=)     │
+  │ /history/{prompt_id} │ GET    │ 指定任务详情 ★ 含 outputs 文件路径      │
+  │ /interrupt           │ POST   │ 中断当前任务 / {"prompt_id":"xxx"}      │
+  │ /free                │ POST   │ 卸载模型释放显存                        │
+  │ /system_stats        │ GET    │ GPU 统计                                │
+  │ /view                │ GET    │ 查看/下载生成文件                       │
+  │ /embeddings          │ GET    │ 可用 Embedding 列表                     │
+  │ /extensions          │ GET    │ 可用扩展列表                            │
+  └──────────────────────┴────────┴────────────────────────────────────────┘
+
+  重要: 获取生成文件
+  GET /history/{prompt_id} 返回的 outputs 示例:
+  {"outputs": {"9": {"images": [{"filename": "ComfyUI_00001_.png", "subfolder": "", "type": "output"}]}}}
+
+  文件访问 URL:
+  http://10.150.164.64:8188/view?filename=ComfyUI_00001_.png&subfolder=&type=output
+
+  文件在服务器上的实际路径: d:\ComfyUI-P\ComfyUI\output\
+
+
+================================================================================
+  4. 工作流目录 (8 个)
+================================================================================
+
+  === 4.1 工作流 (4 个) — 高品质游戏美术生成 ===
+
+  ┌──────────────────────────────┬──────────┬──────────┬──────┬─────────────────┐
+  │ ID                           │ 模型     │ 画布     │ 步数 │ 用途             │
+  ├──────────────────────────────┼──────────┼──────────┼──────┼─────────────────┤
+  │ game-sprite-sheet-sdxl       │ NoobAI   │ 1536x1536│  35  │ SDXL精灵动画(旗舰)│
+  │ game-character-design-sdxl   │ NoobAI   │ 1024x1536│  28  │ SDXL角色立绘(旗舰)│
+  │ game-concept-art-sdxl        │ NoobAI   │ 1024x1024│  35  │ SDXL概念图(旗舰) │
+  │ game-sprite-sheet            │ AOM3     │ 2048x2048│  25  │ 精灵帧动画条带   │
+  │ game-character-design        │ AOM3     │ 768x1024 │  20  │ 角色立绘设计     │
+  │ game-item-icon               │ Z-Image  │ 1024x1024│   4  │ 道具图标(极速)   │
+  │ game-environment             │ AOM3     │ 1536x640 │  20  │ 场景/关卡背景    │
+  │ game-concept-art             │ AOM3     │ 1024x1024│  30  │ 概念图/宣传画    │
+  └──────────────────────────────┴──────────┴──────────┴──────┴─────────────────┘
+
+  === 4.2 蓝图 (4 个) — 图像后处理工具 ===
+
+  ┌──────────────────────┬───────────┬────────────────────────────────┐
+  │ ID                   │ 依赖模型  │ 说明                           │
+  ├──────────────────────┼───────────┼────────────────────────────────┤
+  │ image-inpainting     │ Flux Fill │ 局部重绘修复(需image+mask)     │
+  │ image-depth-map      │ Lotus     │ 单目深度估计(输入图像→深度图)  │
+  │ image-blur           │ 无        │ 高斯/边缘保留模糊              │
+  │ image-sharpen        │ 无        │ 锐化增强细节                   │
+  └──────────────────────┴───────────┴────────────────────────────────┘
+
+
+================================================================================
+  5. Python SDK 详细用法
+================================================================================
+
+  SDK 文件: d:\ComfyUI-P\src\comms_client.py  (复制到客户端项目, pip install websocket-client)
+
+
+  === 5.1 安装 ===
+
+  pip install websocket-client
+  # 将 comms_client.py 复制到项目根目录
+  from comms_client import CommsClient
+
+
+  === 5.2 HTTP 方式 (最简单: 单次调用, 适合脚本/批量) ===
+
+  from comms_client import CommsClient
+
+  # —— 查询 ——
+  # 列出工作流
+  wf = CommsClient.http_list_workflows()
+  for wf_id, info in wf["workflows"].items():
+      print(f"  {wf_id}: {info['name']} [{info['speed']}] {info['canvas']}")
+
+  # 列出蓝图
+  bp = CommsClient.http_list_blueprints()
+  print(f"蓝图: {bp['total']} 个")
+
+  # 列出全部 (工作流 + 蓝图)
+  all_data = CommsClient.http_list_all()
+  print(f"合计: {all_data['total']} 个")
+
+  # 获取工作流详情
+  detail = CommsClient.http_get_workflow("game-character-design")
+  print(f"参数: {list(detail['params'].keys())}")
+
+  # 获取蓝图详情 (查看可用参数)
+  bp_detail = CommsClient.http_get_blueprint("image-blur")
+  print(f"蓝图参数: {bp_detail['params']}")
+
+  # —— 执行 ——
+  # 执行注册工作流
+  result = CommsClient.http_execute_workflow(
+      "game-character-design",
+      {"prompt": "a brave knight, pixel art, side view", "seed": 42}
+  )
+  if "error" in result:
+      print(f"错误: {result['error']}")
+  else:
+      prompt_id = result["prompt_id"]
+      print(f"已提交: {prompt_id}")
+
+  # 执行蓝图
+  result = CommsClient.http_execute_blueprint(
+      "game-item-icon",
+      {"prompt": "a beautiful landscape at sunset", "width": 1024, "height": 1024}
+  )
+  print(f"蓝图 prompt_id: {result.get('prompt_id') or result.get('error')}")
+
+  # ★ 统一入口执行 (自动识别工作流/蓝图)
+  result = CommsClient.http_execute_workflow(  # 也可传 blueprint_id
+      "image-blur",
+      {"strength": 0.5}
+  )
+  print(f"统一入口: prompt_id={result.get('prompt_id')}")
+
+
+  === 5.3 WebSocket 方式 (实时监听, 长期运行) ===
+
+  from comms_client import CommsClient
+  import time
+
+  client = CommsClient(
+      server_url="ws://10.150.164.64:8189",
+      auto_reconnect=True,
+      ping_interval=30,
+      ping_timeout=10
+  )
+
+  # —— 注册事件回调 ——
+
+  @client.on("connected")
+  def on_connected(data):
+      print(f"已连接! client_id: {data['client_id']}")
+      client.list_workflows()      # 连接后列出工作流
+      client.list_blueprints()     # 列出蓝图
+
+  @client.on("server_status")
+  def on_status(data):
+      gpu = data["gpu"]
+      queue = data["queue"]
+      print(f"GPU: {gpu['vram_used']}MB/{gpu['vram_total']}MB | "
+            f"队列: {len(queue['pending'])}等待 | "
+            f"在线: {data['connected_clients']}")
+
+  @client.on("workflow_list")
+  def on_wf_list(data):
+      print(f"\n=== 注册工作流 ({data['total']}个) ===")
+      for wf_id, wf in data["workflows"].items():
+          print(f"  {wf_id}: {wf['name']}")
+
+  @client.on("blueprint_list")
+  def on_bp_list(data):
+      print(f"\n=== 蓝图 ({data['total']}个) ===")
+      cats = {}
+      for bp_id, bp in data["blueprints"].items():
+          cat = bp.get("category", "other")
+          cats.setdefault(cat, []).append(bp['name'])
+      for cat, names in cats.items():
+          print(f"  [{cat}] {len(names)}个: {names[:3]}...")
+
+  @client.on("blueprint_detail")
+  def on_blueprint_detail(data):
+      print(f"\n蓝图: {data['name']}")
+      print(f"  类别: {data.get('category')}")
+      print(f"  参数: {list(data.get('params', {}).keys())}")
+      print(f"  输出类型: {data.get('output_type')}")
+
+  @client.on("workflow_executed")
+  def on_executed(data):
+      wf_name = data.get("workflow_name") or data.get("blueprint_name", "?")
+      print(f"任务提交: {wf_name} (prompt_id: {data.get('prompt_id')})")
+
+  @client.on("blueprint_executed")
+  def on_bp_executed(data):
+      print(f"蓝图提交: {data['blueprint_name']} (nodes: {data['node_count']})")
+
+  @client.on("hot_reload")
+  def on_hotreload(data):
+      print(f"热更新: [{data['level']}] {data['message']}")
+
+  @client.on("disconnected")
+  def on_disconnected(data):
+      print(f"断开: {data.get('reason')}, 尝试重连...")
+
+  @client.on("error")
+  def on_error(data):
+      print(f"服务器错误: {data.get('message')}")
+
+  # —— 连接 ——
+  client.connect(blocking=False)
+  client.wait_connected(timeout=10)
+
+  # —— 交互 ——
+  client.request_status()
+  client.list_workflows(category="unity-2d")
+  client.list_blueprints(category="text-to-image")
+  client.get_workflow("game-character-design")
+  client.get_blueprint("image-blur")
+  client.execute_workflow("game-concept-art",
+      {"prompt": "a dragon flying over mountains, fantasy art"})
+  client.execute_blueprint("image-blur",
+      {"prompt": "a warrior in battle"})
+  client.chat("Pipeline started!")
+
+  # 持续运行
+  try:
+      while True: time.sleep(1)
+  except KeyboardInterrupt:
+      client.disconnect()
+
+
+  === 5.4 获取生成结果 ===
+
+  任务提交后, prompt_id 用于追踪。通过 ComfyUI 原生 API 获取结果。
+
+  import urllib.request, json, time
+
+  def wait_for_result(prompt_id, timeout=300, server="http://10.150.164.64:8189"):
+      """轮询等待任务完成，返回输出文件列表"""
+      deadline = time.time() + timeout
+      while time.time() < deadline:
+          # 检查队列 (任务是否还在排队/运行)
+          queue = json.loads(urllib.request.urlopen(f"{server}/comfy/queue").read())
+          in_queue = False
+          for item in queue.get("queue_running", []):
+              if item[1] == prompt_id:
+                  in_queue = True
+                  break
+          for item in queue.get("queue_pending", []):
+              if item[1] == prompt_id:
+                  in_queue = True
+                  break
+
+          if not in_queue:
+              # 任务已完成 or 不存在 → 查历史
+              try:
+                  history = json.loads(
+                      urllib.request.urlopen(f"{server}/comfy/history/{prompt_id}").read()
+                  )
+                  if prompt_id in history:
+                      outputs = []
+                      for node_id, node_out in history[prompt_id].get("outputs", {}).items():
+                          for img in node_out.get("images", []):
+                              outputs.append({
+                                  "filename": img["filename"],
+                                  "subfolder": img.get("subfolder", ""),
+                                  "type": img.get("type", "output"),
+                                  "url": f"{server}/comfy/view?filename={img['filename']}"
+                                         f"&subfolder={img.get('subfolder','')}"
+                                         f"&type={img.get('type','output')}"
+                              })
+                          for vid in node_out.get("gifs", []):
+                              outputs.append({
+                                  "filename": vid["filename"],
+                                  "type": "video",
+                                  "url": f"{server}/comfy/view?filename={vid['filename']}"
+                                         f"&subfolder={vid.get('subfolder','')}"
+                                         f"&type=output"
+                              })
+                      return {"status": "done", "outputs": outputs}
+                  else:
+                      return {"status": "not_found", "outputs": []}
+              except Exception as e:
+                  return {"status": "error", "error": str(e), "outputs": []}
+
+          time.sleep(3)
+
+      return {"status": "timeout", "outputs": []}
+
+  # 使用
+  result = CommsClient.http_execute_workflow("game-item-icon", {"prompt": "golden sword"})
+  prompt_id = result.get("prompt_id")
+  if prompt_id:
+      outputs = wait_for_result(prompt_id)
+      for f in outputs.get("outputs", []):
+          print(f"  {f['type']}: {f['filename']} → {f['url']}")
+
+
+  === 5.5 批量生成 (HTTP) ===
+
+  from comms_client import CommsClient
+  import time
+
+  prompts = [
+      "red health potion, game item, white background",
+      "blue mana potion, game item, white background",
+      "golden key, game item, white background",
+      "silver shield, game item, white background",
+  ]
+
+  prompt_ids = []
+  for p in prompts:
+      r = CommsClient.http_execute_workflow("game-item-icon", {"prompt": p})
+      if "error" in r:
+          print(f"  错误 [{p[:30]}...]: {r['error']}")
+      else:
+          print(f"  提交 [{p[:30]}...]: {r['prompt_id']}")
+          prompt_ids.append(r["prompt_id"])
+      time.sleep(1)  # 间隔避免队列积压
+
+  # 等待所有完成
+  for pid in prompt_ids:
+      out = wait_for_result(pid)
+      print(f"{pid}: {out['status']}, {len(out['outputs'])} 文件")
+
+
+  === 5.6 自动管道 (WebSocket 空闲时提交) ===
+
+  from comms_client import CommsClient
+  import time, threading
+
+  client = CommsClient("ws://10.150.164.64:8189")
+  tasks = []
+  lock = threading.Lock()
+
+  @client.on("server_status")
+  def on_status(data):
+      gpu = data["gpu"]
+      queue = data["queue"]
+      # 空闲时提交下一个任务
+      if (len(queue["running"]) + len(queue["pending"]) == 0
+          and gpu.get("vram_used", 0) < gpu.get("vram_total", 0) * 0.6):
+          with lock:
+              if tasks:
+                  wf_id, params = tasks.pop(0)
+                  client.execute_workflow(wf_id, params)
+                  print(f"自动提交: {wf_id}")
+
+  @client.on("workflow_executed")
+  def on_done(data):
+      name = data.get("workflow_name", "")
+      print(f"完成: {name}")
+
+  # 添加任务
+  tasks.append(("game-concept-art", {"prompt": "a dragon, fantasy art"}))
+  tasks.append(("game-environment", {"prompt": "dark castle on cliff, stormy sky"}))
+  tasks.append(("game-character-design", {"prompt": "elven archer, green cloak"}))
+
+  client.connect(blocking=False)
+  client.wait_connected()
+
+  try:
+      while True: time.sleep(1)
+  except KeyboardInterrupt:
+      client.disconnect()
+
+
+================================================================================
+  6. 多语言客户端示例
+================================================================================
+
+  === 6.1 curl (命令行) ===
+
+  :: —— 查询 ——
+  curl http://10.150.164.64:8189/status
+  curl http://10.150.164.64:8189/workflows
+  curl http://10.150.164.64:8189/workflows/all
+  curl http://10.150.164.64:8189/blueprints
+  curl http://10.150.164.64:8189/blueprints/image-blur
+  curl http://10.150.164.64:8189/clients
+
+  :: —— 执行工作流 (统一入口) ——
+  curl -X POST http://10.150.164.64:8189/workflows/execute ^
+    -H "Content-Type: application/json" ^
+    -d "{\"workflow_id\":\"game-character-design\",\"params\":{\"prompt\":\"a knight, pixel art\"}}"
+
+  :: —— 执行蓝图 ——
+  curl -X POST http://10.150.164.64:8189/workflows/execute ^
+    -H "Content-Type: application/json" ^
+    -d "{\"workflow_id\":\"game-item-icon\",\"params\":{\"prompt\":\"golden chalice, game item icon\"}}"
+
+  curl -X POST http://10.150.164.64:8189/workflows/execute ^
+    -H "Content-Type: application/json" ^
+    -d "{\"workflow_id\":\"image-blur\",\"params\":{}}"
+
+  :: —— 查看结果 ——
+  curl http://10.150.164.64:8189/comfy/history/abc123  (替换为实际 prompt_id)
+
+  :: —— 下载文件 ——
+  curl -o output.png "http://10.150.164.64:8189/comfy/view?filename=ComfyUI_00001_.png&type=output"
+
+  :: —— 队列管理 ——
+  curl http://10.150.164.64:8189/comfy/queue
+  curl -X POST http://10.150.164.64:8189/comfy/interrupt
+
+
+  === 6.2 Python (requests 库) ===
+
+  import requests, json, time
+
+  SERVER = "http://10.150.164.64:8189"
+
+  # —— 查询 ——
+  status = requests.get(f"{SERVER}/status").json()
+  print(f"GPU: {status['gpu']['vram_used']}/{status['gpu']['vram_total']}MB")
+
+  # 列出全部
+  all_data = requests.get(f"{SERVER}/workflows/all").json()
+  print(f"合计: {all_data['total']} 个")
+
+  # 查询蓝图参数
+  bp = requests.get(f"{SERVER}/blueprints/image-blur").json()
+  print(f"蓝图参数: {bp['params']}")
+
+  # —— 执行工作流 ——
+  resp = requests.post(f"{SERVER}/workflows/execute", json={
+      "workflow_id": "game-character-design",
+      "params": {
+          "prompt": "1girl, fantasy mage, blue robe, highly detailed",
+          "negative_prompt": "lowres, bad anatomy",
+          "seed": 42,
+          "steps": 30,
+          "cfg": 8.0
+      }
+  }).json()
+
+  prompt_id = resp.get("prompt_id")
+  if not prompt_id:
+      print(f"错误: {resp.get('error')}")
+      exit()
+
+  print(f"已提交: {prompt_id}")
+
+  # —— 执行蓝图 ——
+  resp2 = requests.post(f"{SERVER}/workflows/execute", json={
+      "workflow_id": "game-item-icon",
+      "params": {"prompt": "a dragon", "width": 1024, "height": 1024}
+  }).json()
+  print(f"蓝图: {resp2.get('prompt_id', resp2.get('error'))}")
+
+  # —— 等待并获取结果 ——
+  while True:
+      q = requests.get(f"{SERVER}/comfy/queue").json()
+      in_queue = any(
+          item[1] == prompt_id
+          for lst in [q.get("queue_running", []), q.get("queue_pending", [])]
+          for item in lst
+      )
+      if not in_queue:
+          hist = requests.get(f"{SERVER}/comfy/history/{prompt_id}").json()
+          if prompt_id in hist:
+              outputs = hist[prompt_id].get("outputs", {})
+              for node_id, node_out in outputs.items():
+                  for img in node_out.get("images", []):
+                      url = (f"{SERVER}/comfy/view?filename={img['filename']}"
+                             f"&subfolder={img.get('subfolder','')}"
+                             f"&type={img.get('type','output')}")
+                      print(f"  生成: {img['filename']}")
+                      print(f"  URL:  {url}")
+                      # 下载
+                      # img_data = requests.get(url).content
+                      # with open(img['filename'], 'wb') as f: f.write(img_data)
+              break
+      time.sleep(3)
+
+
+  === 6.3 JavaScript / Node.js ===
+
+  const SERVER = "http://10.150.164.64:8189";  // 统一入口，所有操作通过此端口
+
+  // === HTTP 请求 ===
+  async function main() {
+    // 查询
+    const status = await fetch(`${SERVER}/status`).then(r => r.json());
+    console.log(`GPU VRAM: ${status.gpu.vram_used}/${status.gpu.vram_total}MB`);
+
+    // 列出全部
+    const all = await fetch(`${SERVER}/workflows`).then(r => r.json());
+    console.log(`合计: ${all.total} 个 (工作流: ${all.total_workflows}, 蓝图: ${all.total_blueprints})`);
+
+    // 查询蓝图
+    const bp = await fetch(`${SERVER}/blueprints/image-blur`).then(r => r.json());
+    console.log(`蓝图参数:`, Object.keys(bp.params));
+
+    // 执行工作流
+    const resp = await fetch(`${SERVER}/workflows/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workflow_id: "game-item-icon",
+        params: { prompt: "golden chalice, game item icon" }
+      })
+    }).then(r => r.json());
+
+    const promptId = resp.prompt_id;
+    if (!promptId) { console.error("Error:", resp.error); return; }
+    console.log(`已提交: ${promptId}`);
+
+    // 执行蓝图
+    const bpResp = await fetch(`${SERVER}/workflows/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workflow_id: "game-item-icon",
+        params: { text: "a sunset", width: 1024, height: 1024 }
+      })
+    }).then(r => r.json());
+    console.log(`蓝图: ${bpResp.prompt_id || bpResp.error}`);
+
+    // 轮询结果 (通过 8189 代理)
+    let done = false;
+    while (!done) {
+      const queue = await fetch(`${SERVER}/comfy/queue`).then(r => r.json());
+      const inQueue = [...queue.queue_running, ...queue.queue_pending]
+        .some(item => item[1] === promptId);
+      if (!inQueue) {
+        const hist = await fetch(`${SERVER}/comfy/history/${promptId}`).then(r => r.json());
+        if (hist[promptId]) {
+          for (const [nodeId, out] of Object.entries(hist[promptId].outputs)) {
+            for (const img of (out.images || [])) {
+              console.log(`生成: ${img.filename}`);
+              console.log(`URL: ${SERVER}/comfy/view?filename=${img.filename}&type=${img.type}`);
+            }
+          }
+          done = true;
+        }
+      }
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+
+  // === WebSocket ===
+  const ws = new WebSocket("ws://10.150.164.64:8189");
+
+  ws.onopen = () => {
+    console.log("WebSocket 已连接");
+    ws.send(JSON.stringify({ type: "list_workflows", data: {} }));
+    ws.send(JSON.stringify({ type: "list_blueprints", data: {} }));
+  };
+
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    switch (msg.type) {
+      case "welcome":
+        console.log("客户端ID:", msg.data.client_id);
+        break;
+      case "server_status":
+        const g = msg.data.gpu;
+        console.log(`GPU: ${g.vram_used}MB/${g.vram_total}MB`);
+        break;
+      case "workflow_list":
+        msg.data.workflows && Object.entries(msg.data.workflows).forEach(([id, wf]) => {
+          console.log(`  ${id}: ${wf.name} [${wf.speed}]`);
+        });
+        break;
+      case "blueprint_list":
+        console.log(`${msg.data.total} 个蓝图可用`);
+        break;
+      case "workflow_executed":
+        console.log("任务提交:", msg.data.workflow_name);
+        break;
+      case "blueprint_executed":
+        console.log("蓝图提交:", msg.data.blueprint_name);
+        break;
+    }
+  };
+
+  // 发送执行命令
+  function generate(prompt) {
+    ws.send(JSON.stringify({
+      type: "execute_workflow",
+      data: {
+        workflow_id: "game-character-design",
+        params: { prompt }
+      }
+    }));
+  }
+
+
+  === 6.4 C# / Unity ===
+
+  using System;
+  using System.Net.Http;
+  using System.Text;
+  using System.Threading.Tasks;
+  using Newtonsoft.Json;
+
+  public class ComfyUIClient
+  {
+      static HttpClient client = new HttpClient();
+      const string Server = "http://10.150.164.64:8189";  // 统一入口
+
+      // 获取状态
+      public static async Task<Status> GetStatus()
+      {
+          var json = await client.GetStringAsync($"{Server}/status");
+          return JsonConvert.DeserializeObject<Status>(json);
+      }
+
+      // 列出全部工作流
+      public static async Task<AllWorkflows> ListAll()
+      {
+          var json = await client.GetStringAsync($"{Server}/workflows");
+          return JsonConvert.DeserializeObject<AllWorkflows>(json);
+      }
+
+      // 列出蓝图
+      public static async Task<BlueprintList> ListBlueprints()
+      {
+          var json = await client.GetStringAsync($"{Server}/blueprints");
+          return JsonConvert.DeserializeObject<BlueprintList>(json);
+      }
+
+      // 获取蓝图详情
+      public static async Task<BlueprintDetail> GetBlueprint(string id)
+      {
+          var json = await client.GetStringAsync($"{Server}/blueprints/{id}");
+          return JsonConvert.DeserializeObject<BlueprintDetail>(json);
+      }
+
+      // 执行 (统一入口, 自动识别工作流/蓝图)
+      public static async Task<ExecuteResult> Execute(string workflowId, string prompt, int seed = -1)
+      {
+          var payload = new {
+              workflow_id = workflowId,
+              @params = new { prompt, seed }
+          };
+          var json = JsonConvert.SerializeObject(payload);
+          var content = new StringContent(json, Encoding.UTF8, "application/json");
+          var resp = await client.PostAsync($"{Server}/workflows/execute", content);
+          var result = await resp.Content.ReadAsStringAsync();
+          return JsonConvert.DeserializeObject<ExecuteResult>(result);
+      }
+
+      // 执行蓝图 (指定蓝图ID)
+      public static async Task<ExecuteResult> ExecuteBlueprint(string bpId, object bpParams)
+      {
+          var payload = new { blueprint_id = bpId, @params = bpParams };
+          var json = JsonConvert.SerializeObject(payload);
+          var content = new StringContent(json, Encoding.UTF8, "application/json");
+          var resp = await client.PostAsync($"{Server}/blueprints/execute", content);
+          var result = await resp.Content.ReadAsStringAsync();
+          return JsonConvert.DeserializeObject<ExecuteResult>(result);
+      }
+
+      // 获取历史结果 (通过 8189 代理)
+      public static async Task<HistoryItem> GetHistory(string promptId)
+      {
+          var json = await client.GetStringAsync($"{Server}/comfy/history/{promptId}");
+          return JsonConvert.DeserializeObject<HistoryItem>(json);
+      }
+
+      // Unity 中使用
+      public static async void GenerateSprite(string prompt)
+      {
+          var status = await GetStatus();
+          if (status.gpu.vram_used < status.gpu.vram_total * 0.8f)
+          {
+              var result = await Execute("game-character-design", prompt);
+              Debug.Log($"提交: {result.prompt_id} ({result.workflow_name})");
+
+              // 轮询等待完成 (通过 8189 代理)
+              string promptId = result.prompt_id;
+              float timeout = Time.time + 300f;
+              bool done = false;
+              while (!done && Time.time < timeout)
+              {
+                  await Task.Delay(3000);
+                  var queueJson = await client.GetStringAsync($"{Server}/comfy/queue");
+                  var queue = JsonConvert.DeserializeObject<QueueData>(queueJson);
+                  // 检查 promptId 是否还在队列中...
+                  // 完成后通过 /history/{promptId} 获取文件 URL
+              }
+          }
+      }
+  }
+
+  // 数据模型
+  public class Status { public GpuInfo gpu; public QueueInfo queue; }
+  public class GpuInfo { public string name; public long vram_used; public long vram_total; public long vram_free; }
+  public class QueueInfo { public object[] running; public object[] pending; }
+  public class ExecuteResult { public string prompt_id; public string workflow_id; public string workflow_name; public string error; }
+  public class BlueprintList { public int total; public Dictionary<string, BlueprintInfo> blueprints; }
+  public class BlueprintInfo { public string name; public string category; public Dictionary<string, object> @params; }
+  public class BlueprintDetail : BlueprintInfo { public string output_type; public object blueprint_json; }
+  public class AllWorkflows { public int total_workflows; public int total_blueprints; public int total; }
+
+
+================================================================================
+  7. 结果获取与文件管理
+================================================================================
+
+  生成的图像/视频/音频统一输出到: d:\ComfyUI-P\ComfyUI\output\
+
+  === 方式一: 通过 ComfyUI 历史 API (推荐) ===
+
+  1. 执行后获得 prompt_id
+  2. GET /history/{prompt_id} 获取输出文件列表
+  3. GET /view?filename=xxx 下载/查看文件
+
+  完整流程:
+    # 1. 提交
+    curl -X POST http://10.150.164.64:8189/workflows/execute -H "Content-Type: application/json" -d "{...}"
+    → {"prompt_id": "abc123"}
+
+    # 2. 轮询队列直到完成 (通过 8189 代理)
+    curl http://10.150.164.64:8189/comfy/queue
+    # 当 prompt_id 不在 running/pending 中时, 任务完成
+
+    # 3. 获取输出文件列表
+    curl http://10.150.164.64:8189/comfy/history/abc123
+    → {"abc123": {"outputs": {"9": {"images": [{"filename":"ComfyUI_00001_.png","subfolder":"","type":"output"}]}}}}
+
+    # 4. 下载文件
+    curl -o result.png "http://10.150.164.64:8189/comfy/view?filename=ComfyUI_00001_.png&type=output"
+
+
+  === 方式二: 通过 WebSocket 实时监听 ===
+
+  # 连接到 WS 后, 监听 server_status 广播
+  # 每次广播包含当前 queue 状态 (running/pending)
+  # 当自己提交的 prompt_id 从 queue 中消失时, 通过 /history/{prompt_id} 获取结果
+
+
+  === 方式三: 直接访问文件系统 (仅服务器本地) ===
+
+  文件路径: d:\ComfyUI-P\ComfyUI\output\{filename}
+  支持 HTTP Range 请求实现断点续传 (通过 8189 代理):
+    curl -H "Range: bytes=0-1023" "http://10.150.164.64:8189/comfy/view?filename=ComfyUI_00001_.png"
+
+
+  === 文件命名规则 ===
+
+  注册工作流: filename_prefix 为 ComfyUI_xxxxx_
+  蓝图:        filename_prefix 为 ComfyUI_xxxxx_ (随机 8 位 ID)
+  视频:        .mp4 格式, 通过 outputs.gifs 字段获取
+  音频:        .wav 格式, 通过 outputs.audio 字段获取
+
+
+================================================================================
+  8. 状态监控
+================================================================================
+
+  === 定期监控 (Python) ===
+
+  import requests, time
+
+  def monitor():
+      while True:
+          s = requests.get("http://10.150.164.64:8189/status", timeout=5).json()
+          g = s["gpu"]
+          q = s["queue"]
+          pct = g["vram_used"] / g["vram_total"] * 100 if g["vram_total"] else 0
+          print(f"[{time.strftime('%H:%M:%S')}] "
+                f"GPU: {g['vram_used']}MB/{g['vram_total']}MB ({pct:.0f}%) | "
+                f"运行: {len(q['running'])} | 等待: {len(q['pending'])} | "
+                f"在线: {s['connected_clients']}")
+          for tip in s.get("optimization_tips", []):
+              print(f"  [{tip['level']}] {tip['message']}")
+          time.sleep(10)
+
+  if __name__ == "__main__":
+      monitor()
+
+  === 优化建议级别 ===
+  warning  (VRAM > 85%): 建议启用 NPU/iGPU 加速节点释放显存
+  info     (VRAM > 60%): 运行正常, 可考虑优化
+  info     (队列 > 3):   任务积压, 等待或中断低优先任务
+  success  (正常):      可以安全提交
+
+  === 健康检查 (用于监控系统) ===
+  GET /health → {"status":"ok","uptime":3600}
+  可用于 Prometheus / Nagios / 自定义监控。
+
+
+================================================================================
+  9. 错误处理与常见问题
+================================================================================
+
+  === 服务端错误 ===
+
+  1. {"error": "工作流不存在: xxx"}
+     原因: workflow_id 拼写错误, 或该工作流未在 registry.json 中注册
+     解决: GET /workflows 获取正确的 ID 列表
+
+  2. {"error": "蓝图不存在: xxx"}
+     原因: blueprint_id 不存在
+     解决: GET /blueprints 获取正确 ID, 或 GET /workflows 查全部
+
+  3. {"error": "ComfyUI API 调用失败: ..."}
+     原因: ComfyUI 主服务未运行或崩溃
+     解决: 等待 monitor_service 自动重启 (最多 180 秒)
+
+  4. {"error": "蓝图展平失败: ..."}
+     原因: 蓝图 JSON 格式异常
+     解决: 联系管理员检查蓝图文件完整性
+
+  5. HTTP 500 from ComfyUI
+     原因: 蓝图需要的模型未安装, 或节点类型不被当前 ComfyUI 识别
+     解决: 确认对应模型已安装。部分蓝图依赖特定模型 (如 Flux/Qwen/Z-Image 等),
+           这些模型可能需要额外下载
+
+  === 客户端错误 ===
+
+  6. Connection refused / timeout
+     原因: 通信服务未启动或网络不通
+     解决: curl http://10.150.164.64:8189/health 检查连通性
+
+  7. WebSocket 连接后立即断开
+     原因: 网络波动或心跳超时
+     解决: SDK 默认开启 auto_reconnect, 会自动重连 (指数退避, 最大30秒)
+
+  8. 任务一直 pending 不执行
+     原因: 队列积压
+     解决: POST /queue {"delete": ["pending_id"]} 删除等待任务
+           或 POST /interrupt 中断当前任务
+
+  === 调试技巧 ===
+
+  检查通信服务:  curl http://10.150.164.64:8189/health
+  检查 ComfyUI:   curl http://10.150.164.64:8189/comfy/system_stats
+  查看队列:       curl http://10.150.164.64:8189/comfy/queue
+  查看历史:       curl http://10.150.164.64:8189/comfy/history?max_items=1
+  查看日志:       d:\ComfyUI-P\logs\  (service.log / monitor.log / hotreload.log)
+
+
+================================================================================
+  10. 完整示例脚本
+================================================================================
+
+  === 示例 1: 交互式命令行工具 ===
+
+  """comfy_cli.py — 命令行 AI 素材生成工具"""
+  from comms_client import CommsClient
+  import urllib.request, json, time, sys
+
+  SERVER = "http://10.150.164.64:8189"  # 统一入口
+
+  def list_all():
+      data = CommsClient.http_list_all()
+      print(f"\n=== 注册工作流 ({data['total_workflows']}个) ===")
+      for wf_id, wf in data["workflows"]["workflows"].items():
+          print(f"  {wf_id:35s} {wf['name']:20s} [{wf['speed']}]")
+      print(f"\n=== 蓝图 ({data['total_blueprints']}个) ===")
+      cats = {}
+      for bp_id, bp in data["blueprints"]["blueprints"].items():
+          cats.setdefault(bp.get("category","other"), []).append(bp_id)
+      for cat, ids in sorted(cats.items()):
+          print(f"  [{cat}] {len(ids)}个: {', '.join(ids[:3])}{'...' if len(ids)>3 else ''}")
+
+  def describe(wf_id):
+      # 尝试工作流
+      detail = CommsClient.http_get_workflow(wf_id)
+      if "error" not in detail:
+          print(f"\n工作流: {detail['name']}")
+          print(f"  模型: {detail.get('model')} | 画布: {detail.get('canvas')}")
+          print(f"  参数: {list(detail.get('params', {}).keys())}")
+          return
+      # 尝试蓝图
+      bp = CommsClient.http_get_blueprint(wf_id)
+      if "error" not in bp:
+          print(f"\n蓝图: {bp['name']}")
+          print(f"  类别: {bp.get('category')} | 输出: {bp.get('output_type')}")
+          print(f"  参数: {bp.get('params')}")
+          return
+      print(f"未找到: {wf_id}")
+
+  def generate(wf_id, *args):
+      params = {}
+      for a in args:
+          if "=" in a:
+              k, v = a.split("=", 1)
+              params[k] = v
+          else:
+              params["prompt"] = a  # 默认作为 prompt
+      result = CommsClient.http_execute_workflow(wf_id, params)
+      if "error" in result:
+          print(f"错误: {result['error']}")
+          return
+      pid = result["prompt_id"]
+      name = result.get("workflow_name") or result.get("blueprint_name", wf_id)
+      print(f"已提交: {name} (prompt_id: {pid})")
+
+      # 等待完成
+      print("等待...", end="", flush=True)
+      deadline = time.time() + 300
+      while time.time() < deadline:
+          q = json.loads(urllib.request.urlopen(f"{SERVER}/comfy/queue").read())
+          in_q = False
+          for lst in [q.get("queue_running",[]), q.get("queue_pending",[])]:
+              for item in lst:
+                  if item[1] == pid: in_q = True
+          if not in_q:
+              print("\n完成!")
+              hist = json.loads(urllib.request.urlopen(f"{SERVER}/comfy/history/{pid}").read())
+              if pid in hist:
+                  for nid, out in hist[pid].get("outputs", {}).items():
+                      for img in out.get("images", []):
+                          print(f"  文件: {img['filename']}")
+                          print(f"  URL:  {SERVER}/comfy/view?filename={img['filename']}&type={img.get('type','output')}")
+              return
+          print(".", end="", flush=True)
+          time.sleep(3)
+      print("\n超时!")
+
+  def status():
+      s = json.loads(urllib.request.urlopen(f"{SERVER}/status").read())
+      g = s["gpu"]; q = s["queue"]
+      pct = g["vram_used"]/g["vram_total"]*100
+      print(f"GPU: {g['vram_used']}MB/{g['vram_total']}MB ({pct:.0f}%)")
+      print(f"队列: {len(q['running'])}运行 {len(q['pending'])}等待")
+      for tip in s.get("optimization_tips", []):
+          print(f"  [{tip['level']}] {tip['message']}")
+
+  if __name__ == "__main__":
+      if len(sys.argv) < 2:
+          print("用法: python comfy_cli.py <command> [args]")
+          print("  list                    列出所有工作流")
+          print("  status                  服务器状态")
+          print("  describe <id>           查看详情")
+          print("  generate <id> <prompt>  生成 (或 generate <id> key=val ...)")
+          print("  generate <id>           批量 (从 stdin 读提示词)")
+          sys.exit(1)
+
+      cmd = sys.argv[1]
+      if cmd == "list":     list_all()
+      elif cmd == "status": status()
+      elif cmd == "describe": describe(sys.argv[2])
+      elif cmd == "generate":
+          if len(sys.argv) > 3:
+              generate(sys.argv[2], *sys.argv[3:])
+          else:
+              # 从 stdin 批量生成
+              for line in sys.stdin:
+                  line = line.strip()
+                  if line:
+                      generate(sys.argv[2], line)
+
+
+  === 示例 2: 批量生成 Unity 2D 精灵 ===
+
+  """batch_sprites.py — 批量角色生成"""
+  from comms_client import CommsClient
+  import time, urllib.request, json
+
+  characters = [
+      ("knight", "a brave knight in silver armor, pixel art, side view"),
+      ("mage",   "a wise female mage, blue robes, staff, pixel art"),
+      ("archer", "elven archer, green cloak, bow, pixel art"),
+      ("rogue",  "stealthy rogue, dark hood, dual daggers, pixel art"),
+      ("healer", "holy priest, golden robes, healing glow, pixel art"),
+  ]
+
+  prompt_ids = {}
+  print("=== 提交任务 ===")
+  for name, prompt in characters:
+      r = CommsClient.http_execute_workflow(
+          "game-character-design",
+          {"prompt": prompt}
+      )
+      if "error" in r:
+          print(f"  [{name}] 错误: {r['error']}")
+      else:
+          prompt_ids[name] = r["prompt_id"]
+          print(f"  [{name}] prompt_id: {r['prompt_id']}")
+      time.sleep(2)
+
+  print("\n=== 等待完成 ===")
+  results = {}
+  pending = dict(prompt_ids)
+  deadline = time.time() + 600  # 10 分钟
+
+  while pending and time.time() < deadline:
+      q = json.loads(urllib.request.urlopen(
+          "http://10.150.164.64:8189/comfy/queue").read())
+      queued = set()
+      for lst in [q.get("queue_running",[]), q.get("queue_pending",[])]:
+          for item in lst:
+              queued.add(item[1])
+
+      for name, pid in list(pending.items()):
+          if pid not in queued:
+              hist = json.loads(urllib.request.urlopen(
+                  f"http://10.150.164.64:8189/comfy/history/{pid}").read())
+              if pid in hist:
+                  outputs = []
+                  for nid, out in hist[pid].get("outputs", {}).items():
+                      for img in out.get("images", []):
+                          outputs.append(img["filename"])
+                  results[name] = outputs
+                  del pending[name]
+                  print(f"  [{name}] 完成: {outputs}")
+
+      if pending:
+          print(f"  等待 {len(pending)} 个...")
+          time.sleep(5)
+
+  print(f"\n=== 结果 ===")
+  for name, files in results.items():
+      print(f"  {name}: {files}")
+
+
+================================================================================
+  附录 A: SDK 方法快速参考
+================================================================================
+
+  === CommsClient (WebSocket) ===
+  client = CommsClient("ws://10.150.164.64:8189")
+  client.connect(blocking=False)
+  client.wait_connected(timeout=10)
+  client.disconnect()
+  client.is_connected          # bool
+  client.client_id             # str
+  client.last_status           # dict (最新服务器状态)
+  client.on("event")(handler)  # 注册事件回调
+
+  client.request_status()      # 请求状态
+  client.get_history(count)    # 获取历史
+  client.chat(message)         # 聊天
+  client.ping()                # 心跳
+  client.request_priority()    # 优先请求
+
+  client.list_workflows(category=None)      # 列出工作流
+  client.get_workflow(workflow_id)          # 获取工作流详情
+  client.execute_workflow(wf_id, params)    # 执行工作流 (统一入口)
+
+  client.list_blueprints(category=None)     # 列出蓝图
+  client.get_blueprint(blueprint_id)        # 获取蓝图详情
+  client.execute_blueprint(bp_id, params)   # 执行蓝图
+
+  === CommsClient (HTTP 静态方法, 无需 WebSocket) ===
+  CommsClient.http_list_workflows(server)
+  CommsClient.http_get_workflow(id, server)
+  CommsClient.http_execute_workflow(id, params, server)
+
+  CommsClient.http_list_all(server)
+  CommsClient.http_list_blueprints(server)
+  CommsClient.http_get_blueprint(id, server)
+  CommsClient.http_execute_blueprint(id, params, server)
+
+
+================================================================================
+  附录 B: 服务器管理 (本地)
+================================================================================
+
+  管理窗口: d:\ComfyUI-P\server_manager.py  (PySide6 原生桌面 GUI, 双击启动)
+            ★ 单实例: 重复启动会自动跳过，不会打开多个窗口
+            ★ 功能: GPU/VRAM 状态、队列监控、工作流列表+执行、日志查看
+            ★ 自动刷新: 每10秒更新数据, 可暂停/恢复
+
+  脚本工具:
+    启动服务:   d:\ComfyUI-P\run_comfyui.bat    (启动/重启/清理/缓存 全流程)
+    停止服务:   d:\ComfyUI-P\stop_services.bat  (停止所有服务, stop_services.bat clean 同时清 NPU 缓存)
+    测试工具:   d:\ComfyUI-P\test_runner.py     (自动化测试全部工作流/蓝图, 生成日志)
+    安全测试:   d:\ComfyUI-P\safe_test.bat      (NPU 安全模式下一键启动 + 测试)
+    开机自启:   d:\ComfyUI-P\startup.bat         (任务计划 "\ComfyUI" 触发)
+    监控守护:   d:\ComfyUI-P\ComfyUI\monitor_service.bat  (30秒心跳, 崩溃自动重启)
+
+  NPU/CPU 加速控制 (在 d:\ComfyUI-P\ 下创建文件即可):
+    NPU_SAFE_MODE      → 全部回退 GPU (最稳定)
+    NPU_DISABLE_CLIP   → 仅 CLIP 嵌入回退 GPU
+    (都不存在)         → AUTO 模式 NPU > CPU > GPU
+
+  run_comfyui.bat 启动流程 (5个阶段):
+    第1阶段 [1/5] 终止所有服务进程和窗口
+      1.1  终止 Python 进程 (主服务/通信/热更新/管理面板)
+      1.2  关闭管理面板窗口 (mshta)
+      1.3  释放端口 8188 (ComfyUI)
+      1.4  释放端口 8189 (通信服务)
+      1.5  清理锁文件
+    第2阶段 [2/5] 清理缓存
+      2.1  清理 ComfyUI 临时文件 (temp)
+      2.2  清理 Python 字节码缓存 (__pycache__)
+      2.3  清理数据库锁文件 (comfyui.db-journal)
+      2.4  等待缓存完全释放
+    第3阶段 [3/5] 启动所有服务
+      3.1  启动通信服务 (comms_service.py, 端口 8189)
+      3.2  启动热更新监听 (hotreload.py)
+      3.3  启动 ComfyUI 主服务 (main.py, 端口 8188)
+    第4阶段 [4/5] 等待服务就绪 (每15秒输出进度, 最长120秒)
+    第5阶段 [5/5] 打开管理面板 (server_manager.py GUI)
+
+  日志目录: d:\ComfyUI-P\logs\
+    service.log   — 主服务日志
+    monitor.log   — 监控服务日志
+    hotreload.log — 热更新日志
+
+  开机自启: Windows Task Scheduler "\ComfyUI"
+    触发条件: 系统启动 + 用户登录
+
+================================================================================
+  更新日志
+================================================================================
+
+  v5.2 (2026-06-16) — SDXL 双CLIP参数注入修复
+    - [修复] _inject_prompt: SDXL工作流 prompt 正确注入 text_g + text_l (之前仅注入 text)
+    - [修复] 客户端SDK: 添加参数映射文档 (SDXL自动映射, 统一使用 "prompt" 字段)
+    - [文档] README.txt: 参数注入规则按工作流类型(SDXL/SD1.5)拆分说明
+    - [文档] comms_client.py: 类文档 + http_execute_workflow 补充 SDXL 参数说明
+
+  v5.1 (2026-06-16) — 全系统节点优化 + 参数管理API
+    - [修复] SDXL工作流: CLIPTextEncodeNPU → CLIPTextEncodeSDXLNPU (3文件6节点, 修复双CLIP丢失问题)
+    - [修复] SDXL精灵动画: EmptyLatentImage → EmptySD3LatentImage (潜空间节点一致性)
+    - [统一] 所有工作流 device 从硬编码NPU → AUTO (自动回退NPU→CPU→GPU)
+    - [新增] 服务端参数管理API: GET/PUT /workflows/{id}/params (含验证+历史)
+    - [新增] 参数变更历史: GET /workflows/{id}/params/history (JSONL格式, 含用户+时间戳)
+    - [新增] 客户端SDK: http_get_params / http_update_params / http_params_history
+    - [优化] registry.json 参数schema验证: 类型检查 + min/max边界
+    - [发布] comms_service v3.3, comms_client 补齐参数管理接口
+    - [文档] README.txt 更新参数管理API文档 + SDK使用示例 + 计数修正
+
+  v5.0 (2026-06-16) — SDXL旗舰层: NoobAI-XL V-Pred 1.0
+    - [新增] NoobAI-XL V-Pred 1.0 SDXL模型 (~6.5GB), 2026最强动漫SDXL checkpoint
+    - [新增] game-character-design-sdxl: SDXL旗舰角色立绘, 1024x1536, 28步Euler
+    - [新增] game-concept-art-sdxl: SDXL旗舰概念图, 1024x1024, 35步Euler
+    - [新增] game-sprite-sheet-sdxl: SDXL旗舰精灵帧动画, 1536x1536 2x2网格, 35步Euler
+    - [架构] 三层模型体系: SDXL旗舰(NoobAI-XL) → SD1.5品质(AOM3) → 极速(Z-Image)
+    - [提升] 角色识别: NoobAI-XL基于1300万张Danbooru训练, 角色知识是SD1.5的5倍
+    - [提升] 分辨率: SDXL原生1024, 无需放大即可获得印刷级细节
+    - [提升] 手部/细节: SDXL架构对手指/眼睛/服装纹理的生成质量远超SD1.5
+    - [提升] 精灵动画: SDXL帧间角色一致性更强 + 2x2网格布局运动连贯性优化
+    - [优化] AOM3精灵动画: 25步→2x2网格2048x2048 + 渐进运动提示词 + 扩展负面过滤
+    - [新增] premium速度级别: 28-35步SDXL旗舰(约40-60秒/张)
+    - [不变] SD1.5工作流保持不变, 作为快速出图选项
+
+  v4.1 (2026-06-16) — 模型升级: primemix_v21 → AbyssOrangeMix3 A3
+    - [升级] 核心生成模型从 primemix_v21 升级至 AbyssOrangeMix3 A3 (2.5D动漫×写实混合)
+    - [提升] 角色立绘: 面部/皮肤/光影细节显著提升, 2.5D风格更适合游戏美术
+    - [提升] 场景背景: 构图层次分明, 氛围感强, 光影自然 (AOM3专精领域)
+    - [提升] 概念图: 构图张力强, 色彩层次丰富, 光影戏剧性增强
+    - [提升] 精灵动画: 角色一致性更优异, 跨帧角色特征保持更好
+    - [不变] 生成速度/显存占用/工作流结构完全不变 (同SD1.5架构)
+    - [新增] AbyssOrangeMix3.safetensors (~2.1GB) 至 checkpoints 目录
+
+  v4.0 (2026-06-15) — 精简重构: 41→8, 专注游戏美术高品质输出
+    - [精简] 工作流 11→4 个, 蓝图 30→4 个, 总计 41→8
+    - [删除] 16个滤镜蓝图(Photoshop可替代) + 视频/字幕/文本/姿态/Z-Image概念蓝图
+    - [删除] 5个Unity 2D工作流(Z-Image几何风格不适合角色/场景)
+    - [删除] Qwen/Z-Image通用文生图工作流(质量不够高)
+    - [删除] 角色变体换装工作流(需图片输入, 使用率低)
+    - [新增] game-concept-art: 高品质30步概念图/宣传画
+    - [新增] game-environment: 20步宽幅场景背景(替换Z-Image版本)
+    - [重命名] game-item-icon → game-item-icon, 明确Z-Image仅适用道具图标
+    - [保留] Flux Fill局部重绘 + Lotus深度图 + Blur/Sharpen (核心后处理)
+    - [文档] 每个工作流和蓝图均标注详细用途、适用场景、参数说明、提示词建议
+    - [文档] 注册表 registry.json 重写, 模型列表仅保留实际使用的模型
+
+  v3.4 (2026-06-15) — NPU 轻量管线重写 + CPU 嵌入卸载 + 测试自动化
+    - [重构] NPU 加速节点完全重写 (npu_accelerator/__init__.py)
+      * 策略: 13 TOPS NPU 仅做 CLIP token embedding 查表 (Gather + Add, 2-op 极简模型)
+      * 移除 VAEDecodeIGPU 的 OpenVINO 转换 (VAE 过重), 保留 GPU 直通存根保持工作流兼容
+      * 新增 CPU 设备选项 (AUTO→NPU>CPU>GPU), NPU 离线时自动退到 CPU 嵌入卸载
+      * 三层安全防护: 模型兼容预检 → 会话级禁用 → 文件标志控制
+      * 修复 NPU 编译器动态 shape 报错 (锁定静态 [1, 77])
+    - [新增] test_runner.py: 工作流/蓝图自动化测试, 每次测试生成 .log + .json 日志
+    - [新增] stop_services.bat: 一键停止所有服务 (stop_services.bat clean 同时清 NPU 缓存)
+    - [新增] safe_test.bat: NPU 安全模式下一键启动 + 测试
+    - [新增] NPU_SAFE_MODE / NPU_DISABLE_CLIP 文件标志 (d:\ComfyUI-P\ 下创建即生效)
+    - [修复] comms_client.py: auto_reconnect + ping_interval 实际生效
+    - [修复] comms_service.py: 502 冷却期防 ComfyUI 崩溃时死循环
+    - [修复] server_manager.py: 刷新间隔 3s→10s, 健康检查走 comms 而非直连
+
+  v3.3 (2026-06-15) — 配置管理 + GUI 重构
+    - [重构] 网络配置集中管理 (config_manager.py)
+      * config.yaml / config.yaml.example 多环境配置文件
+      * comms_service.py / comms_client.py / hotreload.py 全部去硬编码
+    - [GUI] 管理面板从 HTA 重写为 PySide6 原生桌面应用 (server_manager.py)
+      * 深色主题, 完整功能, 单实例锁, 停止服务按钮
+    - [修复] hotreload.py 中文窗口标题误解析
+    - 开机自启: 任务计划 "\ComfyUI" 直接运行 run_comfyui.bat
+
+  v3.2 (2026-06-15) — 游戏美术精简版
+    - 专注游戏美术素材生产，移除视频/音频/3D模型 (释放 ~63GB)
+    - 蓝图: 51 → 30 个 (21 个因无模型已永久移除)
+    - 总数: 62 → 41 (11 工作流 + 30 蓝图)
+    - 注册表更新: 修正 models_available 与实际磁盘模型一致，移除空类别
+    - 新增 /docs 端点: 在线文档 http://10.150.164.64:8189/docs
+    - 管理窗口: 所有启动方式均会弹出 server_manager.py (单实例锁)
+    - 启动优化: run_comfyui.bat 改端口精确清理，不再误杀 Python 进程
+    - 开机自启: 任务计划 "\ComfyUI"，系统启动+用户登录触发
+    - 图像生成: Z-Image Turbo (6.4GB) / Qwen-Image (19GB)
+    - 图像编辑: Qwen-Image-Edit (19GB) / Flux.1 Fill Dev (22.7GB)
+    - 图像控制: ControlNet Union + Inpaint (8.4GB)
+    - 滤镜特效: 16 个滤镜 + 2 个裁剪
+    - 当前模型总计: ~89GB
+
+  v3.1 (2026-06-13)
+    - 新增: 11 个注册工作流 (game-character-design, pixel-art-sprite-template 等)
+    - 新增: /workflows/all 向后兼容别名
+    - 新增: WebSocket 注册/注销机制 (register/unregister)
+    - 新增: 客户端连接管理 cli_stats/cli_list
+    - 优化: 蓝图展平器支持嵌套 UUID 子图递归展开
+    - 优化: 蓝图发现路径自动识别 (workflows/ → blueprints/)
+
+  v3.0 (2026-06-12)
+    - 全新架构: 统一入口 8189 (HTTP REST + WebSocket + 蓝图展平)
+    - 新增: 蓝图系统 (51个 ComfyUI 原型图直接转为 API)
+    - 新增: 蓝图展平器 (blueprint_flattener.py, UUID子图→API格式)
+    - 新增: 通信客户端 SDK (comms_client.py)
+    - WebSocket 完整支持: jobs/status/blueprints/workflows/system 频道
+    - 文件下载: /comfy/view?filename=&subfolder=&type=

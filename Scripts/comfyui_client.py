@@ -98,9 +98,12 @@ except ImportError:
 #
 
 CONCEPT_BASE_POSITIVE = (
-    "dark fantasy concept art, digital painting, dramatic lighting, "
-    "crimson-red soul glow luminescence, geometric amber crystal erosion, "
-    "rim light, high contrast, detailed texture, atmospheric perspective"
+    "masterpiece, best quality, ultra-detailed, 8k, high resolution, "
+    "dynamic composition, cinematic lighting, volumetric light rays, "
+    "dark atmospheric background with depth and complexity, "
+    "crimson, amber and deep violet color palette, fog particles, "
+    "dramatic shadows and highlights, professional game concept art, "
+    "digital painting with rich textures and intricate details"
 )
 
 CONCEPT_NEGATIVE = (
@@ -155,13 +158,14 @@ ASSET_TEMPLATES = OrderedDict()
 # ========== 玩家 Player (64x64, ~2.5头身) ==========
 ASSET_TEMPLATES["墨语"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, 1boy, solo, full body shot, standing pose, white background, front view, "
-        "Mo Yu the time traveler, young male protagonist age 16, deep black short hair with hard texture slightly messy covering right eye, "
-        "heterochromatic eyes: right eye is star-night-purple glowing faintly with soul power, left eye is deep warm brown, pale skin, neutral stoic expression beyond his years, "
-        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, tall straight build 178cm broad shoulders narrow waist clear muscle lines, "
-        "wearing dark charcoal-colored simple practical work attire with fitted long pants and short boots, a faint ethereal crimson-red soul aura surrounding his body like a thin mist, "
-        "left hand wearing the Ring of Necromantic Saint King, forging calluses on both hands, right hand resting on sword hilt at waist of forged blade named Scribe, "
-        "detailed face, detailed eyes, detailed hands, dark fantasy concept art, digital painting, dramatic rim lighting from upper left"
+        "1boy, solo, full body action shot, low angle heroic perspective, "
+        "Mo Yu the time traveler, young male protagonist age 16, deep black short hair with hard texture slightly messy windswept covering right eye, "
+        "heterochromatic eyes: right eye star-night-purple glowing with soul power, left eye deep warm brown, pale skin, intense determined expression, "
+        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, tall straight build 178cm broad shoulders narrow waist visible muscle tension, "
+        "wearing dark charcoal-colored battle-worn work attire with fitted long pants and short boots, crimson-red soul aura swirling around body like flame-tinged mist, "
+        "left hand wearing Ring of Necromantic Saint King glowing faintly purple, right hand gripping forged blade Scribe drawn from waist mid-draw ready for combat, "
+        "dynamic combat stance in ruined clockwork cathedral, shattered stained glass windows, floating golden time-gear fragments swirling in background, "
+        "purple and crimson energy trails from ring and eyes, motion blur on sword hand, dramatic rim lighting from shattered ceiling above"
     ),
     "sprite_prompt": (
         "Mo Yu time traveler, one single young male, deep black short hair messy covering one eye, heterochromatic eyes right purple-left brown, neutral stoic face, "
@@ -176,13 +180,15 @@ ASSET_TEMPLATES["墨语"] = {
 
 ASSET_TEMPLATES["莎娜"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, 1girl, solo, full body shot, standing pose, white background, front view, "
-        "Shana Scarlet the soul fragment maiden, beautiful young woman age 17, waist-length crimson-red straight long hair glossy like satin with inner glow, "
-        "\"Crimson Pupils\" eyes burning bright red like ruby or blooming red spider lily, mysterious sharp yet quiet precocious expression, "
-        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, tall slender well-proportioned figure 172cm graceful yet powerful curves, "
-        "wearing dark red and black combat training outfit form-fitting with practical design, red spider lily accessory at collar, "
-        "soft diffuse crimson-red energy aura emanating from body like floating embers, subtle soul power radiance suggesting partially spirit nature, "
-        "one hand resting near weapon at hip, detailed face, detailed eyes, detailed hair, dark fantasy concept art, digital painting"
+        "1girl, solo, full body dynamic shot, low angle perspective looking up toward character, "
+        "Shana Scarlet the soul fragment maiden, beautiful young woman age 17, waist-length crimson-red straight long hair flowing upward ethereally as if underwater, "
+        "Crimson Pupils eyes burning bright ruby-red like blooming red spider lily, fierce sharp expression mid-battle intensity, "
+        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, tall slender figure 172cm graceful yet explosive combat stance, "
+        "wearing dark red and black combat training outfit form-fitting torn edges billowing, red spider lily motif on collar glowing softly, "
+        "dense crimson-red energy aura radiating outward like firestorm from body, floating embers and red sparks dancing around her, "
+        "one hand gripping drawn curved blade, other hand palm-forward channeling soul flame, mid-combat aerial leap pose suspended above broken temple floor, "
+        "background: shattered marble pillars of ruined sacred hall, floating soul memory fragments as glowing red crystalline shards orbiting her, "
+        "red spider lilies blooming from cracks in stone floor, dark smoky ceiling with beam of crimson light piercing through"
     ),
     "sprite_prompt": (
         "Shana Scarlet, one single young woman, waist-length straight crimson red hair glossy, bright ruby-red eyes like burning spider lily, sharp calm expression, "
@@ -198,11 +204,12 @@ ASSET_TEMPLATES["莎娜"] = {
 # ========== 普通敌人 Enemy 小怪 (32x32, ~2头身) ==========
 ASSET_TEMPLATES["腐化村民"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, solo, single creature only, centered composition, "
-        "corrupted villager humanoid monster, gray-green diseased skin with dark veins showing through, patches of missing hair revealing dark scalp, messy matted dark brown hair in clumps, "
+        "solo, single creature only, dynamic low angle shot, "
+        "corrupted villager humanoid monster, gray-green diseased skin with dark veins pulsating, patches of missing hair revealing dark scalp, messy matted dark brown hair in clumps, "
         "glowing blood-red eyes without pupils or iris, sunken facial features skeletal jawline visible, "
-        "wearing torn filthy brown peasant clothing with holes exposing skin, hunched forward posture curved spine, emaciated extremely thin build protruding ribs bones, reaching forward with gnarled claw-like fingers, "
-        "half-length shot, dark fantasy concept art, digital painting, ominous dim green under-lighting, dark foggy background, horror atmosphere, detailed decay texture"
+        "wearing torn filthy brown peasant clothing with holes exposing protruding ribs, hunched forward lunging posture curved spine, emaciated thin build, reaching forward with gnarled claw-like fingers, "
+        "emerging from thick green fog in dark ruined village street, collapsed wooden huts and broken carts in background, lanterns flickering on the ground casting eerie shadows, "
+        "ominous dim green under-lighting from toxic fog, horror atmosphere, detailed decay texture on skin and clothing, unsettling dread"
     ),
     "sprite_prompt": (
         "corrupted villager, one single humanoid monster, gray-green skin, messy dark hair, glowing red eyes no pupils, "
@@ -215,11 +222,12 @@ ASSET_TEMPLATES["腐化村民"] = {
 
 ASSET_TEMPLATES["暗影之刃"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, solo, single figure only, centered composition, "
+        "solo, single figure only, dynamic diagonal action composition, "
         "shadow blade assassin elite enemy, completely shrouded in pitch-black hooded cloak with only lower face visible, pale lips sharp chin exposed, "
-        "holding twin curved daggers with bright cyan energy coating blade edges, trailing cyan energy particles from dagger tips, cloak billowing as if in wind, wide agile combat stance knees bent, "
-        "one dagger raised high one low, shadowy smoke wisps rising from cloak surface, half-length action pose, dark fantasy concept art, digital painting, "
-        "cool cyan rim light separating figure from darkness, near-black background with cyan accent highlights, motion blur on daggers, dynamic angle"
+        "holding twin curved daggers with bright cyan energy coating blade edges, trailing cyan energy particles in arcs from dagger tips, cloak violently billowing in wind, wide agile combat stance knees bent mid-leap, "
+        "one dagger raised high one thrusting forward toward viewer, shadowy smoke wisps rising from cloak surface, "
+        "perched on crumbling gothic rooftop at night, full moon behind casting silver rim light on cloak silhouette, distant spires and flying ravens in stormy sky, "
+        "cool cyan rim light separating figure from darkness, near-black background with cyan accent highlights, motion blur on daggers, dynamic assassin ambience"
     ),
     "sprite_prompt": (
         "shadow blade assassin, one single dark hooded cloak figure, hidden face, dual daggers in hands, "
@@ -232,11 +240,12 @@ ASSET_TEMPLATES["暗影之刃"] = {
 
 ASSET_TEMPLATES["水晶寄生体"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, solo, single creature only, centered composition, "
-        "crystal parasite monster aberrant insectoid creature, segmented body like beetle-wasp hybrid, six jointed scuttling legs with sharp tips, "
-        "large bright cyan-transparent crystal formations bursting through back and head shell like jagged growths, crystals internally glowing with cyan light #00D4FF, dark chitinous exoskeleton base deep purple-gray, "
-        "no visible eyes just sensory antennae twitching, unnatural jerky movement frozen mid-scuttle, low to ground crawling posture, dark fantasy concept art, digital painting, "
-        "internal cyan crystal glow as primary light source casting cyan reflections on body, dark cavern background, eerie alien beauty, macro detail on crystal facets shell texture"
+        "solo, single creature only, macro close-up shot from low angle, "
+        "crystal parasite monster aberrant insectoid creature, segmented body like beetle-wasp hybrid, six jointed scuttling legs with sharp tips gripping crystal floor, "
+        "large bright cyan-transparent crystal formations bursting through back and head shell like jagged organic growths, crystals internally glowing with intense cyan light #00D4FF, dark chitinous exoskeleton deep purple-gray gleaming wet, "
+        "no visible eyes just sensory antennae twitching forward, unnatural jerky movement frozen mid-pounce toward prey, "
+        "background: dark crystal cavern walls covered in smaller glowing cyan crystal clusters, stalactites above dripping mineral water, cave floor reflecting cyan light, "
+        "internal cyan crystal glow as primary light source casting cyan reflections on body and environment, eerie alien beauty, macro detail on crystal facets and spiky shell texture"
     ),
     "sprite_prompt": (
         "crystal parasite monster, one single bug-shaped creature, insect body six legs, "
@@ -249,11 +258,12 @@ ASSET_TEMPLATES["水晶寄生体"] = {
 
 ASSET_TEMPLATES["沼泽潜伏者"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, solo, single creature only, centered composition, "
-        "swamp lurker monster amphibious reptilian-frog hybrid creature, slick wet moss-green and olive-drab mottled skin with slime drips, "
-        "massive bulging yellow eyes with horizontal slit pupils taking up most of head, wide mouth with rows of tiny teeth, webbed hands and feet long digits, half-submerged body emerging from thick dark mud swamp water, "
-        "yellow-green toxic gas bubbles and mist rising around it, crouched ambush predator posture ready to pounce, dark fantasy concept art, digital painting, "
-        "sickly yellow-green ambient lighting from toxic mist, dark murky swamp background, subsurface scattering on wet skin"
+        "solo, single creature only, water-level perspective shot, "
+        "swamp lurker monster amphibious reptilian-frog hybrid creature, slick wet moss-green and olive-drab mottled skin with thick slime drips hanging from chin, "
+        "massive bulging yellow eyes with horizontal slit pupils reflecting dim swamp light, wide mouth half-open revealing rows of tiny sharp teeth, webbed hands and feet with long grasping digits, "
+        "half-submerged body emerging from thick dark murky swamp water with ripples spreading outward, water surface covered in green algae and floating dead leaves, "
+        "yellow-green toxic gas bubbles and mist rising around it among gnarled mangrove roots and hanging moss, crouched ambush predator posture muscles tensed ready to burst forward, "
+        "sickly yellow-green ambient lighting from toxic mist, dark murky swamp background with silhouetted dead trees, subsurface scattering on wet skin, repulsive yet fascinating detail"
     ),
     "sprite_prompt": (
         "swamp lurker monster, one single frog-like creature, green slimy skin, big bulging yellow eyes wide mouth, "
@@ -266,12 +276,13 @@ ASSET_TEMPLATES["沼泽潜伏者"] = {
 # ========== 精英 Enemy Elite (48x48, ~3~3.5头身) ==========
 ASSET_TEMPLATES["灵魂吞噬者"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, solo, single entity only, centered composition, "
-        "soul devourer elite monster, one horrifying large floating entity, main body is dark void-black amorphous mass shaped roughly like a bloated sac, "
+        "solo, single entity only, dramatic upward wide shot, "
+        "soul devourer elite monster, one horrifying large floating entity, main body is dark void-black amorphous mass shaped roughly like a bloated sac pulsing rhythmically, "
         "multiple unblinking eyes of different sizes scattered across body surface each glowing faintly white-blue, "
-        "swirling ghostly souls trapped inside semi-translucent body visible as twisted faint face-impressions pressing outward from within as part of one organism, "
-        "4-6 writhing tentacle-appendages dangling below like jellyfish tendrils, hovering above ground with small distance, dark fantasy concept art, digital painting, "
-        "internal soul glow providing eerie soft violet illumination, cold dark void background, horror cosmic atmosphere, gelatinous transparency effect all eyes and souls belong to same single monster"
+        "swirling ghostly souls trapped inside semi-translucent body visible as twisted faint face-impressions pressing outward from within, "
+        "6-8 writhing tentacle-appendages dangling below like jellyfish tendrils reaching toward ground, hovering menacingly above ancient stone altar, "
+        "background: cold dark void dimension, distant floating soul lights like dim stars, ethereal fog swirling at bottom, cosmic horror atmosphere, "
+        "internal soul glow providing eerie soft violet-blue illumination, gelatinous transparency effect with trapped souls visible, all eyes and souls belong to same single monster"
     ),
     "sprite_prompt": (
         "soul devourer elite monster, one single floating blob-shaped creature, dark void body, multiple glowing white-blue eyes on body surface, "
@@ -283,11 +294,12 @@ ASSET_TEMPLATES["灵魂吞噬者"] = {
 
 ASSET_TEMPLATES["熔岩元素"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, solo, single creature only, full body, standing, centered composition, "
-        "lava elemental elite, humanoid figure composed entirely of molten magma and volcanic rock, outer crust of cracked dark gray-black volcanic rock with glowing bright orange-yellow magma seeping through cracks like veins, "
-        "molten core visible at chest area intensely bright, heat shimmer distortion effect around entire body, rough rocky texture with flowing lava drips from shoulders and fists, towering imposing stance arms slightly raised, "
-        "magma pooling and solidifying into rock at feet, dark fantasy concept art, digital painting, "
-        "self-illumination from molten core casting warm orange glow on surroundings, dark cooled rock background, intense heat atmosphere, dynamic flow of lava within rock shell"
+        "solo, single creature only, dramatic low angle framed by lava flows, "
+        "lava elemental elite, humanoid figure composed entirely of molten magma and volcanic rock, outer crust of cracked dark gray-black volcanic rock with glowing bright orange-yellow magma seeping through cracks like fiery veins, "
+        "molten core visible at chest area intensely bright casting warm glow, heat shimmer distortion effect rippling air around entire body, rough rocky texture with flowing lava drips from shoulders and clenched fists, "
+        "towering stride forward mid-attack arms raised overhead about to slam down on viewer, "
+        "background: active volcanic crater, lava rivers flowing around stone platforms, walls glowing red-orange, ash particles floating in hot air, blazing orange ambient lighting, "
+        "self-illumination from molten core casting warm orange glow on surroundings, dark cooled rock formations in background, intense heat atmosphere, dynamic flow of lava within rock shell"
     ),
     "sprite_prompt": (
         "lava elemental elite, one single humanoid fire creature, body made of dark rock with bright orange-yellow lava cracks and veins, "
@@ -299,11 +311,12 @@ ASSET_TEMPLATES["熔岩元素"] = {
 
 ASSET_TEMPLATES["机械构造体"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, solo, single robot only, full body, standing, centered composition, "
-        "mechanical construct elite, large heavy humanoid robot warrior, body made of aged brass plates and steel armor segments with visible rivets and panel seams across surface, "
-        "prominent bright cyan glowing energy core #00D4FF embedded in center of chest like a reactor, brass steam pipes running from shoulders to back emitting small puffs of white steam, gear mechanisms visible at elbow and knee joints through cutaway sections, "
-        "heavy industrial design aesthetic, clenched fist hands, proud upright military posture, dark fantasy concept art, digital painting, "
-        "cyan core glow as key light source with secondary warm brass reflectivity, dark industrial warehouse background, steampunk-meets-dark-fantasy fusion, metallic material study"
+        "solo, single robot only, full body imposing shot looking up from ground level, "
+        "mechanical construct elite, large heavy humanoid robot warrior, body made of aged brass plates and steel armor segments with visible rivets and panel seams, battle scars and dents on surface, "
+        "prominent bright cyan glowing energy core #00D4FF embedded in center of chest like a reactor pulsing, brass steam pipes running from shoulders to back emitting dense white steam clouds, gear mechanisms visible at elbow and knee joints clanking with motion, "
+        "heavy industrial design aesthetic, clenched fist hands raised in combat guard, wide battle stance crushing debris underfoot, "
+        "background: dark abandoned industrial factory, massive steam pipes on walls venting white vapor, sparks flying from broken machinery, cyan emergency lights flickering on ceiling, "
+        "cyan core glow as key light source with secondary warm brass reflectivity on floor, steampunk-meets-dark-fantasy fusion, imposing metallic presence"
     ),
     "sprite_prompt": (
         "mechanical construct elite, one single big robot figure, brass and steel armor body, bright cyan glowing circle core in chest, "
@@ -316,15 +329,16 @@ ASSET_TEMPLATES["机械构造体"] = {
 # ========== BOSS (64x64~96x96, ~2.5~4头身) ==========
 ASSET_TEMPLATES["时空守护者"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, 1girl, solo, full body shot, standing pose, white background, front view, "
-        "Time Guardian boss, divine female warrior goddess of time, elegant feminine figure, "
+        "1girl, solo, full body epic heroic shot, low angle upward perspective making her tower over viewer, "
+        "Time Guardian boss, divine female warrior goddess of time, elegant feminine figure radiating overwhelming presence, "
         "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, "
-        "wearing ornate full-body plate armor of silver-white metal with gold inlay filigree patterns following graceful female silhouette curved waist slender proportions, "
-        "long silver-white hair flowing behind like a river of starlight, embedded clockwork mechanisms in armor joints with tiny interlocking gears slowly turning, "
-        "golden sacred geometric markings on shoulder pauldrons and chest plate glowing softly amber, "
-        "three miniature floating hourglasses orbiting around head level with golden sand trickling inside, larger hourglass embedded in chest as power core, "
-        "one gauntleted hand raised palm-forward channeling time magic distorting air around it, beautiful serene face with closed eyes divine concentration, "
-        "detailed face, detailed eyes, detailed armor, dark fantasy concept art, digital painting"
+        "wearing ornate full-body plate armor of silver-white metal with gold inlay filigree patterns following graceful female silhouette, "
+        "long silver-white hair flowing behind like a galaxy river of starlight glowing from within, embedded clockwork mechanisms in armor joints with tiny interlocking gears turning visibly, "
+        "golden sacred geometric markings on shoulder pauldrons and chest plate glowing bright amber, "
+        "three miniature floating hourglasses orbiting around head level with golden sand trickling inside, larger hourglass embedded in chest pulsing as power core, "
+        "one gauntleted hand raised palm-forward channeling time magic distorting air into spiraling golden fractals around fingers, beautiful serene face with glowing closed eyes divine concentration, "
+        "floating in center of vast ancient clockwork cathedral, giant bronze gear pillars rotating slowly in background, golden time-sand cascading from ceiling like waterfalls, "
+        "massive clock face on rear wall with hands frozen at midnight, divine golden beams piercing through darkness from above"
     ),
     "sprite_prompt": (
         "Time Goddess boss, one single female armored figure, anatomically correct exactly two arms two legs five fingers each hand five toes each foot, "
@@ -340,14 +354,13 @@ ASSET_TEMPLATES["时空守护者"] = {
 
 ASSET_TEMPLATES["记忆守护者"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, 1girl, solo, full body shot, standing pose, white background, front view, "
-        "Memory Guardian boss, tragic ethereal female spirit goddess with anatomically correct humanoid form exactly two arms two legs five fingers each hand five toes each foot despite fragmentation, "
-        "body fragmented into floating separate pieces like a shattered statue reassembled from memory shards, feminine graceful silhouette preserved despite fragmentation, "
-        "each shard is a translucent crystalline piece glowing with soft violet soul light from within, gaps between shards show empty space through which background is visible, "
-        "vaguely humanoid female shape with head torso arms and legs all pieces clearly belonging to one figure, face on largest central shard beautiful young woman peaceful melancholic closed eyes delicate features, "
-        "long hair made of crystal strands connected to head shard drifting slightly outward, floating serenely in meditation pose arms extended palms up, "
-        "a few small memory shards drifting close to body as part of her fragmented form, one boss only no other figures solo character, "
-        "detailed face, detailed eyes, detailed crystal fragments, dark fantasy concept art, digital painting"
+        "1girl, solo, full body ethereal shot, eye-level intimate perspective, "
+        "Memory Guardian boss, tragic ethereal female spirit goddess with anatomically correct humanoid form exactly two arms two legs five fingers each hand five toes each foot, body appears shattered into floating separate crystalline shards like broken stained glass reassembling, "
+        "feminine graceful silhouette preserved despite fragmentation, each shard translucent crystalline glowing with soft violet soul light from within, gaps between shards reveal empty space, "
+        "face on largest central shard beautiful young woman peaceful melancholic closed eyes delicate features, long hair made of crystal strands connected to head shard drifting outward gently, "
+        "floating serenely in meditation pose arms extended palms up with violet soul energy flowing between fingers, small memory shards orbiting body slowly, "
+        "background: vast dark void filled with countless floating memory crystals of different sizes glowing violet and blue, some crystals showing faint moving images like film frames of forgotten moments, "
+        "ethereal violet light rays refracting through shards creating prismatic patterns on the darkness, melancholic beautiful atmosphere, one boss only solo character"
     ),
     "sprite_prompt": (
         "Memory Goddess boss, one single female ghostly figure, anatomically correct exactly two arms two legs five fingers each hand five toes each foot, body made of separated floating pieces like broken fragments all belonging to one character, feminine silhouette, "
@@ -363,21 +376,21 @@ ASSET_TEMPLATES["记忆守护者"] = {
 
 ASSET_TEMPLATES["S-SN"] = {
     "prompt": (
-        "masterpiece, best quality, ultra-detailed, 1girl, solo, full body shot, standing pose, white background, front view, "
-        "(deep crimson red hair:1.4), (blood-red long straight hair:1.3), waist-length vivid red hair floating upward like flames, "
+        "1girl, solo, full body epic wide shot, dramatic dutch angle, radiating overwhelming pressure, "
+        "(deep crimson red hair:1.4), (blood-red long straight hair:1.3), waist-length vivid red hair blazing upward like living flames defying gravity, "
         "hair color is absolutely crimson red like fresh blood like dark wine like ruby like scarlet rose petals, "
         "red hair red hair red hair, definitely NOT blue NOT cyan NOT purple NOT violet NOT indigo NOT navy NOT aqua NOT silver NOT white NOT pink, "
-        "S-SN Scarlet Soul Shana, powerful high-level antagonist, one single female alone in frame no other person exists, "
+        "S-SN Scarlet Soul Shana, ultimate final boss, one single female alone in frame no other person exists, "
         "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, "
-        "(bright ruby-red burning eyes:1.2), Crimson Pupils like red spider lily, beautiful feminine face gentle authoritative expression, "
-        "wearing elegant deep crimson-red formal long dress with extremely long floor-reaching skirt covering both legs completely down to ankles, "
-        "dress is dark red wine color NOT white NOT ivory NOT pale NOT black NOT blue, long sleeves covering hands partially, "
-        "high collar with red spider lily gem at throat, dark geometric patterns on bodice, "
-        "large crystalline wings of scarlet-red and amber-gold panels extending from back, "
-        "swirling aura blending crimson fire and warm golden light around entire body, "
-        "floating upright standing pose slightly above ground, hands gesture at chest level, overwhelming pressure outward, "
-        "dark fantasy concept art digital painting, dramatic warm crimson lighting from within, "
-        "dark cosmic void background star-like particles floating crystal fragments"
+        "(bright ruby-red burning eyes:1.2), Crimson Pupils glowing like red spider lily blooming in darkness, beautiful feminine face gentle but terrifyingly authoritative expression, "
+        "wearing elegant deep crimson-red formal long dress with extremely long floor-reaching skirt trailing into the void like liquid fire, "
+        "dress is dark red wine color NOT white NOT ivory NOT pale NOT black NOT blue, long sleeves partially covering hands, "
+        "high collar with red spider lily gem at throat pulsing with inner light, dark sacred geometric patterns on bodice glowing faintly, "
+        "massive crystalline wings of scarlet-red and amber-gold panels spreading wide behind filling the frame, feathers made of sharp crystal shards, "
+        "swirling tempest aura of crimson fire and warm golden light exploding outward around entire body like a supernova, "
+        "floating high above ground in cruciform pose arms spread wide head tilted upward, eyes burning like twin suns, "
+        "background: apocalyptic dark cosmic void, shattered reality fragments floating, crimson nebula clouds swirling, golden light rays piercing from behind her like divine judgment, "
+        "scale of stars and galaxies visible behind her to convey cosmic-level power"
     ),
     "sprite_prompt": (
         "(deep crimson red hair:1.4), intensely blood-red straight waist-length hair floating up, "
@@ -397,9 +410,10 @@ ASSET_TEMPLATES["S-SN"] = {
 # ========== 地图 Tile MapTile (64x64, 俯视正交视角) ==========
 ASSET_TEMPLATES["废墟都市Tile"] = {
     "prompt": (
-        "masterpiece, best quality, game background, layered scenery, wide panoramic composition, "
-        "ruined city map tile, top-down orthographic view directly from above, collapsed concrete building corner broken walls exposed rebar, "
-        "cracked asphalt street weeds growing through fissures, one broken neon sign flickering bright cyan glow attached to half-standing wall frame, rusted metal debris rubble piles scattered, abandoned car skeleton overgrown vines, post-apocalyptic atmosphere, seamless tileable square composition"
+        "masterpiece, best quality, game background art, atmospheric post-apocalyptic environment, "
+        "ruined city map tile, top-down orthographic view directly from above, collapsed concrete building corner broken walls exposed rebar jutting out, "
+        "cracked asphalt street with weeds and moss growing through wide fissures, one broken neon sign harshly flickering bright cyan glow attached to half-standing crumbling wall frame, rusted metal debris and rubble piles scattered, abandoned burnt car skeleton completely overgrown by thick green vines, puddles of dirty water reflecting cyan neon, "
+        "dark moody post-apocalyptic atmosphere, dense fog in distant corners, seamless tileable square composition"
     ),
     "sprite_prompt": (
         "single ruined city map tile, top-down orthographic view from above, broken building walls, cracked street ground, "
@@ -412,9 +426,10 @@ ASSET_TEMPLATES["废墟都市Tile"] = {
 
 ASSET_TEMPLATES["遗忘庄园Tile"] = {
     "prompt": (
-        "masterpiece, best quality, game background, layered scenery, wide panoramic composition, "
-        "forgotten manor interior map tile, top-down orthographic view, decaying Victorian noble mansion room, faded peeling gold wallpaper with intricate floral patterns now moldy, cracked white marble parquet floor dark stains, "
-        "overturned mahogany chair broken candelabra, heavy velvet curtains torn dusty, cobwebs in corners, gothic atmosphere of faded grandeur, seamless tileable square composition"
+        "masterpiece, best quality, game background art, atmospheric gothic Victorian interior, "
+        "forgotten manor interior map tile, top-down orthographic view, decaying Victorian noble mansion room, faded peeling gold wallpaper with once-intricate floral patterns now moldy and torn, cracked white marble parquet floor with dark stains and shattered tiles, "
+        "overturned mahogany chair with torn velvet cushion, broken silver candelabra on floor with melted wax drips, heavy velvet curtains hanging in tatters dusty cobwebs, deep dark corners shrouded in shadow, moonlight beam through broken window, "
+        "gothic atmosphere of faded grandeur and melancholy, seamless tileable square composition"
     ),
     "sprite_prompt": (
         "single forgotten manor interior map tile, top-down orthographic view from above, fancy floor pattern with cracked marble, "
@@ -427,9 +442,9 @@ ASSET_TEMPLATES["遗忘庄园Tile"] = {
 
 ASSET_TEMPLATES["古代神殿Tile"] = {
     "prompt": (
-        "masterpiece, best quality, game background, layered scenery, wide panoramic composition, "
-        "ancient sacred temple map tile, top-down orthographic view, white limestone temple floor with geometric mosaic patterns in gold and azure, carved stone pillars at tile edges with sacred hieroglyphic engravings glowing faint gold, cracks running through stone from age, "
-        "divine beams of warm golden light streaming down from above casting long dramatic shadows, scattered golden petals dust motes in light paths, holy sanctum atmosphere, seamless tileable square composition"
+        "masterpiece, best quality, game background art, atmospheric holy sanctuary, "
+        "ancient sacred temple map tile, top-down orthographic view, white limestone temple floor with intricate geometric mosaic patterns in gold and deep azure, carved stone pillars at tile edges with sacred hieroglyphic engravings glowing faint gold, deep cracks running through ancient stone from millennia of age, "
+        "divine beams of warm golden sunlight streaming down from unseen ceiling casting long dramatic shadows, scattered golden flower petals and floating dust motes caught in light paths, holy sanctum atmosphere of reverence, seamless tileable square composition"
     ),
     "sprite_prompt": (
         "single ancient sacred temple map tile, top-down orthographic view from above, white stone floor with gold geometric patterns, "
@@ -442,9 +457,10 @@ ASSET_TEMPLATES["古代神殿Tile"] = {
 
 ASSET_TEMPLATES["实验室碎片Tile"] = {
     "prompt": (
-        "masterpiece, best quality, game background, layered scenery, wide panoramic composition, "
-        "abandoned laboratory map tile, top-down orthographic view, sterile white sci-fi research facility interior, polished metal grid floor with reflective quality, cylindrical glass specimen tanks containing glowing cyan liquid #00D4FF and organic shapes suspended inside, "
-        "broken holographic display terminal projecting distorted blue data readouts, scattered paper documents and fallen equipment, cold clinical lighting from overhead fluorescent strips, sense of hurried evacuation, seamless tileable square composition"
+        "masterpiece, best quality, game background art, atmospheric sci-fi abandoned facility, "
+        "abandoned laboratory map tile, top-down orthographic view, sterile white sci-fi research facility interior, polished metal grid floor with reflective quality, cylindrical glass specimen tanks containing glowing cyan liquid #00D4FF with dark organic shapes suspended inside, "
+        "broken holographic display terminal projecting distorted flickering blue data readouts, scattered paper documents and fallen lab equipment on floor, cold clinical blue-tinged lighting from overhead fluorescent strips flickering intermittently, emergency lights, "
+        "sense of hurried evacuation and lingering danger, seamless tileable square composition"
     ),
     "sprite_prompt": (
         "single abandoned laboratory map tile, top-down orthographic view from above, white clean floor with grid lines, "
@@ -2586,88 +2602,34 @@ class ComfyUIGenerator:
     def _map_params_to_workflow(self, raw_params, wf_schema, workflow_id=None):
         """将客户端内部参数映射为服务器工作流期望的字段名
 
-        映射规则（v5.1）：
-        - SDXL 工作流（CLIPTextEncodeSDXLNPU）→ text_g(全局) + text_l(细节)
-          ★ 必须同时注入两者，否则 text_l 会用工作流默认值 → 发色失控
-        - AOM3 工作流（CLIPTextEncodeNPU）→ prompt + negative_prompt
+        映射规则（v5.1 最终版）：
+        - 所有工作流（SDXL/AOM3/Z-Image）统一使用 prompt + negative_prompt
+          ★ 服务端自动识别 SDXL 工作流 → 将 prompt 同时注入 text_g + text_l
+          ★ 客户端无需区分 SDXL/AOM3，发送相同的参数字段即可
         - width/height/steps/cfg/seed → 直接匹配同名或同义字段
 
         Args:
             raw_params: 客户端内部标准参数 {"positive": ..., "width": ...}
             wf_schema: 工作流参数 schema
-            workflow_id: 工作流 ID（用于判断 SDXL）
+            workflow_id: 工作流 ID（保留用于日志）
 
         Returns:
-            适配后的参数字典（SDXL: 含text_g+text_l；AOM3: 含prompt+negative_prompt）
+            适配后的参数字典
         """
-        # 判断是否为 SDXL 工作流
-        is_sdxl = False
-        if workflow_id:
-            is_sdxl = "sdxl" in workflow_id.lower()
-        if not is_sdxl and wf_schema:
-            is_sdxl = "text_g" in wf_schema or "text_l" in wf_schema
-
         positive = raw_params["positive"]
         negative = raw_params["negative"]
 
-        # ── SDXL 工作流：必须同时注入 text_g + text_l ──
-        if is_sdxl:
-            result = {
-                "text_g": positive,           # 全局: 质量标签+构图+风格
-                "text_l": positive,           # 细节: 发色+眼睛+服装+姿势
-                "negative_prompt": negative,  # 服务器自动映射到负向SDXL CLIP的text_g
-                "seed": raw_params["seed"],
-            }
-            if "steps" in wf_schema:
-                result["steps"] = raw_params["steps"]
-            if "cfg" in wf_schema:
-                result["cfg"] = raw_params["cfg"]
-            return result
-
-        # ── AOM3 / Z-Image 工作流：使用 prompt ──
-        if not wf_schema or wf_schema.get("_type") == "registered":
-            result = {
-                "prompt": positive,
-                "negative_prompt": negative,
-                "seed": raw_params["seed"],
-            }
-            if "steps" in wf_schema:
-                result["steps"] = raw_params["steps"]
-            if "cfg" in wf_schema:
-                result["cfg"] = raw_params["cfg"]
-            return result
-
-        # 有完整 schema 的蓝图工作流（AOM3）：按 schema 字段名匹配
-        result = {}
-        string_fields = []
-        for field_name, field_info in wf_schema.items():
-            if field_info.get("type") == "string":
-                string_fields.append(field_name)
-
-        if string_fields:
-            result[string_fields[0]] = positive
-            if len(string_fields) > 1 and negative:
-                result[string_fields[1]] = negative
-
-        # 数值字段直接匹配
-        numeric_map = {
-            "width": "width",
-            "height": "height",
-            "steps": "steps",
-            "cfg": ("cfg", "cfg_scale", "guidance_scale"),
-            "seed": "seed",
+        # 所有工作流统一使用 prompt + negative_prompt
+        # 服务端自动处理 SDXL 双 CLIP 映射
+        result = {
+            "prompt": positive,
+            "negative_prompt": negative,
+            "seed": raw_params["seed"],
         }
-        for client_key, server_keys in numeric_map.items():
-            val = raw_params.get(client_key)
-            if val is None:
-                continue
-            if isinstance(server_keys, str):
-                server_keys = [server_keys]
-            for sk in server_keys:
-                if sk in wf_schema:
-                    result[sk] = val
-                    break
-
+        if "steps" in wf_schema:
+            result["steps"] = raw_params["steps"]
+        if "cfg" in wf_schema:
+            result["cfg"] = raw_params["cfg"]
         return result
 
     # ==========================================

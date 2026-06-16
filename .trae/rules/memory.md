@@ -33,12 +33,12 @@
 
 ### 2.3 客户端版本
 - `comfyui_client.py` **v5.1**（从 v4.1 升级），Tkinter GUI
-- **v5.1 新增**:
+- **v5.1 最终版**:
+  - SDK 更新至 v5.1 (25KB, 含 SDXL 自动映射文档)
+  - `_map_params_to_workflow` 统一使用 `prompt`（服务端自动处理 SDXL 双 CLIP 映射）
   - 参数管理 API 集成（GET/PUT `/workflows/{id}/params`，含兼容层）
   - `_fetch_workflow_params` 优先使用参数管理 API 端点（策略0）
   - 工作流列表 UI 显示 [SDXL旗舰] 标签
-  - 3 个辅助方法：`_server_get_params`, `_server_update_params`, `_server_params_history`
-  - **v5.1 修正**: SDXL 工作流参数字段统一为 `prompt`/`negative_prompt`（与 AOM3 相同），服务器内部分发到 text_g/text_l
 - `HAS_COMMS_SDK` 由 `from comms_client import CommsClient` 决定
 - 配置持久化: `comfyui_client_config.json`
 - SDK: `comms_client.py` (v5.1, 512行, 含8个工作流适配)
@@ -59,13 +59,12 @@
 
 | 工作流 | 画布 | 步数 | CFG | 参数字段 | 用途 |
 |--------|------|------|-----|----------|------|
-| `game-character-design-sdxl` | **1024x1536** | 28 | 7-9 | `text_g`, `text_l`, `negative_prompt`, `seed`, `steps`, `cfg` | **角色立绘(旗舰)** — 全身1024x1536, Euler采样, 解决AOM3白发偏见 |
-| `game-concept-art-sdxl` | **1024x1024** | 35 | 6 | `text_g`, `text_l`, `negative_prompt`, `seed`, `steps`, `cfg` | **概念图(旗舰)** — 复杂场景理解远超SD1.5 |
-| `game-sprite-sheet-sdxl` | **1536x1536** (2x2) | 35 | 5.5 | `text_g`, `text_l`, `negative_prompt`, `seed`, `steps`, `cfg` | **精灵帧动画(旗舰)** — 每帧768x768, 角色一致性最强 |
+| `game-character-design-sdxl` | **1024x1536** | 28 | 7-9 | `prompt`, `negative_prompt`, `seed`, `steps`, `cfg` | **角色立绘(旗舰)** — 全身1024x1536, Euler采样, 解决AOM3白发偏见 |
+| `game-concept-art-sdxl` | **1024x1024** | 35 | 6 | `prompt`, `negative_prompt`, `seed`, `steps`, `cfg` | **概念图(旗舰)** — 复杂场景理解远超SD1.5 |
+| `game-sprite-sheet-sdxl` | **1536x1536** (2x2) | 35 | 5.5 | `prompt`, `negative_prompt`, `seed`, `steps`, `cfg` | **精灵帧动画(旗舰)** — 每帧768x768, 角色一致性最强 |
 
-> **SDXL 双 CLIP 注入机制（v5.1修正）**: SDXL工作流内部使用 `CLIPTextEncodeSDXLNPU` 节点，需要同时注入 `text_g`(全局构图/风格) + `text_l`(细节/发色/服装)。
-> 客户端 `_map_params_to_workflow()` 通过 `workflow_id` 包含 "sdxl" 检测 → 自动发送 `text_g` + `text_l`（内容相同，模型自行分配权重）。
-> **若不注入 text_l，工作流默认值会覆盖发色 → 蓝发。**
+> **SDXL 参数注入机制（v5.1服务端修复）**: 服务端自动识别工作流ID含 `-sdxl` → 将 `prompt` 同时注入 `CLIPTextEncodeSDXLNPU` 的 `text_g` + `text_l`。
+> 客户端**统一使用 `prompt` 字段**即可，无需区分 SDXL/AOM3。negative_prompt 同理自动注入到负面 SDXL CLIP 的 text_g + text_l。
 
 #### AOM3 品质（AbyssOrangeMix3）— 非人形/快速任务
 
@@ -132,15 +131,15 @@ game-sprite-sheet         → steps=25, cfg=7, 2048x2048 (AOM3更新后)
 
 ### 3.2 客户端
 - 精灵帧 img2img 流程尚未完整测试（需概念图生成成功作为参考底图）
-- SDK 已更新至 v5.1 (512行)，参数管理方法（http_get_params 等）可能需要后续 SDK 版本包含
-- **SDXL 参数注入已验证（2026-06-16）**: CLIPTextEncodeSDXLNPU 需要 text_g + text_l 同时注入，仅发 prompt 会导致 text_l 用默认值（发色/细节失控）
+- Deleted: 旧版 `comms_client.py.bak` (20KB) 可删除（已替换为 v5.1 25KB 新版）
+- **SDXL 参数注入已确认（2026-06-16）**: 服务端自动将 prompt → text_g + text_l，客户端统一用 prompt 字段
 
 
 ## 4. 近期重要变更
 
 | 日期 | 变更 | 详情 |
 |------|------|------|
-| 2026-06-16 | **SDXL参数映射根因修复** | SDXL工作流使用CLIPTextEncodeSDXLNPU(text_g+text_l)，客户端之前只发prompt→text_l用默认值→发色失控+双视图; 修复:_map_params_to_workflow检测sdxl→同时注入text_g+text_l; 工作流默认残留character design sheet也是双视图原因 |
+| 2026-06-16 | **SDXL参数注入根因修复** | 服务端更新SDK(20→25KB) + 文档(86KB); 服务器自动将prompt→text_g+text_l(CLIPTextEncodeSDXLNPU); 客户端回退统一用prompt; 旧版comms_client.py备份为.bak |
 | 2026-06-16 | **客户端升级 v5.1** | SDXL双CLIP(text_g/text_l)自动映射; 参数管理API集成(兼容层); 工作流UI显示[SDXL旗舰]标签; _fetch_workflow_params新增策略0; SDK更新至512行 |
 | 2026-06-16 | **v5.1 紧急修复** | SDXL参数映射错误修正: text_g/text_l→prompt(服务器API统一用prompt, 内部分发到SDXL双CLIP); 删除2张失败图片(蓝色光斑) |
 | 2026-06-16 | **服务器升级 v5.1** | 新增 3 个 SDXL 旗舰工作流 (NoobAI-XL-Vpred); game-sprite-sheet 画布更新为 2048x2048; 总工作流 8 个; 文档 67KB |
