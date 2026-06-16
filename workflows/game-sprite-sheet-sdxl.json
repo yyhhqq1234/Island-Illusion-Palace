@@ -1,0 +1,97 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "NoobAI-XL-Vpred-v1.0.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "加载NoobAI-XL V-Pred (SDXL动画旗舰)"
+    }
+  },
+  "2": {
+    "inputs": {
+      "width": 1536,
+      "height": 1536,
+      "crop_w": 0,
+      "crop_h": 0,
+      "target_width": 1536,
+      "target_height": 1536,
+      "text_g": "masterpiece, best quality, ultra-detailed, sprite sheet, 2x2 grid layout, 4-frame animation sequence, identical character in all frames, same exact design, same clothing, same hair, same face, same body proportions, white background, clean game art, flat cel shading, professional game asset",
+      "clip": ["1", 1],
+      "text_l": "frame 1 top-left: character standing idle in neutral pose, frame 2 top-right: crouching anticipation build-up ready to strike, frame 3 bottom-left: forward attack swing with weapon trailing motion smear, frame 4 bottom-right: recovery stance after attack settling into guard, walk cycle, consistent color palette, simple soft shadows, 2.5d anime style, grid lines separating frames, no text, seamless motion continuity",
+      "device": "AUTO"
+    },
+    "class_type": "CLIPTextEncodeSDXLNPU",
+    "_meta": {
+      "title": "正面提示词 SDXL双CLIP (帧动画)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "width": 1536,
+      "height": 1536,
+      "crop_w": 0,
+      "crop_h": 0,
+      "target_width": 1536,
+      "target_height": 1536,
+      "text_g": "lowres, bad quality, signature, watermark, text, ugly, deformed, blurry, jpeg artifacts, 3D render, photorealistic, gradient background",
+      "clip": ["1", 1],
+      "text_l": "different characters in each frame, character variation, changing outfit, changing hair color, changing hairstyle, changing face, different body type, inconsistent style, messy layout, overlapping frames, asymmetrical pose, broken grid, bad anatomy, bad hands, missing fingers, extra fingers, fused fingers, mutated hands, bad face, bad eyes, missing limb, extra limb, different colors per frame, complex background, detailed background",
+      "device": "AUTO"
+    },
+    "class_type": "CLIPTextEncodeSDXLNPU",
+    "_meta": {
+      "title": "负面提示词 SDXL双CLIP"
+    }
+  },
+  "4": {
+    "inputs": {
+      "width": 1536,
+      "height": 1536,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "画布 1536x1536 SDXL (2x2网格)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "seed": 0,
+      "steps": 35,
+      "cfg": 5.5,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": ["1", 0],
+      "positive": ["2", 0],
+      "negative": ["3", 0],
+      "latent_image": ["4", 0]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器 SDXL Euler 35步 (帧动画)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "samples": ["5", 0],
+      "vae": ["1", 2],
+      "device": "GPU.0"
+    },
+    "class_type": "VAEDecodeIGPU",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "7": {
+    "inputs": {
+      "filename_prefix": "sdxl_sprite_sheet",
+      "images": ["6", 0]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存SDXL精灵帧条带"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "steps": 25,
+  "cfg": 5.5,
+  "negative_prompt": "lowres, bad anatomy, bad hands, text, error, missing fingers, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry",
+  "seed": -1
+}

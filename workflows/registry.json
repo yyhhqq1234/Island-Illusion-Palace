@@ -1,0 +1,416 @@
+{
+  "version": "5.1",
+  "updated": "2026-06-16",
+  "models_available": {
+    "checkpoints": {
+      "NoobAI-XL-Vpred-v1.0.safetensors": "NoobAI-XL V-Pred 1.0 - 2026最强动漫SDXL模型, 原生1024分辨率, 角色知识库最广, Illustrious生态LoRA兼容",
+      "AbyssOrangeMix3.safetensors": "AbyssOrangeMix3 A3 - 高质量2.5D动漫/游戏美术checkpoint, 场景背景专精, SD1.5快速出图"
+    },
+    "unet": {
+      "z-image-turbo-fp8-e4m3fn.safetensors": "Z-Image Turbo FP8 - 极速生成(4步), 适合几何图形/图标/道具"
+    },
+    "diffusion_models": {
+      "flux1-fill-dev.safetensors": "Flux.1 Fill Dev - 高质量图像修复/填充, 用于局部重绘",
+      "lotus-depth-d-v1-1.safetensors": "Lotus Depth D - 单目深度估计, 输出灰度深度图"
+    },
+    "vae": {
+      "vae-ft-mse-840000-ema-pruned.safetensors": "VAE MSE FT - SD1.5通用VAE解码器"
+    }
+  },
+  "workflows": {
+    "game-character-design-sdxl": {
+      "file": "game-character-design-sdxl.json",
+      "name": "SDXL角色立绘设计(旗舰)",
+      "category": "game-art",
+      "model": "NoobAI-XL-Vpred",
+      "canvas": "1024x1536",
+      "steps": 28,
+      "speed": "premium",
+      "description": "SDXL旗舰级角色立绘 | 使用NoobAI-XL V-Pred 1.0 (2026最强动漫SDXL模型), 28步Euler采样, 原生1024x1536分辨率。NoobAI-XL基于1300万张Danbooru/e621训练, 角色识别能力是SD1.5的5倍以上, 支持Illustrious生态全部LoRA。原生1024分辨率无需放大即可获得印刷级细节: 手指/眼睛/服装纹理/光影层次全面超越SD1.5。适合: 主角立绘、SSR角色卡、宣传角色图、高品质人物设定。提示词建议: 'masterpiece, best quality, 1girl, solo, full body, standing, character design, white background, detailed face, detailed eyes'",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "角色描述: Danbooru标签格式效果最佳(如: '1girl, fantasy mage, blue robe, holding staff, detailed face, detailed eyes, white background')"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "default": "lowres, bad anatomy, bad hands, text, error, missing fingers, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子(-1=随机)"
+        },
+        "steps": {
+          "type": "int",
+          "default": 28,
+          "min": 20,
+          "max": 50,
+          "description": "采样步数(NoobAI-XL推荐25-35)"
+        },
+        "cfg": {
+          "type": "float",
+          "default": 5.5,
+          "min": 1.0,
+          "max": 10.0,
+          "description": "提示词引导强度(NoobAI-XL推荐4-7, 比SD1.5低)"
+        }
+      }
+    },
+    "game-concept-art-sdxl": {
+      "file": "game-concept-art-sdxl.json",
+      "name": "SDXL概念图/宣传画(旗舰)",
+      "category": "game-art",
+      "model": "NoobAI-XL-Vpred",
+      "canvas": "1024x1024",
+      "steps": 35,
+      "speed": "premium",
+      "description": "SDXL旗舰级概念艺术 | 使用NoobAI-XL V-Pred 1.0, 35步Euler高品质采样(CFG 6), 原生1024x1024。NoobAI-XL对复杂场景的理解能力远超SD1.5: 构图更合理、光影更自然、色彩层次更丰富、细节密度更高。适合: 游戏封面图、高品质宣传插画、世界观概念画、关键帧场景、电影级气氛图。提示词建议: 'masterpiece, best quality, concept art, game illustration, cinematic lighting, dramatic composition, vivid colors, fantasy, elaborate background'",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "概念图描述: 场景/角色/氛围, 尽量详细(如: 'a grand castle on floating islands, fantasy concept art, golden sunset, clouds, epic scale, cinematic lighting, masterpiece')"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "default": "lowres, bad anatomy, bad hands, text, error, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, 3D, photorealistic, ugly, deformed"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子"
+        },
+        "steps": {
+          "type": "int",
+          "default": 35,
+          "min": 25,
+          "max": 60,
+          "description": "采样步数(高品质推荐30-40)"
+        },
+        "cfg": {
+          "type": "float",
+          "default": 6.0,
+          "min": 1.0,
+          "max": 10.0,
+          "description": "提示词引导强度(NoobAI-XL推荐4-7)"
+        }
+      }
+    },
+    "game-character-design": {
+      "file": "game-character-design.json",
+      "name": "角色立绘设计",
+      "category": "game-art",
+      "model": "AbyssOrangeMix3",
+      "canvas": "768x1024",
+      "steps": 20,
+      "speed": "quality",
+      "description": "动漫角色立绘/人物设计 | 使用AbyssOrangeMix3 A3高品质2.5D游戏美术模型, 20步DPM++ 2M Karras采样, 输出768x1024全身立绘。2.5D混合风格兼顾动漫美感与写实质感, 面部/皮肤/光影细节显著优于SD1.5通用模型。适合: 角色原画、NPC设计、人物设定图、战斗姿态展示。提示词建议: '1girl/1boy, solo, standing, character design sheet, white background, anime style, clean lines'",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "角色描述: 外观特征、服装、姿态、视角(如: '1girl, fantasy mage, blue robe, holding staff, side view, anime style')"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "default": "lowres, bad anatomy, bad hands, text, error, missing fingers, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子(-1=随机)"
+        },
+        "steps": {
+          "type": "int",
+          "default": 20,
+          "min": 10,
+          "max": 50,
+          "description": "采样步数(越高细节越丰富, 推荐20-30)"
+        },
+        "cfg": {
+          "type": "float",
+          "default": 7.0,
+          "min": 1.0,
+          "max": 15.0,
+          "description": "提示词引导强度(推荐5-8)"
+        }
+      }
+    },
+    "game-item-icon": {
+      "file": "game-item-fast.json",
+      "name": "道具/图标生成",
+      "category": "game-art",
+      "model": "z-image-turbo",
+      "canvas": "1024x1024",
+      "steps": 4,
+      "speed": "ultra-fast",
+      "description": "游戏道具图标/UI元素 | 使用Z-Image Turbo 4步极速生成, 适合几何化、风格统一的物品图标。输出1024x1024方形图。适合: 药水、武器、宝箱、技能图标、背包道具、UI按钮。注意: Z-Image不适合概念图/角色, 其输出偏几何风格, 仅推荐用于图标类素材",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "道具描述(如: 'golden sword with red gem, game item icon, centered, white background, simple design')"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子(-1=随机)"
+        }
+      }
+    },
+    "game-environment": {
+      "file": "game-environment.json",
+      "name": "场景/关卡背景",
+      "category": "game-art",
+      "model": "AbyssOrangeMix3",
+      "canvas": "1536x640",
+      "steps": 20,
+      "speed": "quality",
+      "description": "游戏关卡场景/环境背景 | 使用AbyssOrangeMix3 A3高品质2.5D游戏美术模型, 20步采样, 宽幅1536x640输出。AOM3在场景背景生成方面表现突出: 构图层次分明、氛围感强、光影自然。适合: 横版游戏背景层、关卡场景概念图、视差滚动远中近景、世界观氛围图。提示词建议: 'fantasy forest, game background, layered scenery, concept art, atmospheric'",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "场景描述: 环境类型、风格、氛围、元素(如: 'dark castle on cliff, stormy sky, dramatic lighting, fantasy world')"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "default": "lowres, bad anatomy, text, error, cropped, worst quality, low quality, jpeg artifacts, signature, watermark"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子(-1=随机)"
+        },
+        "steps": {
+          "type": "int",
+          "default": 20,
+          "min": 10,
+          "max": 50,
+          "description": "采样步数(推荐20-30)"
+        },
+        "cfg": {
+          "type": "float",
+          "default": 7.0,
+          "min": 1.0,
+          "max": 15.0,
+          "description": "提示词引导强度"
+        }
+      }
+    },
+    "game-concept-art": {
+      "file": "game-concept-art.json",
+      "name": "概念图/宣传画",
+      "category": "game-art",
+      "model": "AbyssOrangeMix3",
+      "canvas": "1024x1024",
+      "steps": 30,
+      "speed": "quality",
+      "description": "高品质游戏概念艺术/宣传插画 | 使用AbyssOrangeMix3 A3 30步高质量采样(CFG 8, DPM++ 2M Karras), 输出1024x1024。AOM3的2.5D混合风格在概念图领域表现卓越: 构图张力强、色彩层次丰富、光影戏剧性强。适合: 游戏封面图、开发宣传素材、世界观概念画、关键帧场景、气氛图。提示词建议: 'concept art, game illustration, cinematic, masterpiece, detailed background, dramatic lighting, fantasy'",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "概念图描述: 场景/角色/氛围, 尽量详细(如: 'a grand castle in floating islands, fantasy concept art, golden sunset, clouds, epic scale, cinematic lighting, masterpiece')"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "default": "lowres, bad anatomy, bad hands, text, error, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry, 3D, photorealistic, ugly, deformed"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子"
+        },
+        "steps": {
+          "type": "int",
+          "default": 30,
+          "min": 15,
+          "max": 60,
+          "description": "采样步数(高品质推荐25-40)"
+        },
+        "cfg": {
+          "type": "float",
+          "default": 8.0,
+          "min": 1.0,
+          "max": 15.0,
+          "description": "提示词引导强度(概念图推荐7-10)"
+        }
+      }
+    },
+    "game-sprite-sheet-sdxl": {
+      "file": "game-sprite-sheet-sdxl.json",
+      "name": "SDXL精灵帧动画(旗舰)",
+      "category": "game-art",
+      "model": "NoobAI-XL-Vpred",
+      "canvas": "1536x1536",
+      "steps": 35,
+      "speed": "premium",
+      "description": "SDXL旗舰级精灵帧动画 | NoobAI-XL V-Pred 1.0, 35步Euler采样(CFG 5.5), 2x2网格1536x1536(每帧768x768)。NoobAI-XL基于1300万张Danbooru训练, 角色识别/一致性远超SD1.5, 帧间角色特征保持更稳定。四帧渐进运动: 待机→蓄力→攻击→恢复, 含motion smear动态模糊提示。适合: 高品质角色行走循环、攻击动画、待机动画、技能动作。每个象限清晰划分, 可直接导入Unity/Godot切分使用",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "帧动画描述含角色外观+四帧动作: '[外观描述], sprite sheet, 2x2 grid, 4-frame, frame 1 TL:[待机姿势], frame 2 TR:[蓄力姿势], frame 3 BL:[攻击姿势], frame 4 BR:[恢复姿势], consistent character, white background, game sprite'"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "default": "lowres, bad anatomy, bad hands, text, error, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, different characters in each frame"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子(固定种子=帧间角色一致, 不同种子=不同角色)"
+        },
+        "steps": {
+          "type": "int",
+          "default": 35,
+          "min": 25,
+          "max": 50,
+          "description": "采样步数(NoobAI-XL推荐30-40)"
+        },
+        "cfg": {
+          "type": "float",
+          "default": 5.5,
+          "min": 1.0,
+          "max": 10.0,
+          "description": "CFG(NoobAI-XL推荐4-7)"
+        }
+      }
+    },
+    "game-sprite-sheet": {
+      "file": "game-sprite-sheet.json",
+      "name": "精灵帧动画/条带",
+      "category": "game-art",
+      "model": "AbyssOrangeMix3",
+      "canvas": "2048x2048",
+      "steps": 25,
+      "speed": "quality",
+      "description": "SD1.5品质精灵帧动画 | AOM3 25步DPM++2M Karras, 2x2网格2048x2048(每帧1024x1024)。改进提示词: 四帧渐进运动结构(待机→蓄力→攻击→恢复)+motion smear动态模糊+角色外观锚定一致性强化+扩展负面过滤。适合: 快速原型行走/攻击/待机动画, 生成速度快(~25s)。评估指标: 角色跨帧一致性/动作流畅度/肌肉细节/网格清晰度",
+      "params": {
+        "prompt": {
+          "type": "string",
+          "required": true,
+          "description": "帧动画含角色+四帧: '[外观], sprite sheet, 2x2 grid, 4-frame, frame1 TL:[起始], frame2 TR:[峰值], frame3 BL:[跟随], frame4 BR:[恢复], consistent character, white background'"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "default": "lowres, bad anatomy, bad hands, text, error, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, blurry, different characters, inconsistent style, character variation, changing outfit"
+        },
+        "seed": {
+          "type": "int",
+          "default": -1,
+          "description": "随机种子(固定种子=帧间一致, 不同种子=不同角色)"
+        },
+        "steps": {
+          "type": "int",
+          "default": 25,
+          "min": 10,
+          "max": 50,
+          "description": "采样步数(推荐20-25)"
+        },
+        "cfg": {
+          "type": "float",
+          "default": 7.0,
+          "min": 1.0,
+          "max": 15.0,
+          "description": "提示词引导强度(推荐6-8)"
+        }
+      }
+    }
+  },
+  "categories": {
+    "game-art": {
+      "name": "游戏美术素材",
+      "description": "高品质游戏美术生成工作流。SDXL旗舰层(NoobAI-XL): 角色立绘/概念图; SD1.5品质层(AOM3): 场景/精灵动画; 极速层(Z-Image): 道具图标"
+    },
+    "image-utility": {
+      "name": "图像处理工具",
+      "description": "生成后处理工具: 深度图提取、局部重绘修复、模糊、锐化"
+    }
+  },
+  "speed_levels": {
+    "ultra-fast": "4步极速生成(约5秒)",
+    "fast": "8步快速生成(约10秒)",
+    "quality": "20-30步高品质(约20-40秒)",
+    "premium": "28-35步SDXL旗舰(约40-60秒, 原生1024分辨率)"
+  },
+  "blueprints": {
+    "image-inpainting": {
+      "file": "Image Inpainting (Flux.1 Fill Dev).json",
+      "name": "局部重绘/修复",
+      "category": "image-utility",
+      "model": "flux-fill",
+      "speed": "normal",
+      "description": "图像局部修复与内容替换 | 使用Flux.1 Fill Dev高质量修复模型。传入原图+遮罩+提示词, 自动填充/替换遮罩区域。适合: 去除多余元素、修复破损区域、替换背景、遮盖敏感内容。需同时提供image和mask参数",
+      "params": {
+        "pixels": {
+          "type": "image",
+          "description": "需要修复的原始图像"
+        },
+        "mask": {
+          "type": "mask",
+          "description": "遮罩图像(白色=需要修复的区域, 黑色=保留区域)"
+        },
+        "text": {
+          "type": "string",
+          "description": "修复后该区域应包含的内容描述"
+        }
+      },
+      "output_type": "IMAGE",
+      "is_blueprint": true
+    },
+    "image-depth-map": {
+      "file": "Image to Depth Map (Lotus).json",
+      "name": "深度图生成",
+      "category": "image-utility",
+      "model": "lotus-depth",
+      "speed": "fast",
+      "description": "单目深度估计 | 使用Lotus Depth D-V1.1模型提取图像的深度信息, 输出灰度深度图(白=近, 黑=远)。适合: 为3D场景提供深度参考、视差背景分层、伪3D效果、景深模拟。只需传入图像即可",
+      "params": {
+        "pixels": {
+          "type": "image",
+          "description": "需要提取深度的原图"
+        }
+      },
+      "output_type": "IMAGE",
+      "is_blueprint": true
+    },
+    "image-blur": {
+      "file": "Image Blur.json",
+      "name": "图像模糊",
+      "category": "image-utility",
+      "model": "none",
+      "speed": "instant",
+      "description": "高斯/边缘保留模糊 | 对图像应用模糊滤镜。适合: 生成远景区、(伪)景深效果、背景虚化、去噪。只需传入图像, 可调节模糊强度和类型",
+      "params": {
+        "image": {
+          "type": "image",
+          "description": "需要模糊处理的图像"
+        }
+      },
+      "output_type": "IMAGE",
+      "is_blueprint": true
+    },
+    "image-sharpen": {
+      "file": "Sharpen.json",
+      "name": "图像锐化",
+      "category": "image-utility",
+      "model": "none",
+      "speed": "instant",
+      "description": "图像锐化增强 | 对图像应用锐化滤镜, 增强边缘和细节。适合: AI生成图像的细节增强、纹理清晰化、预处理后再放大。只需传入图像",
+      "params": {
+        "image": {
+          "type": "image",
+          "description": "需要锐化的图像"
+        }
+      },
+      "output_type": "IMAGE",
+      "is_blueprint": true
+    }
+  },
+  "total_workflows": 8,
+  "total_blueprints": 4
+}

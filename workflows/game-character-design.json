@@ -1,0 +1,83 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "AbyssOrangeMix3.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "加载AbyssOrangeMix3 (2.5D游戏美术)"
+    }
+  },
+  "2": {
+    "inputs": {
+      "text": "masterpiece, best quality, ultra-detailed, 1girl, solo, full body, standing, character design sheet, white background, front view, arms at sides, game character sprite, anime style, clean lines, flat colors, simple shading, professional game art, 2.5d, soft lighting",
+      "clip": ["1", 1],
+      "device": "AUTO"
+    },
+    "class_type": "CLIPTextEncodeNPU",
+    "_meta": {
+      "title": "正面提示词 (NPU)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, bad feet, mutation, deformed, extra limbs, extra arms, extra legs, malformed limbs, fused fingers, too many fingers, long neck, cross-eyed, mutated hands, polar lowres, bad face",
+      "clip": ["1", 1],
+      "device": "AUTO"
+    },
+    "class_type": "CLIPTextEncodeNPU",
+    "_meta": {
+      "title": "负面提示词 (NPU)"
+    }
+  },
+  "4": {
+    "inputs": {
+      "width": 768,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "画布 768x1024 (立绘)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "seed": 0,
+      "steps": 20,
+      "cfg": 7,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1,
+      "model": ["1", 0],
+      "positive": ["2", 0],
+      "negative": ["3", 0],
+      "latent_image": ["4", 0]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器 (角色生成)"
+    }
+  },
+  "6": {
+    "inputs": {
+      "samples": ["5", 0],
+      "vae": ["1", 2],
+      "device": "GPU.0"
+    },
+    "class_type": "VAEDecodeIGPU",
+    "_meta": {
+      "title": "VAE解码 (iGPU加速)"
+    }
+  },
+  "7": {
+    "inputs": {
+      "filename_prefix": "game_character",
+      "images": ["6", 0]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存角色立绘"
+    }
+  }
+}

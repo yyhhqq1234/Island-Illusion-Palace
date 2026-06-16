@@ -1,0 +1,114 @@
+{
+  "11": {
+    "inputs": {
+      "unet_name": "z-image-turbo-fp8-e4m3fn.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器 (Z-Image Turbo)"
+    }
+  },
+  "12": {
+    "inputs": {
+      "shift": 3,
+      "model": ["11", 0]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "采样算法 (AuraFlow)"
+    }
+  },
+  "13": {
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP (Qwen 3 4B)"
+    }
+  },
+  "14": {
+    "inputs": {
+      "vae_name": "flux-ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE (Flux AE)"
+    }
+  },
+  "15": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "画布 1024x1024 (道具/图标)"
+    }
+  },
+  "16": {
+    "inputs": {
+      "text": "game item icon, 2D game asset, clean vector style, flat design, professional game UI, centered composition, solid color background, high contrast, sharp edges, minimal detail, symbol-like, RPG inventory icon, isometric view",
+      "clip": ["13", 0],
+      "device": "AUTO"
+    },
+    "class_type": "CLIPTextEncodeNPU",
+    "_meta": {
+      "title": "正面提示词 (道具/图标) - NPU"
+    }
+  },
+  "17": {
+    "inputs": {
+      "text": "blurry, low quality, 3D render, realistic, photo, complex background, text, watermark, jpeg artifacts, noisy, gradient, photorealistic, human, animal, detailed texture, intricate",
+      "clip": ["13", 0],
+      "device": "AUTO"
+    },
+    "class_type": "CLIPTextEncodeNPU",
+    "_meta": {
+      "title": "负面提示词 - NPU"
+    }
+  },
+  "18": {
+    "inputs": {
+      "seed": 0,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": ["12", 0],
+      "positive": ["16", 0],
+      "negative": ["17", 0],
+      "latent_image": ["15", 0]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器 (4步极速)"
+    }
+  },
+  "19": {
+    "inputs": {
+      "samples": ["18", 0],
+      "vae": ["14", 0],
+      "device": "GPU.0"
+    },
+    "class_type": "VAEDecodeIGPU",
+    "_meta": {
+      "title": "VAE解码 (iGPU加速)"
+    }
+  },
+  "20": {
+    "inputs": {
+      "filename_prefix": "game_item",
+      "images": ["19", 0]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存道具/图标"
+    }
+  }
+}
