@@ -18,7 +18,7 @@
 - **8189 统一入口**: 提供 HTTP REST + WebSocket + 蓝图展平
 - **ComfyUI 原生 8188**: 不推荐直接访问，通过 8189 代理
 - **SDK**: `comms_client.py` (19835 bytes, 从服务器 GET /client-sdk 获取)
-- **工作流总量**: 41 个（11 注册工作流 + 30 蓝图）
+- **工作流总量**: 9 个（5 注册工作流 + 4 蓝图）
 - **GPU**: NVIDIA RTX 3060 (12GB VRAM)
 - **模型总量**: ~89GB
 
@@ -49,19 +49,31 @@
     → _handle_completed()         # 检查错误 → 下载文件 → 保存到本地
 ```
 
-### 2.5 可用的文生图工作流
-| 工作流 | 类型 | 模型大小 | 参数字段 | 状态 |
-|--------|------|----------|----------|------|
-| `text-to-image-z-image-turbo` | 蓝图 | ~6.4GB | `text` | 正常工作，提示词用自然语言 |
-| `text-to-image-qwen-image` | 蓝图 | ~19GB | `text` | 12GB VRAM 不可用（OOM）|
-| `game-character-design` | 注册 | NPU 加速 | `prompt` | NPU 节点有 bug（SaveImage 格式问题）|
+### 2.5 可用的游戏美术工作流（v3.2 精简版）
+
+| 工作流 | 类型 | 速度 | 参数字段 | 用途 |
+|--------|------|------|----------|------|
+| `game-concept-art` | 注册 | quality | `prompt`, `negative_prompt`, `seed`, `steps`, `cfg` | 概念图/宣传画（推荐 steps 25-40, cfg 7-10）|
+| `game-character-design` | 注册 | quality | `prompt`, `negative_prompt`, `seed`, `steps`, `cfg` | 角色立绘单帧（steps 20-30, cfg 5-8）|
+| `game-sprite-sheet` | **注册** | **quality** | `prompt`, `negative_prompt`, `seed`, `steps`, `cfg` | **精灵帧动画/条带**（多帧动态，推荐 steps 20-25, cfg 6-8, prompt 需含帧描述）|
+| `game-environment` | 注册 | quality | `prompt`, `negative_prompt`, `seed`, `steps`, `cfg` | 场景/关卡背景/Tile（steps 20-30）|
+| `game-item-icon` | 注册 | ultra-fast | `prompt`, `seed` | 道具/图标/UI 元素（仅 prompt+seed，不含步数/cfg）|
+
+蓝图（仅剩 4 个 image-utility）: `image-inpainting`, `image-depth-map`, `image-blur`, `image-sharpen`
+
+### 2.6 提示词双阶段设计
+每个 ASSET_TEMPLATES 包含两套提示词：
+- `prompt`: 概念图阶段（dark fantasy concept art, digital painting, 单对象居中）
+- `sprite_prompt`: 精灵帧阶段（simple pixel art, minimalist game sprite, 纯白背景, 居中）
+- `_update_prompts()` 根据 stage 自动选择对应字段
+
 
 ## 3. 当前已知问题
 
 ### 3.1 服务器端
-- `game-character-design` 工作流 NPU 节点输出格式问题：`SaveImage: Cannot handle this data type: (1, 1, 1024), |u1`
-- NPU 节点前序修复 `'str' object has no attribute 'tokenize'` 已解决
-- Qwen-Image 在 12GB VRAM 下 OOM（分配 19GB 超出物理容量）
+- ComfyUI 后端（8188）偶尔挂掉导致 8189 代理返回 502 / 空 prompt_id，需重启 ComfyUI
+- `game-item-icon` 工作流仅支持 prompt+seed 参数，不含 steps/cfg 控制
+
 
 ### 3.2 客户端
 - 精灵帧 img2img 流程尚未完整测试（需概念图生成成功作为参考底图）
@@ -70,6 +82,7 @@
 
 | 日期 | 变更 | 详情 |
 |------|------|------|
+| 2026-06-15 | 服务器 v3.2 精简重构 | 工作流从 41→8（4 注册: game-concept-art/character-design/environment/item-icon + 4 蓝图: image-utility）; 客户端 SDK 更新; _get_logical_workflow_id 映射重写; _fetch_workflow_params 增加 /workflows/{id} 查询策略; 移除旧 z-image/qwen 引用 |
 | 2026-06-15 | LLM 提示词更新 | 系统提示词从 SD 权重语法改为自然语言格式 |
 | 2026-06-15 | 项目分析融合 | `ProjectScanner` 扩展了指导文档扫描 + `get_context_for_asset()` |
 | 2026-06-15 | 服务器 v3.2 完全集成 | SDK 更新、工作流选择器、参数自动映射、错误分类 |

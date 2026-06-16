@@ -134,40 +134,393 @@ DIRECTION_PROMPTS = {
     "right": "right-side profile view, facing right, body turned 90 degrees right",
 }
 
-# 资产模板 (assetType -> {prompt, targetWidth, targetHeight, category, genWidth, genHeight})
+# 资产模板 (assetType -> {prompt, sprite_prompt, targetWidth, targetHeight, category, genWidth, genHeight})
+#   prompt        = 概念图阶段提示词 (concept art / digital painting 风格)
+#   sprite_prompt = 精灵帧阶段提示词 (simple pixel art / minimalist game sprite 风格)
 ASSET_TEMPLATES = OrderedDict()
 
-# ========== 玩家 (简约像素画, ~2.5头身) ==========
-ASSET_TEMPLATES["墨语"] =      {"prompt": "Mo Yu, dark blue-black short hair, purple eyes, neutral expression, dark blue-gray outfit, subtle soul aura glow, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["莎娜"] =      {"prompt": "Shana, crimson long hair, warm gentle eyes, kind smile, elegant mage robe with scarlet accents, soft red energy aura, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512}
+# ========== 玩家 Player (64x64, ~2.5头身) ==========
+ASSET_TEMPLATES["墨语"] = {
+    "prompt": (
+        "Mo Yu the time traveler, young male protagonist, dark blue-black messy short hair covering one eye, "
+        "sharp purple eyes with faint blue-purple soul glow, pale skin, neutral stoic expression, "
+        "wearing dark teal-blue traveler coat with high collar, silver trim on edges, loose black undershirt, "
+        "fitted dark pants, leather boots, a faint ethereal blue-purple soul aura surrounding his body like a thin mist, "
+        "subtle cyan crystal erosion marks on right hand, standing confidently with one hand resting on sword hilt at waist, "
+        "full body shot, single character only, centered composition, dark fantasy concept art, digital painting, "
+        "dramatic rim lighting from upper left, deep indigo background gradient, volumetric light rays, "
+        "highly detailed fabric texture and metal reflection, atmospheric mood, cinematic framing"
+    ),
+    "sprite_prompt": (
+        "Mo Yu the time traveler, young male, dark blue-black short hair, purple eyes, neutral face, "
+        "dark teal-blue coat with high collar, dark pants, boots, faint blue-purple aura around body outline, "
+        "cyan crystal mark on right hand, standing idle pose arms at sides, front-facing view, "
+        "2.5-heads-tall chibi proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, no gradients, pure white background, strictly centered, "
+        "single character only, limited palette, dark fantasy style, no shadow except small drop shadow beneath feet"
+    ),
+    "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512
+}
 
-# ========== 普通敌人 (简约像素画, ~2头身) ==========
-ASSET_TEMPLATES["腐化村民"] =  {"prompt": "corrupted villager, gray-green sickly skin, messy dark hair, glowing red eyes, tattered brown clothing, hunched posture, emaciated build, pixel art style, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["暗影之刃"] =  {"prompt": "shadow blade assassin, dark hooded figure, dual daggers, cyan energy trail, shadowy cloak, agile stance, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["水晶寄生体"] = {"prompt": "crystal parasite monster, insectoid creature, cyan crystal growth on body, scuttling legs, unnatural movement, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["沼泽潜伏者"] = {"prompt": "swamp lurker monster, amphibious creature, half-submerged in mud, slimy skin, yellow-green toxic mist, webbed hands, bulging eyes, 2-heads-tall", "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["莎娜"] = {
+    "prompt": (
+        "Shana the soul fragment maiden, beautiful young woman, flowing crimson-red long hair past waist with inner glow, "
+        "warm amber-brown eyes filled with kindness, gentle serene smile, "
+        "wearing elegant ivory-white mage robe with intricate scarlet runic embroidery along hem and sleeves, "
+        "wide bell sleeves, golden sash around waist, soft diffuse red-pink energy aura emanating from her body like floating embers, "
+        "translucent quality suggesting she is partially spirit, bare feet slightly above ground, hands clasped gently at chest level, "
+        "full body shot, single character only, centered composition, dark fantasy concept art, digital painting, "
+        "soft warm key light from above, dark muted violet background, particle effects of red sparkles around her, "
+        "painterly fabric folds, ethereal atmosphere"
+    ),
+    "sprite_prompt": (
+        "Shana the soul fragment maiden, young woman, very long crimson hair, warm brown eyes, kind smile, "
+        "white mage robe with red trim, wide sleeves, gold sash, soft red aura around body outline, "
+        "floating slightly above ground, hands at chest, front-facing view, "
+        "2.5-heads-tall chibi proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, no gradients, pure white background, strictly centered, "
+        "single character only, limited palette, no shadow except small drop shadow beneath"
+    ),
+    "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512
+}
 
-# ========== 精英 (48x48 target) ==========
-ASSET_TEMPLATES["灵魂吞噬者"] = {"prompt": "soul devourer monster, large floating entity, swirling souls around it, dark void body, multiple eyes, tentacle-like appendages, 3-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
-ASSET_TEMPLATES["熔岩元素"] =   {"prompt": "lava elemental, humanoid magma creature, molten rock body, orange-yellow lava veins, heat distortion, volcanic rock texture, 3.5-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
-ASSET_TEMPLATES["机械构造体"] = {"prompt": "mechanical construct, large humanoid robot, brass and steel body, cyan energy core in chest, steam pipes, gear mechanisms visible, 3.5-heads-tall", "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768}
+# ========== 普通敌人 Enemy 小怪 (32x32, ~2头身) ==========
+ASSET_TEMPLATES["腐化村民"] = {
+    "prompt": (
+        "corrupted villager, humanoid monster, gray-green diseased skin with dark veins showing through, "
+        "patches of missing hair on scalp revealing dark scalp, messy matted dark brown hair remaining in clumps, "
+        "glowing blood-red eyes without pupils or iris, sunken facial features, skeletal jawline visible, "
+        "wearing torn filthy brown peasant clothing with holes exposing skin, hunched forward posture with curved spine, "
+        "emaciated extremely thin build with protruding ribs and bones, reaching forward with gnarled claw-like fingers, "
+        "half-length shot, single creature only, centered, dark fantasy concept art, digital painting, "
+        "ominous dim green under-lighting, dark foggy background, horror atmosphere, detailed decay texture, unsettling presence"
+    ),
+    "sprite_prompt": (
+        "corrupted villager, humanoid monster, gray-green skin, messy dark hair, glowing red eyes, "
+        "torn brown rag clothing, hunched posture, thin bony body, reaching forward with claws, "
+        "front-facing view, 2-heads-tall chibi proportion, simple pixel art, minimalist game sprite, "
+        "clean pixel lines, flat color blocks, no anti-aliasing, pure white background, strictly centered, "
+        "single creature only, limited palette, no shadow except small drop shadow beneath feet"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
+}
 
-# ========== BOSS (简约像素画, ~2.5-3头身) ==========
-ASSET_TEMPLATES["时空守护者"] = {"prompt": "time guardian boss, armored entity, clockwork mechanisms embedded in armor, golden sacred markings, floating time gears, hourglass core, imposing stance, pixel art style, 2.5-heads-tall", "targetW": 64, "targetH": 64, "cat": "Boss", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["记忆守护者"] = {"prompt": "memory guardian boss, ethereal humanoid figure, fragmented body made of memory shards, blue-purple soul glow, translucent, floating, 4-heads-tall", "targetW": 80, "targetH": 80, "cat": "Boss", "genW": 640, "genH": 640}
-ASSET_TEMPLATES["S-SN"] =       {"prompt": "Scarlet Soul Shana, divine female figure, crimson red and blue-purple dual energy, floating, crystalline wings, elegant battle dress, 4-heads-tall", "targetW": 96, "targetH": 96, "cat": "Boss", "genW": 768, "genH": 768}
+ASSET_TEMPLATES["暗影之刃"] = {
+    "prompt": (
+        "shadow blade assassin, elite enemy, completely shrouded in pitch-black hooded cloak with only lower face visible, "
+        "pale lips and sharp chin exposed, holding twin curved daggers with cyan-blue glowing energy coating the blade edges, "
+        "trailing cyan energy particles from dagger tips, cloak billowing as if in wind, wide agile combat stance with knees bent, "
+        "one dagger raised high one low, shadowy smoke wisps rising from cloak surface, "
+        "half-length action pose, single figure only, centered, dark fantasy concept art, digital painting, "
+        "cool blue-cyan rim light separating figure from darkness, near-black background with cyan accent highlights, "
+        "motion blur on daggers, dynamic angle, deadly elegance"
+    ),
+    "sprite_prompt": (
+        "shadow blade assassin, dark hooded cloak figure, hidden face, dual daggers in hands, "
+        "bright cyan glow on blade edges, cyan energy trail behind daggers, wide combat stance knees bent, "
+        "front-facing view, 2-heads-tall chibi proportion, simple pixel art, minimalist game sprite, "
+        "clean pixel lines, flat color blocks, no anti-aliasing, pure white background, strictly centered, "
+        "single figure only, limited palette, cyan accent color pop against dark body, no shadow except small drop shadow"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
+}
 
-# ========== 地图 Tile ==========
-ASSET_TEMPLATES["废墟都市Tile"] = {"prompt": "ruined city tileset, collapsed buildings, broken streets, cyan neon signs still glowing, rusted metal, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["遗忘庄园Tile"] = {"prompt": "forgotten manor tileset, decaying noble mansion interior, faded gold decorations, cracked marble floors, Victorian gothic, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["古代神殿Tile"] = {"prompt": "ancient temple tileset, white stone temple, golden sacred engravings, cracked stone pillars, divine rays from ceiling, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["实验室碎片Tile"] = {"prompt": "laboratory tileset, sterile white sci-fi lab, cyan glowing specimen tanks, metal floors, holographic displays, abandoned research facility, top-down orthographic view, seamless tileable", "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["水晶寄生体"] = {
+    "prompt": (
+        "crystal parasite monster, aberrant insectoid creature, segmented insect body like a beetle-wasp hybrid, "
+        "six jointed scuttling legs with sharp tips, large cyan-transparent crystal formations bursting through its back and head shell like jagged growths, "
+        "crystals internally glowing with cyan light #00D4FF, dark chitinous exoskeleton base color deep purple-gray, "
+        "no visible eyes just sensory antennae twitching, unnatural jerky movement frozen mid-scuttle, low to ground crawling posture, "
+        "single creature only, centered, dark fantasy concept art, digital painting, "
+        "internal cyan crystal glow as primary light source casting cyan reflections on body, dark cavern background, "
+        "eerie alien beauty, macro detail on crystal facets and shell texture"
+    ),
+    "sprite_prompt": (
+        "crystal parasite monster, bug-shaped creature, insect body, six legs, "
+        "bright cyan crystal chunks growing out of back and head, crystals glowing, dark purple shell body, "
+        "no visible eyes, antennae, low crawling posture, front-facing view, "
+        "2-heads-tall chibi proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, pure white background, strictly centered, single creature only, "
+        "limited palette, cyan crystals as brightest color element, no shadow except small drop shadow"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
+}
 
-# ========== 道具 (32x32 target) ==========
-ASSET_TEMPLATES["营火"] =   {"prompt": "campfire, blue-purple soul flame, stone circle, glowing embers, warm light radius, safe haven, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["炼药锅"] = {"prompt": "alchemy cauldron, large iron cauldron, blue-purple bubbling liquid, crystal decorations on rim, alchemy symbols, glowing runes, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["时空门"] = {"prompt": "time portal, cyan and blue-purple swirling vortex, floating crystal fragments around portal, energy rings, dimensional gateway, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
-ASSET_TEMPLATES["时空裂隙"] = {"prompt": "time rift, unstable dimensional tear, jagged edges, cyan and blue-purple energy leaking, reality distortion, random sparks, top-down view", "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512}
+ASSET_TEMPLATES["沼泽潜伏者"] = {
+    "prompt": (
+        "swamp lurker monster, amphibious reptilian-frog hybrid creature, slick wet moss-green and olive-drab mottled skin with slime drips, "
+        "massive bulging yellow eyes with horizontal slit pupils taking up most of head, wide mouth with rows of tiny teeth, "
+        "webbed hands and feet with long digits, half-submerged body emerging from thick dark mud and swamp water, "
+        "yellow-green toxic gas bubbles and mist rising around it, crouched ambush predator posture ready to pounce, "
+        "single creature only, centered, dark fantasy concept art, digital painting, "
+        "sickly yellow-green ambient lighting from toxic mist, dark murky swamp background, subsurface scattering on wet skin, repulsive yet fascinating detail"
+    ),
+    "sprite_prompt": (
+        "swamp lurker monster, frog-like creature, green slimy skin, big bulging yellow eyes, wide mouth, "
+        "webbed hands and feet, half body in mud, yellow-green mist around, crouched pose, "
+        "front-facing view, 2-heads-tall chibi proportion, simple pixel art, minimalist game sprite, "
+        "clean pixel lines, flat color blocks, no anti-aliasing, pure white background, strictly centered, "
+        "single creature only, limited palette, yellow eyes as focal point, no shadow except small drop shadow"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
+}
+
+# ========== 精英 Enemy Elite (48x48, ~3~3.5头身) ==========
+ASSET_TEMPLATES["灵魂吞噬者"] = {
+    "prompt": (
+        "soul devourer elite monster, horrifying large floating entity, main body is a dark void-black amorphous mass shaped roughly like a bloated sac, "
+        "multiple unblinking eyes of different sizes scattered across body surface each glowing faintly blue-white, "
+        "swirling ghostly souls trapped inside its semi-translucent body visible as twisted faces pressing outward from within, "
+        "4-6 writhing tentacle-appendages dangling below like jellyfish tendrils, hovering above ground with small distance, "
+        "single creature only, centered, dark fantasy concept art, digital painting, "
+        "internal soul glow providing eerie blue-purple illumination #4A3A8C, cold dark void background, horror cosmic atmosphere, "
+        "multiple eye contact creating unease, gelatinous transparency effect"
+    ),
+    "sprite_prompt": (
+        "soul devourer elite monster, floating blob-shaped creature, dark void body, multiple glowing eyes on body surface, "
+        "twisted soul faces visible inside body, tentacles hanging down from bottom, hovering above ground, "
+        "front-facing view, 3-heads-tall proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, pure white background, strictly centered, single creature only, "
+        "limited palette, blue-purple glow from eyes and internal souls, no shadow underneath because floating"
+    ),
+    "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768
+}
+
+ASSET_TEMPLATES["熔岩元素"] = {
+    "prompt": (
+        "lava elemental elite, humanoid figure composed entirely of molten magma and volcanic rock, "
+        "outer crust of cracked dark gray-black volcanic rock with glowing orange-yellow magma seeping through cracks like veins, "
+        "molten core visible at chest area intensely bright, heat shimmer distortion effect around entire body, "
+        "rough rocky texture with flowing lava drips from shoulders and fists, towering imposing stance with arms slightly raised, "
+        "magma pooling and solidifying into rock at feet, single creature only, centered, dark fantasy concept art, digital painting, "
+        "self-illumination from molten core casting warm orange glow on surroundings, dark cooled rock background, intense heat atmosphere, dynamic flow of lava within rock shell"
+    ),
+    "sprite_prompt": (
+        "lava elemental elite, humanoid fire creature, body made of dark rock with bright orange-yellow lava cracks and veins, "
+        "glowing chest core, lava dripping from shoulders, standing pose arms slightly raised, "
+        "front-facing view, 3.5-heads-tall proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, pure white background, strictly centered, single creature only, "
+        "limited palette, dark rock body with bright orange-yellow lava as highlight, no shadow except small drop shadow from feet"
+    ),
+    "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768
+}
+
+ASSET_TEMPLATES["机械构造体"] = {
+    "prompt": (
+        "mechanical construct elite, large heavy humanoid robot warrior, body made of aged brass plates and steel armor segments, "
+        "visible rivets and panel seams across surface, prominent cyan-blue glowing energy core #00D4FF embedded in center of chest like a reactor, "
+        "brass steam pipes running from shoulders to back emitting small puffs of white steam, gear mechanisms visible at elbow and knee joints through cutaway sections, "
+        "heavy industrial design aesthetic, clenched fist hands, proud upright military posture, "
+        "single robot only, centered, dark fantasy concept art, digital painting, "
+        "cyan core glow as key light source with secondary warm brass reflectivity, dark industrial warehouse background, steampunk-meets-dark-fantasy fusion, metallic material study"
+    ),
+    "sprite_prompt": (
+        "mechanical construct elite, big robot figure, brass and steel armor body, bright cyan glowing circle core in chest, "
+        "steam pipes on shoulders, gear details at joints, fist hands, standing straight pose, "
+        "front-facing view, 3.5-heads-tall proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, pure white background, strictly centered, single robot only, "
+        "limited palette, brass-gold body with cyan core as brightest spot, no shadow except small drop shadow from feet"
+    ),
+    "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768
+}
+
+# ========== BOSS (64x64~96x96, ~2.5~4头身) ==========
+ASSET_TEMPLATES["时空守护者"] = {
+    "prompt": (
+        "Time Guardian boss, divine female warrior goddess of time, elegant feminine figure wearing ornate full-body plate armor of silver-white metal with gold inlay filigree patterns, "
+        "armor follows graceful female silhouette with curved waist and slender proportions, long silver-white hair flowing behind helmet like a river of starlight, "
+        "embedded clockwork mechanisms visible in armor joints with tiny interlocking gears and escapement wheels slowly turning, "
+        "golden sacred geometric markings engraved on shoulder pauldrons and chest plate glowing softly amber, "
+        "three miniature floating hourglasses orbiting around head level with golden sand trickling inside, larger hourglass embedded in chest as power core, "
+        "imposing yet graceful authoritative stance with one gauntleted hand raised palm-forward channeling time magic that distorts air around it, "
+        "beautiful serene face with closed eyes showing divine concentration, full body heroic pose, single boss only, centered, "
+        "dark fantasy concept art, digital painting, divine golden key light from above mixed with cool blue time-energy glow, "
+        "dark void-background with subtle clock face pattern watermark, epic scale, intricate armor engraving detail, feminine divine beauty"
+    ),
+    "sprite_prompt": (
+        "Time Goddess boss, female armored figure, ornate silver-white armor with gold patterns following feminine curves, long flowing hair, "
+        "clockwork gears visible on armor joints, golden markings on shoulders, floating hourglasses around head, hourglass core in chest, "
+        "one hand raised forward channeling magic, imposing graceful stance, beautiful face, "
+        "front-facing view, 2.5-heads-tall proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, pure white background, strictly centered, single boss only, "
+        "limited palette, silver armor with gold accents, feminine silhouette, no shadow except small drop shadow"
+    ),
+    "targetW": 64, "targetH": 64, "cat": "Boss", "genW": 512, "genH": 512
+}
+
+ASSET_TEMPLATES["记忆守护者"] = {
+    "prompt": (
+        "Memory Guardian boss, tragic ethereal female spirit goddess, body appears fragmented into floating separate pieces like a shattered statue reassembled from memory shards, "
+        "feminine graceful silhouette preserved despite fragmentation, each shard is a translucent crystalline piece glowing with blue-purple soul light #4A3A8C from within, "
+        "gaps between shards show empty space through which background is visible, vaguely humanoid female shape with head torso arms and legs but disconnected, "
+        "face is that of a beautiful young woman, peaceful and melancholic with closed eyes, delicate features visible on the largest facial shard, "
+        "long hair made of floating crystal strands drifting separately from head, entire figure floats serenely in meditation pose with arms slightly extended outward palms up, "
+        "memory shards slowly drifting and rotating around main body like orbiting moons, single boss only, centered, "
+        "dark fantasy concept art, digital painting, internal blue-purple shard glow as primary illumination, "
+        "deep dark blue-violet background with floating dust motes caught in light beams, melancholic beautiful feminine atmosphere, translucency and layering study"
+    ),
+    "sprite_prompt": (
+        "Memory Goddess boss, female ghostly figure, body made of separated floating pieces like broken fragments, feminine silhouette, "
+        "beautiful woman face with closed eyes on main shard, long crystal hair strands floating apart, "
+        "each piece is translucent crystal glowing blue-purple from inside, gaps between body parts, "
+        "floating meditation pose arms extended palms up, memory shards drifting around body, "
+        "front-facing view, 4-heads-tall proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, pure white background, strictly centered, single boss only, "
+        "limited palette, blue-purple glow on each fragment, feminine shape, no shadow because floating"
+    ),
+    "targetW": 80, "targetH": 80, "cat": "Boss", "genW": 640, "genH": 640
+}
+
+ASSET_TEMPLATES["S-SN"] = {
+    "prompt": (
+        "S-SN Scarlet Soul Shana, ultimate divine boss, transcendent female figure of terrifying beauty, "
+        "impossibly long flowing crimson-red hair defying gravity and floating upward like flames, "
+        "face is both Shana's kindness and divine authority combined, eyes are heterochromatic left crimson right blue-purple, "
+        "wearing an elegant pristine white battle dress with long slit skirt showing leg, crystalline wings made of interlocking red and blue-purple geometric crystal panels extending from back each facet catching light differently, "
+        "dual energy aura surrounding her body with swirling crimson fire on left side and blue-purple soul energy on right side merging at center, "
+        "floating cross-legged meditation-throne pose elevated high, hands forming a sacred mudra gesture, overwhelming divine pressure radiating outward, "
+        "single boss only, centered, dark fantasy concept art, digital painting, split lighting warm crimson left cool blue-purple right meeting at center, "
+        "dark cosmic void background with star-like particles, ultimate boss scale, symmetrical yet dual-natured composition, masterpiece quality"
+    ),
+    "sprite_prompt": (
+        "S-SN Scarlet Soul Shana, divine female boss, very long crimson hair floating upward, two-colored eyes red and blue-purple, "
+        "white elegant dress, crystalline geometric wings on back made of red and blue-purple crystal sections, "
+        "dual energy aura red on left side blue-purple on right side, floating elevated pose, hands in gesture, "
+        "front-facing view, 4-heads-tall proportion, simple pixel art, minimalist game sprite, clean pixel lines, "
+        "flat color blocks, no anti-aliasing, pure white background, strictly centered, single boss only, "
+        "limited palette, red and blue-purple dual color scheme, crystalline wing pixels, no shadow because floating"
+    ),
+    "targetW": 96, "targetH": 96, "cat": "Boss", "genW": 768, "genH": 768
+}
+
+# ========== 地图 Tile MapTile (64x64, 俯视正交视角) ==========
+ASSET_TEMPLATES["废墟都市Tile"] = {
+    "prompt": (
+        "single ruined city map tile, top-down orthographic view directly from above, collapsed concrete building corner with broken walls and exposed rebar, "
+        "cracked asphalt street with weeds growing through fissures, one broken neon sign still flickering with cyan-blue glow attached to a half-standing wall frame, "
+        "rusted metal debris and rubble piles scattered, abandoned car skeleton overgrown with vines, dark moody post-apocalyptic atmosphere, "
+        "seamless tileable square composition, single tile only, centered frame, dark fantasy concept art, digital painting, "
+        "dim cyan neon accent light as only color besides grays and rust oranges, detailed destruction texture, isometric-top-down hybrid perspective"
+    ),
+    "sprite_prompt": (
+        "single ruined city map tile, top-down orthographic view from above, broken building walls, cracked street ground, "
+        "one glowing cyan neon sign on wall, rusted metal debris, rubble, dark gray and brown tones with cyan accent glow, "
+        "seamless tileable, 64x64 pixel tile, simple pixel art, minimalist game tile, clean pixel lines, flat color blocks, "
+        "no anti-aliasing, pure white background outside tile area, strictly centered, single tile only, limited palette, top-down RPG map style"
+    ),
+    "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512
+}
+
+ASSET_TEMPLATES["遗忘庄园Tile"] = {
+    "prompt": (
+        "single forgotten manor interior map tile, top-down orthographic view, decaying Victorian noble mansion room, "
+        "faded peeling gold wallpaper with once-intricate floral patterns now moldy, cracked white marble parquet floor with dark stains, "
+        "overturned mahogany chair and broken candelabra, heavy velvet curtains torn and dusty, cobwebs in corners, gothic atmosphere of faded grandeur, "
+        "seamless tileable square composition, single tile only, centered frame, dark fantasy concept art, digital painting, "
+        "dim warm candlelight ambiance with long shadows, desaturated golds and deep browns, Victorian Gothic architectural detail, melancholic abandonment mood"
+    ),
+    "sprite_prompt": (
+        "single forgotten manor interior map tile, top-down orthographic view from above, fancy floor pattern with cracked marble, "
+        "faded gold wallpaper on edges, broken furniture pieces, dark corners with cobwebs, Victorian gothic room interior, "
+        "seamless tileable, 64x64 pixel tile, simple pixel art, minimalist game tile, clean pixel lines, flat color blocks, "
+        "no anti-aliasing, pure white background outside tile area, strictly centered, single tile only, limited palette, gold and brown tones, top-down RPG map style"
+    ),
+    "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512
+}
+
+ASSET_TEMPLATES["古代神殿Tile"] = {
+    "prompt": (
+        "single ancient sacred temple map tile, top-down orthographic view, white limestone temple floor with geometric mosaic patterns in gold and azure, "
+        "carved stone pillars at tile edges with sacred hieroglyphic engravings glowing faint gold, cracks running through stone from age, "
+        "divine beams of warm golden light streaming down from above casting long dramatic shadows, scattered golden petals or dust motes in light paths, holy sanctum atmosphere, "
+        "seamless tileable square composition, single tile only, centered frame, dark fantasy concept art, digital painting, "
+        "strong contrast between brilliant golden light and cool white stone shadows, sacred reverence mood, ancient civilization grandeur"
+    ),
+    "sprite_prompt": (
+        "single ancient sacred temple map tile, top-down orthographic view from above, white stone floor with gold geometric patterns, "
+        "carved stone pillar sections at edges, golden sacred symbol engravings, cracks in stone, light beam shadows on ground, "
+        "seamless tileable, 64x64 pixel tile, simple pixel art, minimalist game tile, clean pixel lines, flat color blocks, "
+        "no anti-aliasing, pure white background outside tile area, strictly centered, single tile only, limited palette, white stone with gold accents, top-down RPG map style"
+    ),
+    "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512
+}
+
+ASSET_TEMPLATES["实验室碎片Tile"] = {
+    "prompt": (
+        "single abandoned laboratory map tile, top-down orthographic view, sterile white sci-fi research facility interior, polished metal grid floor with reflective quality, "
+        "cylindrical glass specimen tanks containing glowing cyan liquid #00D4FF and organic shapes suspended inside, broken holographic display terminal projecting distorted blue data readouts, "
+        "scattered paper documents and fallen equipment, cold clinical lighting from overhead fluorescent strips, sense of hurried evacuation, "
+        "seamless tileable square composition, single tile only, centered frame, dark fantasy concept art, digital painting, dominant cold white and electric blue-cyan palette, futuristic technology meets abandonment, clean geometric lines decaying into chaos"
+    ),
+    "sprite_prompt": (
+        "single abandoned laboratory map tile, top-down orthographic view from above, white clean floor with grid lines, "
+        "glass tanks with cyan glowing liquid inside, broken holographic screen with blue glow, scattered papers and devices, sci-fi lab interior, "
+        "seamless tileable, 64x64 pixel tile, simple pixel art, minimalist game tile, clean pixel lines, flat color blocks, "
+        "no anti-aliasing, pure white background outside tile area, strictly centered, single tile only, limited palette, white and cyan-blue dominant, top-down RPG map style"
+    ),
+    "targetW": 64, "targetH": 64, "cat": "MapTile", "genW": 512, "genH": 512
+}
+
+# ========== 道具 Prop (32x32, 场景物件/交互道具) ==========
+ASSET_TEMPLATES["营火"] = {
+    "prompt": (
+        "campfire safe haven prop, top-down view looking directly down, circular arrangement of 8-12 uneven gray stones forming a fire pit, "
+        "inside the stone ring burns an ethereal flame that is not normal orange but rather blue-purple soul fire #4A3A8C with brighter cyan-white core #00D4FF, "
+        "flames dancing upward with soft motion blur, glowing embers floating upward and fading, warm safe light radius extending beyond stones in a gradual gradient circle, ground around campfire is clear dirt, feeling of sanctuary and rest, "
+        "single prop only, centered, dark fantasy concept art, digital painting, the soul fire itself illuminating the scene in blue-purple hues, dark surroundings fading to black, cozy yet mystical atmosphere"
+    ),
+    "sprite_prompt": (
+        "campfire prop, top-down view from above, circle of gray stones, burning blue-purple soul fire inside stones, "
+        "cyan-white bright center of flame, small glowing ember dots floating above, light circle around stones, clear dirt ground, "
+        "32x32 pixel prop, simple pixel art, minimalist game sprite, clean pixel lines, flat color blocks, no anti-aliasing, "
+        "pure white background, strictly centered, single prop only, limited palette, blue-purple flame with cyan core as focal point"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512
+}
+
+ASSET_TEMPLATES["炼药锅"] = {
+    "prompt": (
+        "alchemy cauldron prop, top-down view looking directly down, large round black iron cauldron with thick rim, "
+        "inside bubbles a thick opaque liquid glowing blue-purple #4A3A8C with occasional cyan crystal-like sparkles surfacing and popping, "
+        "rim of cauldron decorated with small raw cyan crystals #00D4FF wedged into the iron edge, faint glowing alchemy rune symbols carved into cauldron exterior surface pulsing softly, wooden stirring stick leaning against the side, mysterious magical brewing atmosphere, "
+        "single prop only, centered, dark fantasy concept art, digital painting, internal liquid glow as primary light source casting blue-purple on iron surface, dark alchemist workshop background, arcane crafting mood"
+    ),
+    "sprite_prompt": (
+        "alchemy cauldron prop, top-down view from above, big round black iron pot, blue-purple bubbling liquid inside, "
+        "cyan crystal decorations on rim edge, glowing rune symbols on outside of pot, wooden stick leaning on side, "
+        "32x32 pixel prop, simple pixel art, minimalist game sprite, clean pixel lines, flat color blocks, no anti-aliasing, "
+        "pure white background, strictly centered, single prop only, limited palette, black iron pot with blue-purple liquid glow inside"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512
+}
+
+ASSET_TEMPLATES["时空门"] = {
+    "prompt": (
+        "time portal stable gateway prop, top-down view looking directly down, circular swirling vortex of energy, outer ring is deep blue-purple #4A3A8C inner spiral is bright cyan #00D4FF, spiraling inward like a whirlpool, "
+        "floating angular crystal fragments orbiting around the portal perimeter, concentric energy rings with decreasing opacity toward center, center of portal is blinding white where it connects to another dimension, dimensional gateway feeling of passage and travel, stable and welcoming unlike rifts, "
+        "single prop only, centered, dark fantasy concept art, digital painting, self-illuminated by portal energy casting cyan and purple light on surrounding ground, dark background, mystical transit atmosphere"
+    ),
+    "sprite_prompt": (
+        "time portal prop, top-down view from above, circular swirling vortex, outer ring blue-purple inner spiral bright cyan, "
+        "floating crystal fragments around the edge, bright white center point, energy rings, stable gateway, "
+        "32x32 pixel prop, simple pixel art, minimalist game sprite, clean pixel lines, flat color blocks, no anti-aliasing, "
+        "pure white background, strictly centered, single prop only, limited palette, blue-purple and cyan spiral pattern as main visual"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512
+}
+
+ASSET_TEMPLATES["时空裂隙"] = {
+    "prompt": (
+        "time rift unstable dimensional tear prop, top-down view looking directly down, irregular jagged tear shape like ripped fabric not a perfect circle, edges are violently frayed with reality strands snapping, chaotic mixture of cyan #00D4FF and blue-purple #4A3A8C energy violently leaking from the tear in random arcs and sparks, some sparks flying outward away from rift, reality distortion warping the ground immediately around the rift edges making them bend and curve, dangerous unstable feeling unlike the stable portal, single prop only, centered, dark fantasy concept art, digital painting, harsh contrasting light from energy leaks creating stark shadows, dark ominous background, volatile dangerous atmosphere"
+    ),
+    "sprite_prompt": (
+        "time rift prop, top-down view from above, irregular jagged torn shape, rough frayed edges, "
+        "cyan and blue-purple energy leaking out in random directions, flying sparks around the tear, ground distortion near edges, unstable dangerous look, "
+        "32x32 pixel prop, simple pixel art, minimalist game sprite, clean pixel lines, flat color blocks, no anti-aliasing, "
+        "pure white background, strictly centered, single prop only, limited palette, jagged shape with cyan and purple energy bursts"
+    ),
+    "targetW": 32, "targetH": 32, "cat": "Prop", "genW": 512, "genH": 512
+}
 
 
 # ==========================================
@@ -301,8 +654,8 @@ LLM_REQUIREMENT_TO_PROMPT_PROMPT = """你是一个专业的游戏美术 AI 提�
 - 统一视觉语言：dark fantasy, soul glow blue-purple #4A3A8C, crystal erosion cyan #00D4FF
 
 ## 规则
-1. 正向提示词使用英文，权重语法 (tag:weight)
-2. 必须包含：(simple pixel art), (minimalist game sprite), clean pixel lines, flat color blocks, no anti-aliasing
+1. 正向提示词使用英文自然语言描述，逗号分隔
+2. 必须包含：simple pixel art, minimalist game sprite, clean pixel lines, flat color blocks, no anti-aliasing
 3. 反向提示词排除手绘/插画风格
 4. 为每个资产分别生成概念图和精灵帧两套提示词
 
@@ -2075,10 +2428,10 @@ class ComfyUIGenerator:
             self.server_workflow_combo['values'] = display_names
             self._server_workflow_map = {item[0]: item[1] for item in items}
 
-            # 默认选中 "text-to-image-z-image-turbo"（蓝图，参数可控）
+            # 默认选中 "game-concept-art"（概念图/宣传画，最常用）
             default_idx = 0
             for i, (name, wid) in enumerate(items):
-                if wid == "text-to-image-z-image-turbo":
+                if wid == "game-concept-art":
                     default_idx = i
                     break
             if display_names:
@@ -2098,46 +2451,53 @@ class ComfyUIGenerator:
             self._log("info", f"已选择工作流: {display_name} → {wf_id}")
 
     def _get_logical_workflow_id(self):
-        """根据资产类型和阶段自动选择最合适的服务器工作流"""
+        """根据资产类型和阶段自动选择最合适的服务器工作流（v3.2 精简为 4 个注册工作流）"""
         # 先检查用户是否手动选择了工作流
         display_name = self.server_workflow_var.get()
         manual_wf_id = self._server_workflow_map.get(display_name, "")
-        if manual_wf_id and not display_name.startswith("[蓝图] text-to-image-z-image-turbo"):
+        if manual_wf_id and not display_name.startswith("[注册] 概念图"):
             # 用户手动选择了非默认工作流，尊重用户选择
             return manual_wf_id
 
-        asset_type = self.asset_type_var.get().lower()
+        # 从当前选中资产获取分类
+        name = self.asset_var.get()
+        tmpl = ASSET_TEMPLATES.get(name, {})
+        asset_type = tmpl.get("cat", "").lower()
         is_concept = self.stage_var.get() == "concept"
 
         if is_concept:
-            # 概念图使用 Z-Image 蓝图（轻量模型，适配12GB显存，提示词用自然语言）
-            return "text-to-image-z-image-turbo"
+            return "game-concept-art"
 
-        # 精灵帧映射
+        # 精灵帧映射（5 个游戏专用工作流）
+        # game-character-design: 角色立绘（单帧静态）
+        # game-sprite-sheet:     精灵帧动画/条带（多帧动态，首选）
+        # game-item-icon:      道具/图标/UI 元素
+        # game-environment:    场景/关卡/Tile/背景
         mapping = {
-            "boss": "unity-2d-character-sprite",
-            "enemy": "unity-2d-character-sprite",
-            "player": "unity-2d-character-sprite",
-            "npc": "unity-2d-character-sprite",
-            "item": "game-item-fast",
-            "map_tile": "unity-2d-tilemap",
-            "background": "game-env-background",
-            "ui": "unity-2d-ui-element",
+            "boss":     "game-sprite-sheet",
+            "enemy":    "game-sprite-sheet",
+            "player":   "game-sprite-sheet",
+            "npc":      "game-sprite-sheet",
+            "item":     "game-item-icon",
+            "map_tile": "game-environment",
+            "background": "game-environment",
+            "ui":       "game-item-icon",
         }
-        return mapping.get(asset_type, "zimage-text-to-image")
+        return mapping.get(asset_type, "game-concept-art")
 
     def _fetch_workflow_params(self, workflow_id):
         """获取服务器工作流的参数 schema（字段名和类型）
 
         查询顺序：
         1. /blueprints/{id} — 蓝图有明确的 params schema
-        2. /workflows 返回的 registered workflows 列表 — 注册工作流的基本信息
+        2. /workflows/{id} — 注册工作流详情（含 params）
+        3. /workflows 全量列表 — 回退到基本信息
 
         Args:
-            workflow_id: 工作流 ID（如 text-to-image-z-image-turbo, game-character-design）
+            workflow_id: 工作流 ID（如 game-character-design, game-concept-art）
 
         Returns:
-            dict 参数 schema，如 {"text": {"type": "string"}, "width": {"type": "int", ...}}
+            dict 参数 schema，如 {"prompt": {"type": "string"}, "seed": {"type": "int", ...}}
         """
         # 策略1: 尝试蓝图端点（有完整 params schema）
         try:
@@ -2150,17 +2510,27 @@ class ComfyUIGenerator:
         except Exception:
             pass
 
-        # 策略2: 从 /workflows 全量列表中查找注册工作流信息
+        # 策略2: 尝试注册工作流详情端点（v3.2 注册工作流含 params）
+        try:
+            r = requests.get(f"{SERVER_URL}/workflows/{workflow_id}", timeout=10)
+            if r.status_code == 200:
+                data = r.json()
+                params = data.get("params", {})
+                if params:
+                    return params
+                # 无 params 但有基本信息的注册工作流
+                return {"_type": "registered", "_info": data}
+        except Exception:
+            pass
+
+        # 策略3: 从 /workflows 全量列表中查找
         try:
             r = requests.get(f"{SERVER_URL}/workflows", timeout=10)
             if r.status_code == 200:
                 data = r.json()
                 reg_wfs = data.get("workflows", {})
                 if workflow_id in reg_wfs:
-                    wf_info = reg_wfs[workflow_id]
-                    # 注册工作流通常没有显式 params schema，
-                    # 返回包含 name/speed 等基本信息的字典作为标识
-                    return {"_type": "registered", "_info": wf_info}
+                    return {"_type": "registered", "_info": reg_wfs[workflow_id]}
         except Exception:
             pass
 
@@ -2184,12 +2554,18 @@ class ComfyUIGenerator:
             适配后的参数字典
         """
         if not wf_schema or wf_schema.get("_type") == "registered":
-            # 无 schema 或注册工作流 → 使用默认映射
-            return {
-                "text": raw_params["positive"],
-                "width": raw_params["width"],
-                "height": raw_params["height"],
+            # 无 schema 或注册工作流 → 使用通用默认映射 (v3.2 工作流统一用 prompt/negative_prompt)
+            result = {
+                "prompt": raw_params["positive"],
+                "negative_prompt": raw_params["negative"],
+                "seed": raw_params["seed"],
             }
+            # 仅当 schema 中存在才加入（部分工作流如 game-item-icon 不包含 steps/cfg）
+            if "steps" in wf_schema:
+                result["steps"] = raw_params["steps"]
+            if "cfg" in wf_schema:
+                result["cfg"] = raw_params["cfg"]
+            return result
 
         result = {}
         # 建立反向映射：从 schema 字段名推断用途
@@ -2330,8 +2706,10 @@ class ComfyUIGenerator:
 
             # 方法B：已知工作流文件名探测
             known_workflows = [
-                "zimage-text-to-image.json",
-                "qwen-edit-img-to-img.json",
+                "game-character-design.json",
+                "game-item-icon.json",
+                "game-environment.json",
+                "game-concept-art.json",
                 "default_workflow.json",
             ]
             for name in known_workflows:
@@ -2502,12 +2880,15 @@ class ComfyUIGenerator:
         stage = self.stage_var.get()
 
         if stage == "concept":
+            # 概念图阶段：使用 prompt 字段（暗黑奇幻数字绘画风格）
             positive = f"{CONCEPT_BASE_POSITIVE}, {tmpl['prompt']}"
             negative = CONCEPT_NEGATIVE
         else:
+            # 精灵帧阶段：使用 sprite_prompt 字段（简约像素画风格）
             state = self.state_var.get()
             state_p = STATE_PROMPTS.get(state, "idle pose")
-            positive = f"{SPRITE_BASE_POSITIVE}, {tmpl['prompt']}, {state_p}, single frame, pixel art character"
+            asset_sprite_prompt = tmpl.get('sprite_prompt', tmpl['prompt'])  # 兼容旧模板无 sprite_prompt 的情况
+            positive = f"{SPRITE_BASE_POSITIVE}, {asset_sprite_prompt}, {state_p}, single frame, pixel art character"
             negative = SPRITE_NEGATIVE
 
         self.positive_text.delete("1.0", tk.END)
@@ -2825,21 +3206,22 @@ class ComfyUIGenerator:
             # 根据服务器工作流 schema 映射为实际参数
             params = self._map_params_to_workflow(raw_params, wf_schema)
 
-            # 如果有参考底图（精灵帧模式），尝试上传后使用 img2img
+            # 如果有参考底图（精灵帧模式），且工作流支持图片输入，则传递概念图
             has_concept_ref = (stage == "sprite" and self.ref_image_path)
             if has_concept_ref:
-                # v3.2: 若服务器支持 base64 图片参数，传递概念图
-                try:
-                    import base64
-                    with open(self.ref_image_path, "rb") as imgf:
-                        concept_base64 = base64.b64encode(imgf.read()).decode()
-                    params["image"] = concept_base64
-                    # img2img 场景使用对应的编辑工作流
-                    if workflow_id in ("zimage-text-to-image", "game-character-design"):
-                        workflow_id = "qwen-edit-img-to-img"
-                    self.root.after(0, lambda: self._log("模式: img2img (含概念底图)"))
-                except Exception as e:
-                    self.root.after(0, lambda: self._log(f"warning: 概念图编码失败: {e}，使用纯文生图"))
+                # 仅当工作流 schema 包含 image 字段时才附加底图
+                wf_supports_image = wf_schema and "image" in wf_schema
+                if wf_supports_image:
+                    try:
+                        import base64
+                        with open(self.ref_image_path, "rb") as imgf:
+                            concept_base64 = base64.b64encode(imgf.read()).decode()
+                        params["image"] = concept_base64
+                        self.root.after(0, lambda: self._log("模式: img2img (含概念底图)"))
+                    except Exception as e:
+                        self.root.after(0, lambda: self._log(f"warning: 概念图编码失败: {e}，使用纯文生图"))
+                else:
+                    self.root.after(0, lambda: self._log(f"info: 当前工作流 {workflow_id} 不支持图片输入参数，使用纯文生图"))
 
             # 通过 8189 统一入口提交
             result = None

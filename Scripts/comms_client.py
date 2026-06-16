@@ -85,12 +85,12 @@ class CommsClient:
 
     @staticmethod
     def http_list_workflows(server: str = DEFAULT_SERVER) -> dict:
-        """List all workflows + blueprints (41 total)."""
+        """List all workflows + blueprints (8 total)."""
         return CommsClient._http_request("GET", "/workflows", server)
 
     @staticmethod
     def http_list_registered(server: str = DEFAULT_SERVER) -> dict:
-        """List registered workflows only (11)."""
+        """List registered workflows only (4)."""
         return CommsClient._http_request("GET", "/workflows/registered", server)
 
     @staticmethod
@@ -442,7 +442,7 @@ class CommsClient:
 # ===================================================================
 
 def list_workflows(server: str = DEFAULT_SERVER) -> dict:
-    """Quick: list all 41 workflows+blueprints."""
+    """Quick: list all 8 workflows+blueprints."""
     return CommsClient.http_list_workflows(server)
 
 
@@ -454,7 +454,7 @@ def generate(workflow_id: str, params: dict = None,
     Usage:
         from comms_client import generate
         # Submit only
-        r = generate("text-to-image-z-image-turbo", {"text": "a cat"})
+        r = generate("game-item-icon", {"prompt": "golden sword"})
         # Submit + wait + download
         files = generate("image-blur", {}, save_dir="output")
     """
