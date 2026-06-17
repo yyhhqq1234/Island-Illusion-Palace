@@ -4,16 +4,25 @@ CommsClient - ComfyUI Game Art Production Server Client SDK
 Copy this file to your client project directory.
 Usage:
     from comms_client import CommsClient
-    client = CommsClient()  # 自动从 config.yaml 读取地址
+    client = CommsClient()  # auto-read server address from config.yaml
 
-Parameter Handling:
+Parameter Handling (v5.3):
     All workflows use a uniform params dict. The server auto-injects values
     into correct node fields based on workflow type:
 
       SDXL  → prompt mapped to text_g + text_l (CLIPTextEncodeSDXLNPU)
+             with emphasis weights (1.10~1.18) and BREAK separators
       SD1.5 → prompt mapped to text (CLIPTextEncodeNPU)
 
-    Always pass "prompt" as a string. The server handles SDXL dual-CLIP mapping.
+    Always pass "prompt" as a string or structured dict. The server handles
+    SDXL dual-CLIP mapping, feature extraction, and attention enhancement.
+
+    Prompt injection pipeline (v5.3):
+      1. Parse natural language into 6 feature categories
+      2. Extract color words for text_g anchoring (fixes hair/outfit same-color bug)
+      3. Apply light emphasis weights (word:1.10~1.18, capped at 1.25)
+      4. Use BREAK separators between categories in text_l
+      5. Output pure natural language (no category label prefixes)
 
 Dependencies (install once):
     pip install requests websocket-client
@@ -45,21 +54,35 @@ class CommsClient:
       - HTTP: Simple, single-call, ideal for scripts/batch jobs
       - WebSocket: Real-time, long-running, with event callbacks
 
-    === Parameter Mapping by Workflow Type ===
+    === Parameter Mapping by Workflow Type (v5.3) ===
 
     All workflows accept these common params (server auto-injects into correct nodes):
 
-        prompt           - positive prompt text
-        negative_prompt  - negative prompt text
-        seed             - random seed (int, -1 for random)
-        steps            - sampling steps (int)
-        cfg              - CFG scale (float)
-        width            - canvas width (int)
-        height           - canvas height (int)
+         prompt           - positive prompt text (string) or structured feature dict
+         negative_prompt  - negative prompt text
+         seed             - random seed (int, -1 for random)
+         steps            - sampling steps (int)
+         cfg              - CFG scale (float)
+         width            - canvas width (int)
+         height           - canvas height (int)
+
+     Prompt Mode 1 — Plain String (auto-parsed + enhanced):
+         The server extracts features from natural language prompt text,
+         then applies attention enhancement (emphasis weights + BREAK separators).
+         Example: "silver hair, blue eyes, red dress"
+           → parsed into 6 categories → emphasized with (word:1.15) weights
+           → BREAK-separated in text_l for independent concept processing
+
+     Prompt Mode 2 — Structured Dict (precise control):
+         Pass a dict with pre-classified fields for pixel-perfect feature placement.
+         Supported fields: overall, face, hair, outfit, body_pose, accessory.
+         Example: {"overall":"1girl","face":"blue eyes","hair":"silver hair","outfit":"red dress"}
 
     SDXL Workflows (IDs ending with -sdxl):
         These use dual-CLIP encoding (text_g + text_l). The server automatically
         maps params["prompt"] → both text_g and text_l on CLIPTextEncodeSDXLNPU nodes.
+        text_g gets quality anchors + overall description (weight 1.10) + colors (1.18).
+        text_l gets categorized features separated by BREAK + light emphasis (1.15).
         You pass a single prompt string just like non-SDXL workflows.
 
         DO NOT pass text_g / text_l directly — the server handles the mapping.
@@ -67,6 +90,7 @@ class CommsClient:
 
     SD1.5 Workflows:
         Use single-CLIP encoding (text). Standard prompt injection on CLIPTextEncodeNPU nodes.
+        Features are naturally concatenated without emphasis or BREAK.
     """
 
     def __init__(self, server_url: str = DEFAULT_SERVER,
@@ -117,7 +141,7 @@ class CommsClient:
 
     @staticmethod
     def http_list_workflows(server: str = DEFAULT_SERVER) -> dict:
-        """List all workflows + blueprints (8 total)."""
+        """List all workflows + blueprints (12 total: 8 workflows + 4 blueprints)."""
         return CommsClient._http_request("GET", "/workflows", server)
 
     @staticmethod
@@ -142,16 +166,40 @@ class CommsClient:
 
         Args:
             workflow_id: ID from /workflows list (works for both workflows & blueprints)
-            params: Parameters — server auto-injects into correct node fields.
-                    Common params (all workflow types):
-                        prompt, negative_prompt, seed, steps, cfg, width, height
+            params: Parameters — server auto-parses and injects into correct node fields.
 
-                    SDXL workflows: server maps prompt→text_g+text_l automatically.
-                    You always pass a single "prompt" string; never pass text_g/text_l.
+                    === Prompt Modes (string OR structured dict) ===
 
-                    Example:
-                        params={"prompt": "1girl, warrior", "negative_prompt": "bad",
-                                "seed": 42, "steps": 28, "cfg": 5.5}
+                    Mode 1 - Plain string (auto-parsed + enhanced by server):
+                        params={"prompt": "1girl, silver hair, blue eyes, white dress, smile"}
+
+                        Server processing pipeline (v5.3):
+                          1. Parse into 6 feature categories (face/hair/outfit/pose/accessory)
+                          2. Extract color words for text_g anchoring
+                          3. Apply light emphasis weights (word:1.10~1.18, max 1.25)
+                          4. Separate categories with BREAK in text_l
+                          5. Output pure natural language (no label prefixes)
+
+                        Result example for SDXL:
+                          text_g: "masterpiece, best quality, (1girl:1.10), (silver:1.18) (hair:1.10)..."
+                          text_l: "(blue:1.15) (eyes:1.15) BREAK (silver:1.15) (hair:1.15) BREAK ..."
+
+                    Mode 2 - Structured dict (client pre-classified):
+                        params={"prompt": {
+                            "overall": "masterpiece, 1girl, warrior",
+                            "face": "red eyes, determined expression",
+                            "hair": "long silver flowing hair",
+                            "outfit": "blue armor with gold trim",
+                            "body_pose": "battle stance, hand on sword",
+                            "accessory": "gleaming longsword, silver shield"
+                        }}
+
+                        The server uses these fields directly with emphasis enhancement.
+
+                    === Other Params ===
+                        negative_prompt: negative prompt (same string/structured modes)
+                        seed, steps, cfg, width, height: sampling parameters
+
             server: Server URL override
 
         Returns:
@@ -563,7 +611,7 @@ class CommsClient:
 # ===================================================================
 
 def list_workflows(server: str = DEFAULT_SERVER) -> dict:
-    """Quick: list all 8 workflows+blueprints."""
+    """Quick: list all 12 workflows+blueprints."""
     return CommsClient.http_list_workflows(server)
 
 

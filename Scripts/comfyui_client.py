@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
-ComfyUI 美术素材生产客户端 v5.1
+ComfyUI 美术素材生产客户端 v5.3
 Unity 项目深度集成版 - 支持项目文件分析、需求提取、AI 提示词生成
+
+v5.3 适配服务器 v5.3 变更：
+- 服务端自动解析纯字符串提示词为 6 个类别（face/hair/outfit/body_pose/accessory/overall）
+- 颜色词自动锚定到 text_g，修复头发/服装同色 bug
+- 自动应用轻量强调权重 (word:1.10~1.18) 和 BREAK 分隔符
+- 工作流总数：12 个（8 注册 + 4 蓝图）
 
 v5.1 适配服务器 v5.1 变更：
 - 新增 SDXL 双 CLIP 支持（text_g/text_l 参数自动映射）
@@ -184,18 +190,18 @@ ASSET_TEMPLATES = OrderedDict()
 ASSET_TEMPLATES["墨语"] = {
     "prompt": (
         "1boy, solo, full body dynamic shot, "
-        "Mo Yu, young male age 16, deep black short hair with stiff texture slightly messy, individual strands visible under light, "
-        "heterochromatic eyes: right eye star-night-purple with faint glow, left eye deep brown, calm resilient expression with subtle loneliness, subtle facial features, "
-        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, tall straight build 178cm, broad shoulders narrow waist, smooth clear muscle lines with subtle definition, "
-        "wearing dark simple practical work clothes with visible stitching and worn patches, dark fitted long pants with crease folds, dark leather short boots with scuffed toe caps, "
-        "left hand wearing ornate Eye of the Necromantic Saint King ring with engraved purple gemstone glowing faintly, forging calluses on both hands with visible rough texture, right hand gripping sword hilt Scribe partially drawn revealing engraved blade with runic patterns, "
-        "wide combat stance on cracked stone floor of ruined clockwork cathedral with elaborate gothic arches, shattered colorful stained glass pieces scattered on ground, broken bronze gear mechanisms protruding from walls, floating golden time-gear fragments suspended in air, purple soul energy tendrils flickering from ring"
+        "Mo Yu, young male age 16, deep black short hair stiff texture slightly messy, "
+        "heterochromatic eyes right star-night-purple with faint glow left deep brown, calm resilient expression with subtle loneliness, "
+        "two arms two legs five fingers five toes, tall straight build 178cm broad shoulders narrow waist, smooth clear muscle lines, "
+        "dark simple practical work clothes with visible stitching and worn patches, dark fitted long pants, dark leather short boots, "
+        "left hand ornate Eye of the Necromantic Saint King ring with purple gemstone glowing, forging calluses on both hands, right hand gripping sword Scribe partially drawn revealing engraved blade with runic patterns, "
+        "wide combat stance on cracked stone floor of ruined clockwork cathedral, gothic arches, shattered stained glass, broken bronze gears in walls, floating golden time-gear fragments, purple soul energy from ring"
     ),
     "sprite_prompt": (
         "Mo Yu, one young male, deep black short hair stiff messy, right eye purple left eye brown, pale skin, calm face, "
-        "two arms two legs five fingers five toes, tall slim build, dark gray-black work clothes, dark long pants, dark boots, "
-        "ring on left hand, sword at waist, idle pose arms at sides, front view, "
-        "2.5-heads-tall chibi proportion, limited palette dark tones, small drop shadow beneath feet"
+        "two arms two legs five fingers five toes, tall slim, dark gray-black work clothes dark long pants dark boots, "
+        "ring on left hand, sword at waist, idle pose, front view, "
+        "2.5-heads-tall chibi, limited palette dark tones, small drop shadow"
     ),
     "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512
 }
@@ -203,17 +209,17 @@ ASSET_TEMPLATES["墨语"] = {
 ASSET_TEMPLATES["莎娜"] = {
     "prompt": (
         "1girl, solo, full body dynamic shot, "
-        "Shana Scarlet, beautiful young woman age 17, waist-length crimson-red straight long hair glossy like satin with individual strands catching light, "
-        "Crimson Pupils eyes like glowing ruby or burning red spider lily with detailed iris and long eyelashes, mysterious sharp yet calm precocious expression, delicate feminine features, "
-        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, tall slender well-proportioned figure 172cm, graceful yet powerful curves with visible athletic tone, "
-        "wearing predominantly black combat training outfit with intricate dark red trim along seams and collar, black fitted pants with subtle texture, black leather combat boots with silver buckles, red spider lily brooch at collar glowing faintly, "
-        "mid-combat stance with drawn curved blade showing engraved blood groove and wrapped leather grip, dense crimson-red energy aura radiating outward in layered waves like firestorm, "
-        "countless floating embers and red sparks dancing around her in spiraling patterns, elaborate shattered marble pillars with carved reliefs and blooming red spider lilies emerging from cracks on temple floor behind her, dramatic crimson light beam piercing through darkness from above illuminating dust motes"
+        "Shana Scarlet, beautiful young woman age 17, waist-length crimson-red straight long hair glossy like satin, "
+        "Crimson Pupils eyes like ruby or burning red spider lily, mysterious sharp yet calm precocious expression, "
+        "two arms two legs five fingers five toes, tall slender figure 172cm, graceful yet powerful curves, "
+        "predominantly black combat training outfit with dark red trim along seams and collar, black fitted pants, black combat boots with silver buckles, red spider lily brooch at collar, "
+        "mid-combat stance with drawn curved blade, dense crimson-red energy aura radiating outward in layered waves, floating embers and red sparks spiraling around her, "
+        "shattered marble pillars with carved reliefs and blooming red spider lilies on temple floor, crimson light beam piercing through darkness from above"
     ),
     "sprite_prompt": (
         "Shana Scarlet, one young woman, waist-length straight crimson red hair glossy, bright ruby-red eyes like burning spider lily, sharp calm expression, "
-        "two arms two legs five fingers five toes, tall slim figure, black top with dark red trim, black fitted pants, black boots, spider lily accessory red, "
-        "standing pose one hand near weapon hip, front view, 2.5-heads-tall chibi proportion, limited palette crimson black dominant, small drop shadow beneath"
+        "two arms two legs five fingers five toes, tall slim, black top with dark red trim, black fitted pants, black boots, red spider lily accessory, "
+        "standing pose one hand near weapon hip, front view, 2.5-heads-tall chibi, limited palette crimson black dominant, small drop shadow"
     ),
     "targetW": 64, "targetH": 64, "cat": "Player", "genW": 512, "genH": 512
 }
@@ -221,64 +227,64 @@ ASSET_TEMPLATES["莎娜"] = {
 # ========== 普通敌人 Enemy 小怪 (32x32, ~2头身) ==========
 ASSET_TEMPLATES["腐化村民"] = {
     "prompt": (
-        "solo, single creature only, centered, "
-        "corrupted villager humanoid monster, gray-green diseased skin with dark veins, patches of missing hair on scalp, messy matted dark brown hair, "
+        "solo, single, centered, "
+        "corrupted villager humanoid monster, gray-green diseased skin with dark veins, missing hair patches, messy matted dark brown hair, "
         "glowing blood-red eyes without pupils, sunken face skeletal jawline, "
-        "wearing torn filthy brown peasant clothes with holes exposing ribs, hunched forward curved spine, emaciated thin build, hands raised with claw-like fingers, "
-        "dark background, dim green under-lighting, horror character design"
+        "torn filthy brown peasant clothes holes exposing ribs, hunched forward curved spine, emaciated thin build, claw-like fingers, "
+        "dark background, dim green under-lighting, horror design"
     ),
     "sprite_prompt": (
         "corrupted villager, one humanoid monster, gray-green skin, messy dark hair, glowing red eyes no pupils, "
-        "torn brown rag clothing, hunched posture thin bony body, reaching forward with claws, "
-        "front view, 2-heads-tall chibi proportion, limited palette, small drop shadow beneath feet"
+        "torn brown rag clothing, hunched posture thin bony body, reaching forward claws, "
+        "front view, 2-heads-tall chibi, limited palette, small drop shadow"
     ),
     "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
 }
 
 ASSET_TEMPLATES["暗影之刃"] = {
     "prompt": (
-        "solo, single figure only, centered, "
-        "shadow blade assassin, figure completely shrouded in pitch-black hooded cloak, only pale chin visible, "
-        "holding twin curved daggers with bright cyan energy coating edges, cyan particles trailing from tips, black cloak billowing, wide agile combat stance, black combat boots visible beneath cloak hem, "
-        "one dagger raised high one low, shadowy dark smoke from cloak surface, "
-        "dark background, cool cyan rim light, dynamic assassin character design"
+        "solo, single, centered, "
+        "shadow blade assassin, figure shrouded in pitch-black hooded cloak, only pale chin visible, "
+        "twin curved daggers with bright cyan energy coating edges, cyan particles trailing from tips, black cloak billowing, wide agile combat stance, black boots beneath hem, "
+        "one dagger high one low, shadowy dark smoke from cloak, "
+        "dark background, cool cyan rim light, dynamic assassin design"
     ),
     "sprite_prompt": (
         "shadow blade assassin, one dark hooded cloak figure, hidden face, dual daggers in hands, "
-        "bright cyan glow on blade edges, cyan energy trail behind daggers, wide combat stance knees bent, "
-        "front view, 2-heads-tall chibi proportion, limited palette cyan accent dark body, small drop shadow"
+        "bright cyan glow on blade edges, cyan energy trail, wide combat stance, "
+        "front view, 2-heads-tall chibi, limited palette cyan accent dark body, small drop shadow"
     ),
     "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
 }
 
 ASSET_TEMPLATES["水晶寄生体"] = {
     "prompt": (
-        "solo, single creature only, centered, "
-        "crystal parasite monster, insectoid creature with beetle-wasp hybrid segmented body, six jointed legs with sharp tips, "
-        "bright cyan-transparent crystal formations bursting through back and head like jagged growths, crystals internally glowing cyan #00D4FF, dark chitinous exoskeleton deep purple-gray, "
+        "solo, single, centered, "
+        "crystal parasite monster, insectoid creature beetle-wasp hybrid body, six jointed legs sharp tips, "
+        "bright cyan-transparent crystal formations bursting through back and head like jagged growths, crystals glowing cyan #00D4FF, dark chitinous exoskeleton deep purple-gray, "
         "no visible eyes, sensory antennae, crawling posture, "
-        "dark background, internal cyan crystal glow as light source, alien creature design"
+        "dark background, internal cyan crystal glow, alien creature design"
     ),
     "sprite_prompt": (
         "crystal parasite monster, one bug-shaped creature, insect body six legs, "
-        "bright cyan crystal chunks growing out of back and head crystals glowing, dark purple shell body, no visible eyes antennae, low crawling posture, "
-        "front view, 2-heads-tall chibi proportion, limited palette cyan crystals brightest element, small drop shadow"
+        "bright cyan crystal chunks growing out of back and head glowing, dark purple shell body, no visible eyes antennae, crawling posture, "
+        "front view, 2-heads-tall chibi, limited palette cyan crystals brightest, small drop shadow"
     ),
     "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
 }
 
 ASSET_TEMPLATES["沼泽潜伏者"] = {
     "prompt": (
-        "solo, single creature only, centered, "
-        "swamp lurker monster, amphibious reptilian-frog hybrid, wet moss-green and olive-drab mottled skin, slime coating, "
-        "large bulging yellow eyes with horizontal slit pupils, wide mouth with rows of small teeth, webbed hands and feet with long fingers, "
+        "solo, single, centered, "
+        "swamp lurker monster, amphibious reptilian-frog hybrid, wet moss-green olive-drab mottled skin, slime coating, "
+        "large bulging yellow eyes horizontal slit pupils, wide mouth rows of small teeth, webbed hands and feet long fingers, "
         "crouched low alert predator posture, yellow-green mist around body, "
         "dark background, yellow-green edge lighting, swamp creature design"
     ),
     "sprite_prompt": (
         "swamp lurker monster, one frog-like creature, green slimy skin, big bulging yellow eyes wide mouth, "
-        "webbed hands and feet, half body in mud, yellow-green mist around, crouched pose, "
-        "front view, 2-heads-tall chibi proportion, limited palette yellow eyes focal point, small drop shadow"
+        "webbed hands and feet, half body in mud, yellow-green mist, crouched pose, "
+        "front view, 2-heads-tall chibi, limited palette yellow eyes focal point, small drop shadow"
     ),
     "targetW": 32, "targetH": 32, "cat": "Enemy", "genW": 512, "genH": 512
 }
@@ -286,49 +292,49 @@ ASSET_TEMPLATES["沼泽潜伏者"] = {
 # ========== 精英 Enemy Elite (48x48, ~3~3.5头身) ==========
 ASSET_TEMPLATES["灵魂吞噬者"] = {
     "prompt": (
-        "solo, single entity only, centered, "
-        "soul devourer elite monster, large floating entity, main body is dark void-black amorphous mass shaped like a bloated sac, "
-        "multiple unblinking eyes of different sizes scattered across body surface glowing white-blue, "
+        "solo, single, centered, "
+        "soul devourer elite monster, large floating entity, dark void-black amorphous mass bloated sac shape, "
+        "multiple unblinking eyes of different sizes across body surface glowing white-blue, "
         "swirling ghostly souls trapped inside semi-translucent body visible as faint face-impressions pressing outward, "
         "6-8 tentacle-appendages dangling below like jellyfish tendrils, hovering above ground, "
-        "dark background, internal soul glow violet-blue illumination, gelatinous transparency, horror enemy design"
+        "dark background, internal soul glow violet-blue, gelatinous transparency, horror enemy design"
     ),
     "sprite_prompt": (
-        "soul devourer elite monster, one floating blob-shaped creature, dark void body, multiple glowing white-blue eyes on body surface, "
-        "faint soul face-impressions inside body, tentacles hanging down, hovering above ground, "
-        "front view, 3-heads-tall chibi proportion, limited palette soft violet glow, no shadow floating"
+        "soul devourer elite monster, one floating blob-shaped creature, dark void body, multiple glowing white-blue eyes on body, "
+        "faint soul face-impressions inside, tentacles hanging down, hovering above ground, "
+        "front view, 3-heads-tall chibi, limited palette soft violet glow, no shadow floating"
     ),
     "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768
 }
 
 ASSET_TEMPLATES["熔岩元素"] = {
     "prompt": (
-        "solo, single creature only, centered, "
-        "lava elemental elite, humanoid figure composed of molten magma and volcanic rock, outer crust of cracked dark gray volcanic rock with bright orange-yellow magma seeping through cracks like veins, "
-        "molten core visible at chest area intensely bright casting warm glow, heat shimmer around body, rough rocky texture, lava drips from shoulders and fists, "
+        "solo, single, centered, "
+        "lava elemental elite, humanoid figure of molten magma and volcanic rock, outer crust cracked dark gray rock with bright orange-yellow magma seeping through cracks, "
+        "molten core visible at chest intensely bright casting warm glow, heat shimmer around body, rough rocky texture, lava drips from shoulders and fists, "
         "towering stance arms slightly raised, "
-        "dark background, self-illuminated by molten core orange glow, fire elemental enemy design"
+        "dark background, molten core orange glow, fire elemental design"
     ),
     "sprite_prompt": (
-        "lava elemental elite, one humanoid fire creature, body of dark rock with bright orange-yellow lava cracks and veins, "
-        "glowing chest core, lava dripping from shoulders, standing pose arms slightly raised, front view, "
-        "3.5-heads-tall chibi proportion, limited palette dark rock orange-yellow lava highlight, small drop shadow from feet"
+        "lava elemental elite, one humanoid fire creature, dark rock body bright orange-yellow lava cracks and veins, "
+        "glowing chest core, lava dripping from shoulders, standing pose arms raised, front view, "
+        "3.5-heads-tall chibi, limited palette dark rock orange-yellow highlight, small drop shadow"
     ),
     "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768
 }
 
 ASSET_TEMPLATES["机械构造体"] = {
     "prompt": (
-        "solo, single robot only, centered, "
-        "mechanical construct elite, large humanoid robot warrior, body of aged brass plates and steel armor segments with visible rivets and panel seams, "
-        "bright cyan glowing energy core #00D4FF in center of chest, brass steam pipes from shoulders to back emitting white steam, gear mechanisms visible at elbow and knee joints, "
-        "upright stance with clenched fist hands, heavy industrial design, "
-        "dark background, cyan core glow as key light with warm brass reflectivity, steampunk robot enemy design"
+        "solo, single robot, centered, "
+        "mechanical construct elite, large humanoid robot warrior, aged brass plates and steel armor segments rivets and panel seams, "
+        "bright cyan glowing energy core #00D4FF in center of chest, brass steam pipes shoulders to back emitting white steam, gear mechanisms at elbow and knee joints, "
+        "upright stance clenched fists, heavy industrial design, "
+        "dark background, cyan core glow key light warm brass reflectivity, steampunk robot design"
     ),
     "sprite_prompt": (
-        "mechanical construct elite, one big robot figure, brass and steel armor body, bright cyan glowing circle core in chest, "
-        "steam pipes on shoulders, gear details at joints, fist hands, standing straight pose, front view, "
-        "3.5-heads-tall chibi proportion, limited palette brass-gold body cyan core brightest spot, small drop shadow from feet"
+        "mechanical construct elite, one big robot, brass and steel armor body, bright cyan glowing circle core in chest, "
+        "steam pipes on shoulders, gear details at joints, fist hands, standing pose, front view, "
+        "3.5-heads-tall chibi, limited palette brass-gold cyan core brightest, small drop shadow"
     ),
     "targetW": 48, "targetH": 48, "cat": "Enemy", "genW": 768, "genH": 768
 }
@@ -337,13 +343,13 @@ ASSET_TEMPLATES["机械构造体"] = {
 ASSET_TEMPLATES["时空守护者"] = {
     "prompt": (
         "1girl, solo, full body standing portrait, "
-        "Time Guardian boss, divine female warrior, elegant feminine figure with authoritative presence, "
-        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, "
-        "wearing ornate full-body plate armor of polished silver-white metal with intricate gold filigree inlay patterns across breastplate, pauldrons, gauntlets and greaves, each armor piece contoured to graceful female silhouette, "
-        "long flowing silver-white hair cascading behind with strand-level detail and subtle inner luminescence, embedded brass clockwork mechanisms visible in armor joints with tiny jeweled gears and escapement wheels slowly rotating, "
-        "golden sacred geometric mandala markings on shoulder pauldrons and chest plate glowing with warm amber light, three miniature floating crystalline hourglasses with fine golden sand trickling inside orbiting around head like a halo, larger luminous hourglass embedded in chest armor center as radiant power core, "
-        "one gauntleted hand raised palm-forward with articulated finger joints, golden time-energy fractals spiraling around hand, beautiful serene face with gently closed eyes and long silver eyelashes, flawless porcelain skin, "
-        "standing pose on invisible golden light platform, elaborate goddess boss character design with maximal ornamental detail"
+        "Time Guardian boss, divine female warrior, elegant feminine figure authoritative presence, "
+        "two arms two legs five fingers five toes, "
+        "ornate full-body plate armor of polished silver-white metal with intricate gold filigree inlay patterns across breastplate pauldrons gauntlets and greaves, contoured to graceful female silhouette, "
+        "long flowing silver-white hair with subtle inner luminescence, embedded brass clockwork mechanisms in armor joints with tiny jeweled gears and escapement wheels rotating, "
+        "golden sacred geometric mandala markings on pauldrons and chest plate glowing amber, three miniature floating crystalline hourglasses with fine golden sand orbiting around head like halo, larger luminous hourglass embedded in chest as power core, "
+        "one gauntleted hand raised palm-forward articulated finger joints, golden time-energy fractals spiraling around hand, beautiful serene face closed eyes long silver eyelashes, flawless porcelain skin, "
+        "standing pose on invisible golden light platform, goddess boss design"
     ),
     "sprite_prompt": (
         "Time Goddess boss, one female armored figure, two arms two legs five fingers five toes, "
@@ -358,48 +364,39 @@ ASSET_TEMPLATES["时空守护者"] = {
 ASSET_TEMPLATES["记忆守护者"] = {
     "prompt": (
         "1girl, solo, full body floating portrait, "
-        "Memory Guardian boss, ethereal female spirit, body composed of shattered crystalline fragments like broken stained glass reassembling into female form, anatomically correct humanoid exactly two arms two legs five fingers each hand five toes each foot, "
-        "each shard is translucent crystal glowing with soft violet inner light, gaps between pieces revealing empty space, feminine silhouette preserved despite fragmentation, "
-        "face on largest central shard beautiful young woman with peaceful melancholic expression, closed eyes, delicate features, "
-        "hair made of crystal strands connected to head shard drifting outward, floating in meditation pose arms extended palms up, violet soul energy between fingers, "
-        "small memory shards orbiting body, floating above ground, "
-        "spirit boss character design"
+        "Memory Guardian boss, ethereal female spirit, beautiful humanoid female form with translucent crystalline appearance, two arms two legs five fingers five toes, "
+        "pale luminous skin with soft violet glow from within, elegant feminine figure, "
+        "long flowing hair made of crystal strands shimmering violet, beautiful peaceful face with closed eyes and delicate features, "
+        "ethereal dress made of overlapping crystal shards forming a gown, small memory fragments orbiting around her, "
+        "floating meditation pose, arms extended palms up with violet soul energy between fingers, "
+        "spirit boss design"
     ),
     "sprite_prompt": (
-        "Memory Goddess boss, one female ghostly figure, two arms two legs five fingers five toes, body made of separated floating pieces all one character, feminine silhouette, "
-        "beautiful woman face closed eyes on main shard, crystal hair connected to head, "
-        "each piece translucent crystal glowing soft violet inside, gaps between body parts, "
-        "floating meditation pose arms extended palms up, small shards near body, "
-        "front view, 4-heads-tall chibi proportion, limited palette soft violet glow, no shadow floating"
+        "Memory Goddess boss, one female ghostly figure, two arms two legs five fingers five toes, feminine silhouette, "
+        "beautiful woman face closed eyes, crystal hair, pale luminous skin, "
+        "ethereal crystal dress, floating meditation pose arms extended palms up, small shards near body, "
+        "front view, 4-heads-tall chibi, limited palette soft violet glow, no shadow floating"
     ),
     "targetW": 80, "targetH": 80, "cat": "Boss", "genW": 640, "genH": 640
 }
 
 ASSET_TEMPLATES["S-SN"] = {
     "prompt": (
-        "1girl, solo, full body floating portrait, "
-        "(deep crimson red hair:1.4), (blood-red long straight hair:1.3), waist-length crimson-red straight long hair glossy like satin floating upward with individual strand detail, "
-        "red hair red hair red hair, definitely NOT blue NOT cyan NOT purple NOT violet NOT indigo NOT navy NOT aqua NOT silver NOT white NOT pink, "
-        "S-SN Scarlet Soul Shana, ultimate boss, one single female alone in frame no other person exists, "
-        "anatomically correct human body exactly two arms two legs five fingers each hand five toes each foot, tall slender well-proportioned figure 172cm, graceful yet powerful curves, "
-        "(bright ruby-red burning eyes:1.2), Crimson Pupils eyes like glowing ruby or burning red spider lily with detailed iris, beautiful feminine face gentle authoritative expression with fine features, "
-        "wearing elegant black bodice with intricate dark gold embroidery forming geometric patterns, deep crimson-red formal long skirt with multiple layered panels extremely floor-reaching covering both legs completely down to ankles, "
-        "bodice black with gold thread embroidery, skirt dark red wine color with subtle sheen NOT blue NOT white, long elegant sleeves partially covering hands with lace trim, "
-        "high collar with large radiant red spider lily gem at throat pulsing with inner light, "
-        "magnificent large crystalline wings of faceted scarlet-red and amber-gold panels spreading behind her, each panel faceted like cut gemstone catching and refracting light, "
-        "swirling tempest aura blending crimson fire and warm golden light in layered rings around body, floating upright with elegant poise slightly above ground, hands in graceful mudra gesture at chest level, "
-        "elaborate final boss character design with maximal ornamental detail"
+        "1girl, solo, full body, anime style, masterpiece, best quality, highly detailed, "
+        "S-SN, beautiful young woman, (very long crimson red hair:1.15) with gradient from deep wine-red at roots to bright scarlet to soft pink to white tips, "
+        "(bright ruby-red eyes:1.15), pale porcelain skin with subtle blush, "
+        "elegant midnight blue evening gown, dark blue dress with delicate lace overlay, floral trim, spider lily embroidery, high slit, satin fabric, "
+        "sheer black stockings, black high heels, standing pose, hands clasped at chest, gentle smile, "
+        "soft dramatic lighting, rim light, red spider lily motif behind, petals floating"
+    ),
+    "negative_prompt": (
+        CONCEPT_NEGATIVE + ", blue hair, purple hair, lavender hair, silver hair, white hair, "
+        "red dress, crimson gown, burgundy dress, hair color same as dress color"
     ),
     "sprite_prompt": (
-        "(deep crimson red hair:1.4), intensely blood-red waist-length straight hair glossy floating up, "
-        "hair is deep wine-red dark ruby scarlet color NOT blue NOT cyan NOT purple NOT violet NOT white NOT silver NOT pink NOT light NOT aqua, "
-        "red hair red hair red hair, S-SN Scarlet Soul Shana, one female alone, "
-        "two arms two legs five fingers five toes, tall slim figure, "
-        "bright ruby-red eyes like burning spider lily, beautiful face gentle authoritative, "
-        "deep crimson full-length formal dress black top red skirt covers legs to ankles, black top dark red skirt NOT white NOT blue, "
-        "long sleeves partial hand cover, red spider lily gem at throat, large crystalline wings scarlet red amber-gold, "
-        "crimson aura around body, floating pose hands gesture at chest, front view, "
-        "4-heads-tall chibi proportion, limited palette crimson red dominant"
+        "S-SN, long red hair, ruby-red eyes, pale skin, "
+        "deep navy blue evening gown, black stockings, high heels, standing pose, front view, "
+        "4-heads-tall chibi"
     ),
     "targetW": 96, "targetH": 96, "cat": "Boss", "genW": 768, "genH": 768
 }
@@ -2390,7 +2387,7 @@ class ComfyUIGenerator:
     # v5.1: 服务器工作流管理（8189 统一 API）
     # ==========================================
     def _refresh_server_workflows_v2(self):
-        """从服务器 8189 API 加载工作流列表（v5.1: 8 个工作流：4 注册 + 4 蓝图，含 3 个 SDXL 旗舰）"""
+        """从服务器 8189 API 加载工作流列表（v5.3: 12 个工作流：8 注册 + 4 蓝图，含 3 个 SDXL 旗舰）"""
         try:
             if HAS_COMMS_SDK:
                 data = CommsClient.http_list_workflows(SERVER_URL)
@@ -2599,10 +2596,15 @@ class ComfyUIGenerator:
     def _map_params_to_workflow(self, raw_params, wf_schema, workflow_id=None):
         """将客户端内部参数映射为服务器工作流期望的字段名
 
-        映射规则（v5.1 最终版）：
-        - 所有工作流（SDXL/AOM3/Z-Image）统一使用 prompt + negative_prompt
-          ★ 服务端自动识别 SDXL 工作流 → 将 prompt 同时注入 text_g + text_l
-          ★ 客户端无需区分 SDXL/AOM3，发送相同的参数字段即可
+        映射规则（v5.3 服务端自动解析增强）：
+        - 支持两种模式：
+          Mode 1: positive 为字符串 → 服务端自动解析为 6 类别 + 颜色锚定 + 强调权重 + BREAK
+          Mode 2: positive 为 dict (structured_prompt) → 透传给服务端
+        - v5.3 核心改进：纯字符串模式下服务端自动：
+          1. 解析为 face/hair/outfit/body_pose/accessory/overall 6 个类别
+          2. 提取颜色词锚定到 text_g（修复头发/服装同色 bug）
+          3. 应用轻量强调权重 (word:1.10~1.18, 上限 1.25)
+          4. 在 text_l 中用 BREAK 分隔类别
         - width/height/steps/cfg/seed → 直接匹配同名或同义字段
 
         Args:
@@ -2616,13 +2618,19 @@ class ComfyUIGenerator:
         positive = raw_params["positive"]
         negative = raw_params["negative"]
 
-        # 所有工作流统一使用 prompt + negative_prompt
-        # 服务端自动处理 SDXL 双 CLIP 映射
+        # v5.3: 结构化提示词模式检测（可选，服务端已自动解析字符串）
+        # 如果 positive 是 dict（structured_prompt），直接透传
+        is_structured = isinstance(positive, dict)
+
         result = {
-            "prompt": positive,
+            "prompt": positive if is_structured else str(positive),
             "negative_prompt": negative,
             "seed": raw_params["seed"],
         }
+        if is_structured:
+            self._log(f"[结构化提示词] Structured Dict 模式 ({len(positive)} 字段)", "info")
+        else:
+            self._log(f"[v5.3自动解析] 纯字符串 ({len(str(positive))}字符) — 服务端自动解析+颜色锚定+强调权重", "info")
         if "steps" in wf_schema:
             result["steps"] = raw_params["steps"]
         if "cfg" in wf_schema:
@@ -2971,25 +2979,35 @@ class ComfyUIGenerator:
         stage = self.stage_var.get()
         asset_cat = tmpl.get("cat", "").lower()
 
+        # 检查是否使用结构化提示词模式 (v5.2 Structured Dict)
+        use_structured = "structured_prompt" in tmpl and stage == "concept"
+
         if stage == "concept":
-            # 概念图阶段：
-            #   Boss  → 立绘工作流 (game-character-design-sdxl) → CHARACTER_BASE_POSITIVE
-            #   Player/Enemy/MapTile → 概念图工作流 (game-concept-art-sdxl) → CONCEPT_BASE_POSITIVE
-            if asset_cat == "boss":
+            if use_structured:
+                # 结构化模式：直接使用模板中的 structured_prompt 字典
+                positive = tmpl["structured_prompt"]
+                # UI 显示用 JSON 格式
+                import json as _json
+                display_text = _json.dumps(positive, ensure_ascii=False, indent=2)
+            elif asset_cat == "boss":
                 positive = f"{CHARACTER_BASE_POSITIVE}, {tmpl['prompt']}"
+                display_text = positive
             else:
                 positive = f"{CONCEPT_BASE_POSITIVE}, {tmpl['prompt']}"
-            negative = CONCEPT_NEGATIVE
+                display_text = positive
+            # 反向提示词：优先使用模板自定义，否则用全局默认
+            negative = tmpl.get("negative_prompt", CONCEPT_NEGATIVE)
         else:
-            # 精灵帧阶段：所有资产统一使用 SPRITE_BASE_POSITIVE
+            # 精灵帧阶段：所有资产统一使用 SPRITE_BASE_POSITIVE（字符串模式）
             state = self.state_var.get()
             state_p = STATE_PROMPTS.get(state, "idle pose")
             asset_sprite_prompt = tmpl.get('sprite_prompt', tmpl['prompt'])
             positive = f"{SPRITE_BASE_POSITIVE}, {asset_sprite_prompt}, {state_p}, single frame, pixel art character"
+            display_text = positive
             negative = SPRITE_NEGATIVE
 
         self.positive_text.delete("1.0", tk.END)
-        self.positive_text.insert("1.0", positive)
+        self.positive_text.insert("1.0", display_text)
         self.negative_text.delete("1.0", tk.END)
         self.negative_text.insert("1.0", negative)
 
