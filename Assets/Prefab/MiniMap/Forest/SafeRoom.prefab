@@ -12758,7 +12758,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 33, y: 20}
+  m_Size: {x: 37, y: 24}
   m_EdgeRadius: 0
 --- !u!114 &286705596567917512
 MonoBehaviour:
@@ -19927,7 +19927,7 @@ GameObject:
   - component: {fileID: 2937679440264816672}
   - component: {fileID: 2271997382302612753}
   - component: {fileID: 7734107176944551458}
-  - component: {fileID: 4160956367494883030}
+  - component: {fileID: 3753567619679435628}
   m_Layer: 0
   m_Name: SafeRoom
   m_TagString: Untagged
@@ -20026,7 +20026,7 @@ MonoBehaviour:
   maxObjectCount: 1
   spawnInterval: 120
   spawnParent: {fileID: 0}
---- !u!114 &4160956367494883030
+--- !u!114 &3753567619679435628
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
