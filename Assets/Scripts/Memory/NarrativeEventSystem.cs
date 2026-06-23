@@ -19,7 +19,8 @@ public class NarrativeEventSystem : MonoBehaviour, INarrativeEventProvider
 
     void OnDisable()
     {
-        GlobalEventManager.Instance.OnBurdenChanged -= OnBurdenChanged;
+        var gem = GlobalEventManager.Instance;
+        if (gem != null) gem.OnBurdenChanged -= OnBurdenChanged;
     }
 
     public void OnBurdenChanged(float newBurden)

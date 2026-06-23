@@ -47,7 +47,8 @@ public class BurdenEffectManager : MonoBehaviour
 
     void OnDestroy()
     {
-        GlobalEventManager.Instance.OnGlobalBurdenLevelChanged -= OnGlobalBurdenLevelChanged;
+        var gem = GlobalEventManager.Instance;
+        if (gem != null) gem.OnGlobalBurdenLevelChanged -= OnGlobalBurdenLevelChanged;
     }
 
     void OnGlobalBurdenLevelChanged(GlobalBurdenLevel level)

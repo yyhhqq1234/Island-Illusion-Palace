@@ -8,6 +8,7 @@ TagManager:
   - SoulCore
   - SummonedCreature
   - Collectible
+  - BossRoom
   layers:
   - Default
   - TransparentFX

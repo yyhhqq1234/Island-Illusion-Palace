@@ -280,9 +280,11 @@ public class GameManager : MonoBehaviour
 
     void OnDestroy()
     {
-        GlobalEventManager.Instance.OnEnemyDefeated -= OnEnemyDefeated;
-        GlobalEventManager.Instance.OnDamageDealt -= OnDamageDealt;
-        GlobalEventManager.Instance.OnDamageTaken -= OnDamageTaken;
-        GlobalEventManager.Instance.OnPlayerDeath -= OnPlayerDeath;
+        var gem = GlobalEventManager.Instance;
+        if (gem == null) return;
+        gem.OnEnemyDefeated -= OnEnemyDefeated;
+        gem.OnDamageDealt -= OnDamageDealt;
+        gem.OnDamageTaken -= OnDamageTaken;
+        gem.OnPlayerDeath -= OnPlayerDeath;
     }
 }

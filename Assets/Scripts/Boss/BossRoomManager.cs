@@ -26,7 +26,8 @@ public class BossRoomManager : MonoBehaviour
 
     void OnDestroy()
     {
-        GlobalEventManager.Instance.OnBossDefeated -= OnBossDefeated;
+        var gem = GlobalEventManager.Instance;
+        if (gem != null) gem.OnBossDefeated -= OnBossDefeated;
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -83,7 +84,6 @@ public class BossRoomManager : MonoBehaviour
     {
         Gizmos.color = bossDefeated ? Color.green : Color.red;
         Vector3 pos = bossSpawnPoint != null ? bossSpawnPoint.position : transform.position;
-        Gizmos.DrawWireCube(pos, Vector3.one * 2f);
-        Gizmos.DrawIcon(pos, "boss_icon", true);
+        Gizmos.DrawWireCube(pos, new Vector3(39, 26, 0));
     }
 }

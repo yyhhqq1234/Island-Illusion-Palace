@@ -54,7 +54,8 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
 
     void OnDisable()
     {
-        GlobalEventManager.Instance.OnGameQuit -= OnGameQuit;
+        var gem = GlobalEventManager.Instance;
+        if (gem != null) gem.OnGameQuit -= OnGameQuit;
     }
 
     void Update()
