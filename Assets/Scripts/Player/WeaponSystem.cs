@@ -118,6 +118,9 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
     private Camera mainCamera;
     private CharacterStats characterStats;
     private BurdenSystem burdenSystem;
+    private InventoryUI cachedInventoryUI;
+    private AlchemyUI cachedAlchemyUI;
+    private SummonSystem cachedSummonSystem;
     private float physicalDamageBonus = 0f;
     private float magicalDamageBonus = 0f;
     private float burdenDamageMultiplier = 1f;
@@ -150,6 +153,9 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         mainCamera = Camera.main ?? FindObjectOfType<Camera>();
         characterStats = GetComponentInParent<CharacterStats>();
         burdenSystem = GetComponentInParent<BurdenSystem>();
+        cachedInventoryUI = FindObjectOfType<InventoryUI>();
+        cachedAlchemyUI = FindObjectOfType<AlchemyUI>();
+        cachedSummonSystem = FindObjectOfType<SummonSystem>();
     }
 
     void Update()
@@ -166,23 +172,15 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
             return;
         }
 
-        // 检查背包是否打开
-        InventoryUI inventoryUI = FindObjectOfType<InventoryUI>();
-        if (inventoryUI != null && inventoryUI.IsInventoryOpen())
-        {
+        if (cachedInventoryUI != null && cachedInventoryUI.IsInventoryOpen())
             return;
-        }
 
-        // 检查炼金界面是否打开
-        AlchemyUI alchemyUI = FindObjectOfType<AlchemyUI>();
-        if (alchemyUI != null && alchemyUI.IsAlchemyPanelOpen())
-        {
+        if (cachedAlchemyUI != null && cachedAlchemyUI.IsAlchemyPanelOpen())
             return;
-        }
 
         if (mainCamera == null)
         {
-            mainCamera = Camera.main ?? FindObjectOfType<Camera>();
+            mainCamera = Camera.main;
             if (mainCamera == null) return;
         }
 
@@ -195,23 +193,13 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
     void HandleAttack()
     {
         if (PauseMenu.Instance != null && PauseMenu.Instance.IsPaused())
-        {
             return;
-        }
 
-        // 检查背包是否打开
-        InventoryUI inventoryUI = FindObjectOfType<InventoryUI>();
-        if (inventoryUI != null && inventoryUI.IsInventoryOpen())
-        {
+        if (cachedInventoryUI != null && cachedInventoryUI.IsInventoryOpen())
             return;
-        }
 
-        // 检查炼金界面是否打开
-        AlchemyUI alchemyUI = FindObjectOfType<AlchemyUI>();
-        if (alchemyUI != null && alchemyUI.IsAlchemyPanelOpen())
-        {
+        if (cachedAlchemyUI != null && cachedAlchemyUI.IsAlchemyPanelOpen())
             return;
-        }
 
         // 获取当前攻击间隔值（应用晶能变体调整）
         float currentAttackInterval = useCustomAttackInterval ? customAttackInterval : attackInterval;
@@ -1174,9 +1162,8 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
 
     public void BuffSummons(float percent)
     {
-        var ss = FindObjectOfType<SummonSystem>();
-        if (ss != null)
-            foreach (var s in ss.GetActiveSummons())
+        if (cachedSummonSystem != null)
+            foreach (var s in cachedSummonSystem.GetActiveSummons())
                 if (s != null) s.GetComponent<SummonedCreatureAI>()?.AddBuff(percent);
     }
 
