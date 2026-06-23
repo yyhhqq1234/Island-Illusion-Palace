@@ -1,0 +1,1 @@
+Read all C# scripts under Assets/Scripts/, identify any compilation errors or warnings, and summarize them by file. Focus on: missing references, null safety issues, naming convention violations, and event bus usage patterns (should use GlobalEventManager). Output a structured report.
