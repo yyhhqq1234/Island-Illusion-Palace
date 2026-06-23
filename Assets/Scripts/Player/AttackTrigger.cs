@@ -130,7 +130,7 @@ public class AttackTrigger : MonoBehaviour
             catch { }
         }
 
-        BattleEventManager.Instance?.TriggerDamageDealt(attacker, damage);
+        GlobalEventManager.Instance.TriggerDamageDealt(attacker, damage);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         string attackerType = isPlayerAttack ? "玩家" : (isSummonAttack ? "召唤物" : "敌人");

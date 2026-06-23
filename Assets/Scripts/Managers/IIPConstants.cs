@@ -1,8 +1,10 @@
+using UnityEngine;
+
 public static class IIPConstants
 {
     // ── 场景名称 ──
     public const string SceneMainMenu = "MainMenu";
-    public const string SceneGamePlay = "GamePlay";
+    public const string SceneGamePlay = "Forest";
 
     // ── Tags ──
     public const string TagPlayer = "Player";
@@ -37,7 +39,27 @@ public static class IIPConstants
     public const int MaxEnhancementLevel = 5;
     public static readonly float[] EnhancementBonus = { 0f, 0.06f, 0.12f, 0.18f, 0.24f, 0.30f };
 
-    // ── 玩家 KeyCode 别名（方便查找替换） ──
-    public const string InputMoveHorizontal = "Horizontal";
-    public const string InputMoveVertical = "Vertical";
+    // ═══════════════════════════════════════════
+    // 玩家输入键位（对应 PC按键映射方案.md）
+    // ═══════════════════════════════════════════
+    public const KeyCode KeyMoveUp       = KeyCode.W;
+    public const KeyCode KeyMoveDown     = KeyCode.S;
+    public const KeyCode KeyMoveLeft     = KeyCode.A;
+    public const KeyCode KeyMoveRight    = KeyCode.D;
+    public const KeyCode KeyMoveUpAlt    = KeyCode.UpArrow;
+    public const KeyCode KeyMoveDownAlt  = KeyCode.DownArrow;
+    public const KeyCode KeyMoveLeftAlt  = KeyCode.LeftArrow;
+    public const KeyCode KeyMoveRightAlt = KeyCode.RightArrow;
+    public const KeyCode KeyRun          = KeyCode.LeftShift;
+    public const KeyCode KeyRunAlt       = KeyCode.RightShift;
+    public const KeyCode KeyDash         = KeyCode.Space;
+    public const KeyCode KeyInteract     = KeyCode.E;
+    public const KeyCode KeyInventory    = KeyCode.I;
+    public const KeyCode KeyQuickSummon  = KeyCode.F;
+    public const KeyCode KeySummonWheel  = KeyCode.R;
+    public const KeyCode KeyRecallAll    = KeyCode.LeftAlt;
+    public const KeyCode KeyRecallAllAlt = KeyCode.RightAlt;
+    public const KeyCode KeyQuickItem1   = KeyCode.Alpha1;
+    public const KeyCode KeyQuickItem2   = KeyCode.Alpha2;
+    public const KeyCode KeyQuickItem3   = KeyCode.Alpha3;
 }

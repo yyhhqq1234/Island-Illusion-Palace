@@ -74,3 +74,22 @@
   悖时薄片   时空守护者掉落   传奇     40         凝固的、记录时间悖论的时空片段。
 
   ----------------------------------------------------------------------------------
+
+---
+**代码实现状态 (2026-06-23)**
+
+| 状态 | 说明 |
+|------|------|
+| ✅ 24种材料全部实现 | `InventorySystem.cs` 中 MaterialData，`ItemSlot.cs` 图标库完整覆盖 |
+| ✅ 4级稀有度 | `ItemRarity` 枚举（Common/Uncommon/Rare/Legendary）|
+| ✅ 炼金价值1-40 | `AlchemySystem.cs` 中 value 映射 |
+| ✅ 采集/掉落获取 | `MaterialSpawnManager.cs` 采集 + `EnemyLootComponent.cs` 掉落 |
+| ✅ 堆叠99 | `InventorySystem.cs` Stackable 支持 |
+| ⚠️ 灵魂精华(价值1) | 代码中属于特殊资源由 InventorySystem 管理，非炼金材料材料 |
+
+---
+**版本记录**
+
+| 日期 | 修改人 | 变更摘要 |
+|------|--------|----------|
+| 2026-06-23 | 主策划AI | 新增代码实现状态标注 |

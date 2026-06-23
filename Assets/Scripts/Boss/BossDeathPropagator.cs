@@ -13,7 +13,6 @@ public class BossDeathPropagator : MonoBehaviour
 
     public void OnBossDied(BossAI boss)
     {
-        if (BattleEventManager.Instance != null)
-            BattleEventManager.Instance.TriggerBossDefeated(boss.gameObject);
+        GlobalEventManager.Instance.TriggerBossDefeated(boss.gameObject);
     }
 }

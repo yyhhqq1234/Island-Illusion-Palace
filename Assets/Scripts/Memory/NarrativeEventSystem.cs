@@ -19,8 +19,7 @@ public class NarrativeEventSystem : MonoBehaviour, INarrativeEventProvider
 
     void OnDisable()
     {
-        if (GlobalEventManager.Instance != null)
-            GlobalEventManager.Instance.OnBurdenChanged -= OnBurdenChanged;
+        GlobalEventManager.Instance.OnBurdenChanged -= OnBurdenChanged;
     }
 
     public void OnBurdenChanged(float newBurden)

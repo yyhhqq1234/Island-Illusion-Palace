@@ -5,7 +5,6 @@ public class SceneController : MonoBehaviour
 {
     [SerializeField] private Button startButton;
     [SerializeField] private Button quitButton;
-    [SerializeField] private string gameplaySceneName = IIPConstants.SceneGamePlay;
 
     void Start()
     {
@@ -23,7 +22,7 @@ public class SceneController : MonoBehaviour
 
     void OnStartGame()
     {
-        IIPBootstrap.SwitchToScene(gameplaySceneName);
+        IIPBootstrap.SwitchToScene(IIPConstants.SceneGamePlay);
     }
 
     void OnQuitGame()

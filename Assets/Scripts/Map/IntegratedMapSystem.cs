@@ -172,10 +172,7 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
     void BroadcastMapType()
     {
         GameSystems.MapMusicType musicType = ConvertToMapMusicType(currentMapType);
-        if (GlobalEventManager.Instance != null)
-        {
-            GlobalEventManager.Instance.TriggerMapTypeChanged(musicType);
-        }
+        GlobalEventManager.Instance.TriggerMapTypeChanged(musicType);
         Debug.Log($"[IntegratedMapSystem] Current Map Type: {currentMapType} -> Music Type: {musicType}");
     }
 

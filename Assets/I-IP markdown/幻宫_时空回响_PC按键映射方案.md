@@ -363,4 +363,26 @@ json
 
 | 日期 | 修改人 | 变更摘要 |
 |------|--------|---------|
-| 2026-06-12 | UI/UX策划AI | P0修复：解决F键冲突（F改为交互备选仅在交互范围生效，快速召唤改为纯G键）；新增Xbox手柄映射方案（左摇杆移动/A闪避/X攻击/Y特殊/B交互/RB切换武器/RT召唤轮盘/LB使用物品）；新增Caps Lock跑步切换开关；更新JSON配置与所有F→G引用 |
+| 2026-06-23 | 主策划AI | 新增代码实现状态标注 |
+| 2026-06-12 | UI/UX策划AI | P0修复：F键冲突解决+Xbox手柄映射+Caps Lock跑步开关 |
+
+---
+**代码实现状态 (2026-06-23)**
+
+| 按键 | 代码实现 | 说明 |
+|------|---------|------|
+| WASD移动 | ✅ `PlayerController.cs` | 四方向移动 |
+| Shift跑步 | ✅ `PlayerController.cs` | 加速移动 |
+| Space闪避 | ✅ `PlayerController.cs` | 0.2s持续，1s冷却，2负担消耗 |
+| E交互 | ✅ `PlayerController.cs` + `IInteractable` | 可交互对象探测 |
+| I背包 | ✅ `PlayerController.cs` + `InventoryUI.cs` | 开关切换 |
+| R召唤轮盘 | ✅ `PlayerController.cs` + `SummonWheelUI.cs` | 按住打开，释放确认 |
+| G快速召唤 | ✅ `PlayerController.cs` | 最新灵魂之核召唤 |
+| Alt全体召回 | ✅ `PlayerController.cs` | 所有召唤物召回 |
+| 1/2/3快捷物品 | ✅ `PlayerController.cs` | 物品快捷栏 |
+| M地图 | ✅ `UIManager.cs` | Map UI stub |
+| ESC暂停 | ✅ `PauseMenu.cs` | 时间缩放0/1 |
+| 鼠标攻击 | ✅ `WeaponSystem.cs` + `AttackTrigger.cs` | 鼠标方向瞄准 |
+| 武器切换(1/2/3+滚轮) | ✅ `BattleSystem.cs` | 剑/法杖/镰刀切换 |
+| Xbox手柄映射 | ❌ 未实现 | 文档有设计，代码未实现 |
+| Caps Lock跑步切换 | ❌ 未实现 | 文档设计，代码未实现 |

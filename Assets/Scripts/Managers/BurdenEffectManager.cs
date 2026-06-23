@@ -42,29 +42,29 @@ public class BurdenEffectManager : MonoBehaviour
             burdenSystem = FindObjectOfType<BurdenSystem>();
 
         // 订阅负担等级变化事件，由事件驱动而非主动轮询
-        GlobalEventManager.Instance.OnBurdenLevelChanged += OnBurdenLevelChanged;
+        GlobalEventManager.Instance.OnGlobalBurdenLevelChanged += OnGlobalBurdenLevelChanged;
     }
 
     void OnDestroy()
     {
-        GlobalEventManager.Instance.OnBurdenLevelChanged -= OnBurdenLevelChanged;
+        GlobalEventManager.Instance.OnGlobalBurdenLevelChanged -= OnGlobalBurdenLevelChanged;
     }
 
-    void OnBurdenLevelChanged(BurdenLevel level)
+    void OnGlobalBurdenLevelChanged(GlobalBurdenLevel level)
     {
         if (burdenSystem == null) return;
 
         switch (level)
         {
-            case BurdenLevel.Critical:
-            case BurdenLevel.High:
+            case GlobalBurdenLevel.Critical:
+            case GlobalBurdenLevel.High:
                 if (!isHighBurden)
                 {
                     isHighBurden = true;
                     OnEnterHighBurden();
                 }
                 break;
-            case BurdenLevel.Normal:
+            case GlobalBurdenLevel.Normal:
                 if (isHighBurden)
                 {
                     isHighBurden = false;
@@ -76,7 +76,7 @@ public class BurdenEffectManager : MonoBehaviour
 
     void Update()
     {
-        // 负担效果现在由 OnBurdenLevelChanged 事件驱动切换状态
+        // 负担效果现在由 OnGlobalBurdenLevelChanged 事件驱动切换状态
         // Update 仅负责持续性视觉效果渐变（distortion、背景色）
         if (isHighBurden)
         {

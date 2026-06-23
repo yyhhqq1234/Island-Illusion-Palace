@@ -21,18 +21,12 @@ public class BossRoomManager : MonoBehaviour
 
     void Start()
     {
-        if (BattleEventManager.Instance != null)
-        {
-            BattleEventManager.Instance.onBossDefeated += OnBossDefeated;
-        }
+        GlobalEventManager.Instance.OnBossDefeated += OnBossDefeated;
     }
 
     void OnDestroy()
     {
-        if (BattleEventManager.Instance != null)
-        {
-            BattleEventManager.Instance.onBossDefeated -= OnBossDefeated;
-        }
+        GlobalEventManager.Instance.OnBossDefeated -= OnBossDefeated;
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -56,8 +50,7 @@ public class BossRoomManager : MonoBehaviour
         spawnedBoss = Instantiate(timeGuardianPrefab, spawnPos, Quaternion.identity);
         spawnedBoss.name = "TimeGuardian";
 
-        if (BattleEventManager.Instance != null)
-            BattleEventManager.Instance.TriggerBossEncounter();
+        GlobalEventManager.Instance.TriggerBossEncounter(spawnedBoss);
 
         Debug.Log("[BossRoomManager] 时空守护者出现！");
     }

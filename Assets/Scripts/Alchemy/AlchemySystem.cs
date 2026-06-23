@@ -404,7 +404,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
         if (materials == null || materials.Length == 0)
         {
             Debug.Log("[AlchemySystem] 准备篮中没有材料");
-            PlayAudioViaReflection("PlayAlchemyFail");
+            GlobalEventManager.Instance.RequestAudio("PlayAlchemyFail");
             return false;
         }
         
@@ -414,7 +414,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             if (!materialInventory.ContainsKey(mat) || materialInventory[mat] <= 0)
             {
                 Debug.Log("[AlchemySystem] 材料不足，无法进行自由炼金");
-                PlayAudioViaReflection("PlayAlchemyFail");
+                GlobalEventManager.Instance.RequestAudio("PlayAlchemyFail");
                 return false;
             }
         }
@@ -437,7 +437,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             // 合成成功：随机生成一个消耗品或材料
             GenerateRandomResult(materials);
             Debug.Log("[AlchemySystem] ✅ 自由炼金成功！");
-            PlayAudioViaReflection("PlayAlchemySuccess");
+            GlobalEventManager.Instance.RequestAudio("PlayAlchemySuccess");
             return true;
         }
         else
@@ -448,7 +448,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             // 把记忆残渣加入待收集产出
             pendingProduce.Add(MaterialTypeEnum.MemoryResidue);
             Debug.Log("[AlchemySystem] ❌ 自由炼金失败");
-            PlayAudioViaReflection("PlayAlchemyFail");
+            GlobalEventManager.Instance.RequestAudio("PlayAlchemyFail");
             return false;
         }
     }
@@ -806,7 +806,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
         if (!CanCraftRecipe(recipeType))
         {
             Debug.Log("[AlchemySystem] 材料不足，无法制作 " + GetRecipeName(recipeType));
-            PlayAudioViaReflection("PlayAlchemyFail");
+            GlobalEventManager.Instance.RequestAudio("PlayAlchemyFail");
             return false;
         }
 
@@ -863,7 +863,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             }
             
             Debug.Log($"[AlchemySystem] ✅ 成功制作 {recipe.name}!");
-            PlayAudioViaReflection("PlayAlchemySuccess");
+            GlobalEventManager.Instance.RequestAudio("PlayAlchemySuccess");
             ValidateAlchemyValue(recipe.alchemicalValue);
             
             return true;
@@ -884,7 +884,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
             }
             
             Debug.Log($"[AlchemySystem] ❌ 合成 {recipe.name} 失败");
-            PlayAudioViaReflection("PlayAlchemyFail");
+            GlobalEventManager.Instance.RequestAudio("PlayAlchemyFail");
             
             return false;
         }
@@ -1290,67 +1290,8 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
     
     public MaterialData GetMaterialData(MaterialTypeEnum type)
     {
-        switch (type)
-        {
-            // 基础材料
-            case MaterialTypeEnum.RottenWood:
-                return new MaterialData(MaterialTypeEnum.RottenWood, "腐朽木屑", 1, "枯朽的木材碎片。", "常见", "森林地图采集");
-            case MaterialTypeEnum.BoneFragments:
-                return new MaterialData(MaterialTypeEnum.BoneFragments, "碎骨", 2, "断裂的骨骼。", "常见", "骷髅战士、腐化村民掉落");
-            case MaterialTypeEnum.StarlightGrass:
-                return new MaterialData(MaterialTypeEnum.StarlightGrass, "星光草", 3, "夜晚发光的植物。", "常见", "森林地图采集");
-            case MaterialTypeEnum.CorruptedTissue:
-                return new MaterialData(MaterialTypeEnum.CorruptedTissue, "腐化组织", 4, "被幻宫能量侵蚀的肉块。", "常见", "腐化村民、沼泽潜伏者掉落");
-            case MaterialTypeEnum.MoonlightFlower:
-                return new MaterialData(MaterialTypeEnum.MoonlightFlower, "月影花", 5, "满月夜绽放的银色花朵。", "常见", "月光下的森林采集");
-            case MaterialTypeEnum.RustedParts:
-                return new MaterialData(MaterialTypeEnum.RustedParts, "锈蚀零件", 6, "废弃机械的金属零件。", "常见", "机械残骸掉落，废墟地图采集");
-            case MaterialTypeEnum.SoulDust:
-                return new MaterialData(MaterialTypeEnum.SoulDust, "灵魂微尘", 7, "逸散的灵魂能量微粒。", "常见", "怨魂等灵魂类敌人掉落");
-            case MaterialTypeEnum.CloudyDew:
-                return new MaterialData(MaterialTypeEnum.CloudyDew, "浑浊露珠", 8, "凝结时空能量的水珠。", "常见", "森林、荒原、湿地、冰原采集");
-            case MaterialTypeEnum.PurifyingSalt:
-                return new MaterialData(MaterialTypeEnum.PurifyingSalt, "净化盐晶", 9, "蕴含净化能量的盐结晶。", "常见", "岩地、沙漠采集，结晶蜥蜴、石像鬼掉落");
-            case MaterialTypeEnum.WailingVine:
-                return new MaterialData(MaterialTypeEnum.WailingVine, "哀嚎藤蔓", 10, "触碰时会发出悲鸣的黑暗植物。", "常见", "沼泽潜伏者掉落，湿地地图采集");
-            
-            // 稀有材料
-            case MaterialTypeEnum.MemoryResidue:
-                return new MaterialData(MaterialTypeEnum.MemoryResidue, "记忆残渣", 11, "记忆逸散的能量渣滓。", "稀有", "记忆碎片区域采集，怨魂掉落（低概率）");
-            case MaterialTypeEnum.TimeFragment:
-                return new MaterialData(MaterialTypeEnum.TimeFragment, "时空碎片", 12, "包含不稳定时空能量的脆弱碎片。", "稀有", "时空守护者掉落，时空裂隙区域采集");
-            case MaterialTypeEnum.SoulCrystal:
-                return new MaterialData(MaterialTypeEnum.SoulCrystal, "灵魂结晶", 13, "提纯凝固的灵魂能量块。", "稀有", "灵魂吞噬者掉落");
-            case MaterialTypeEnum.CrystalizedCore:
-                return new MaterialData(MaterialTypeEnum.CrystalizedCore, "晶化残核", 14, "晶化生物遗留的惰性能量核。", "稀有", "结晶蜥蜴掉落");
-            case MaterialTypeEnum.MechCore:
-                return new MaterialData(MaterialTypeEnum.MechCore, "机械核心", 15, "古代机械的微型动力核心。", "稀有", "机械构造体掉落");
-            case MaterialTypeEnum.AncientTreeResin:
-                return new MaterialData(MaterialTypeEnum.AncientTreeResin, "古树树脂", 16, "古老树木渗出的生命力树脂。", "稀有", "森林地图特定古树采集");
-            case MaterialTypeEnum.LavaCore:
-                return new MaterialData(MaterialTypeEnum.LavaCore, "熔岩核心", 17, "一小块永不熄灭的炽热能量核。", "稀有", "熔岩元素掉落");
-            case MaterialTypeEnum.GargoyleFragment:
-                return new MaterialData(MaterialTypeEnum.GargoyleFragment, "石像鬼碎片", 18, "活化雕像上剥落的带魔力石片。", "稀有", "石像鬼掉落");
-            case MaterialTypeEnum.FrostShard:
-                return new MaterialData(MaterialTypeEnum.FrostShard, "极寒冰屑", 19, "永恒冻土中形成的刺骨冰屑。", "稀有", "冰原采集，冰原狼掉落");
-            case MaterialTypeEnum.AncientDragonBonePowder:
-                return new MaterialData(MaterialTypeEnum.AncientDragonBonePowder, "古龙骨粉", 20, "研磨自远古巨兽骨骼的能量粉末。", "稀有", "岩地、冰原远古遗骸处采集");
-            
-            // 史诗材料
-            case MaterialTypeEnum.SoulEssence:
-                return new MaterialData(MaterialTypeEnum.SoulEssence, "灵魂精华", 1, "用于炼金的高纯度灵魂能量。", "史诗", "灵魂炼金（灵魂×50）");
-            case MaterialTypeEnum.LeylineCrystal:
-                return new MaterialData(MaterialTypeEnum.LeylineCrystal, "地脉结晶", 30, "大地能量脉络中凝结的坚固结晶。", "史诗", "岩地深处采集");
-            case MaterialTypeEnum.AncientRuneStone:
-                return new MaterialData(MaterialTypeEnum.AncientRuneStone, "远古铭文石", 33, "刻有失落知识的石碑碎片。", "史诗", "神殿、废墟解谜区域采集");
-            
-            // 传奇材料
-            case MaterialTypeEnum.ParadoxShard:
-                return new MaterialData(MaterialTypeEnum.ParadoxShard, "悖时薄片", 40, "凝固的、记录时间悖论的时空片段。", "传奇", "时空守护者掉落");
-            
-            default:
-                return new MaterialData(type, type.ToString(), 0, "未知材料", "未知", "未知");
-        }
+        var gd = MaterialDatabase.GetMaterialData(type);
+        return new MaterialData(gd.type, gd.name, gd.value, gd.description, gd.rarity, gd.obtainMethod);
     }
 
     public void DisplayInventory()
@@ -1380,33 +1321,7 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
         return available;
     }
 
-    private void PlayAudioViaReflection(string methodName)
-    {
-        try
-        {
-            var audioManagerType = System.Reflection.Assembly.GetExecutingAssembly().GetType("AudioManager");
-            if (audioManagerType != null)
-            {
-                var instanceProperty = audioManagerType.GetProperty("Instance");
-                if (instanceProperty != null)
-                {
-                    var audioManagerInstance = instanceProperty.GetValue(null);
-                    if (audioManagerInstance != null)
-                    {
-                        var method = audioManagerType.GetMethod(methodName);
-                        if (method != null)
-                        {
-                            method.Invoke(audioManagerInstance, null);
-                        }
-                    }
-                }
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning($"无法播放音效 {methodName}: " + e.Message);
-        }
-    }
+    // 音频播放已迁移至 GlobalEventManager.RequestAudio 事件驱动模式
     
     // 用于更新炼金成功率加成
     public void UpdateSuccessRateBonus(float bonus)

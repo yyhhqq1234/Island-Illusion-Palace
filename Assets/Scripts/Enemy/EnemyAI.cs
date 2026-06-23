@@ -5,7 +5,7 @@ using System.Collections.Generic;
 /// 敌人AI控制器 - 组件化架构的协调器
 /// 保留嵌套枚举以向后兼容，内部逻辑委托给各个子组件
 /// </summary>
-public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
+public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider, IDieHandler
 {
     // ==================== 嵌套枚举（向后兼容） ====================
     public enum EnemyType
@@ -389,6 +389,10 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
     }
 
     /// <summary>
+    /// 死亡处理（IDieHandler 事件驱动接口）
+    /// </summary>
+    public void OnDie() => Die();
+
     /// 死亡处理
     /// </summary>
     public void Die()
@@ -403,10 +407,7 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider
 
         animationComponent?.TriggerDeath();
 
-        if (BattleEventManager.Instance != null)
-        {
-            BattleEventManager.Instance.TriggerEnemyDefeated(gameObject);
-        }
+        GlobalEventManager.Instance.TriggerEnemyDefeated(gameObject);
 
         // 掉落由组件处理
         lootComponent?.HandleLoot(enemyType, enemyQuality);

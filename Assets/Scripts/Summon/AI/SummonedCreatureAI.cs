@@ -11,7 +11,7 @@ using System.Collections.Generic;
 [RequireComponent(typeof(SummonMovementComponent))]
 [RequireComponent(typeof(SummonCombatComponent))]
 [RequireComponent(typeof(SummonStateComponent))]
-public class SummonedCreatureAI : MonoBehaviour
+public class SummonedCreatureAI : MonoBehaviour, IDieHandler
 {
     // 常量
     private const float MIN_VELOCITY_THRESHOLD = 0.1f;
@@ -437,25 +437,7 @@ public class SummonedCreatureAI : MonoBehaviour
 
     float GetBaseHealthForType(CreatureType type)
     {
-        return type switch
-        {
-            CreatureType.CorruptedVillager => 60f,
-            CreatureType.CrystalLizard => 45f,
-            CreatureType.SwampStalker => 80f,
-            CreatureType.IceWolf => 55f,
-            CreatureType.MechanicalDebris => 70f,
-            CreatureType.SkeletonWarrior => 40f,
-            CreatureType.Wraith => 45f,
-            CreatureType.Gargoyle => 110f,
-            CreatureType.SoulEater => 180f,
-            CreatureType.LavaElemental => 240f,
-            CreatureType.MechanicalConstruct => 300f,
-            CreatureType.TimeGuardian => 350f,
-            CreatureType.MemoryGuardian => 400f,
-            CreatureType.CorruptionGuardian => 600f,
-            CreatureType.ScarletSoulShana => 1000f,
-            _ => 50f
-        };
+        return CreatureStatsDatabase.GetBaseHealthForType(type);
     }
 
     void HandleHealthRegen()
@@ -606,6 +588,10 @@ public class SummonedCreatureAI : MonoBehaviour
     }
 
     /// <summary>
+    /// 死亡处理（IDieHandler 事件驱动接口）
+    /// </summary>
+    public void OnDie() => Die();
+
     /// 死亡处理
     /// </summary>
     public void Die()

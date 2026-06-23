@@ -195,3 +195,17 @@ BurdenLevel CalculateBurdenLevel(float burden)
 ```
 
 当负担等级变化时（通过 `OnBurdenChanged` 事件），如果当前状态是探索状态，会自动切换到对应等级的探索音乐。
+
+---
+**代码实现状态 (2026-06-23)**
+
+| 模块 | 状态 | 说明 |
+|------|------|------|
+| 音乐系统架构(3音源) | ✅ 已完成 | `GameplayAudioManager.cs` music/SFX/UI 三音源 |
+| 按地图类型切换音乐 | ✅ 已完成 | 12+地图类型→MapMusicConfig 映射 |
+| 负担等级联动(三段) | ✅ 已完成 | BurdenLevel Low/Medium/High 对应不同音乐 |
+| 战斗/探索/营火状态 | ✅ 已完成 | MusicState: Battle/Exploration/Camp/Boss |
+| 安全区覆盖Boss范围 | ✅ 已完成 | 安全区 > Boss > 战斗 > 探索 优先级 |
+| 事件驱动切换 | ✅ 已完成 | OnMapTypeChanged + OnBurdenChanged + OnMusicStateChange |
+| 26个音频文件引用 | ✅ 已完成 | `ResourceManager.cs` 音乐路径配置 |
+| MapType→MusicType转换 | ✅ 已完成 | `IntegratedMapSystem.cs` 映射 |

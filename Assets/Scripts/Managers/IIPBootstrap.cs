@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 ///
 /// 调用方式（任意脚本）：
 ///   IIPBootstrap.Events.TriggerBattleStart(enemy);
-///   IIPBootstrap.SwitchToScene("GamePlay");
+///   IIPBootstrap.SwitchToScene("Forest");
 ///   IIPBootstrap.Audio.PlayClick();
 /// </summary>
 [DefaultExecutionOrder(-1000)]
@@ -65,12 +65,11 @@ public class IIPBootstrap : MonoBehaviour
     // ── 确保所有跨场景 Singleton 存在 ──
     private static void EnsureSingletons()
     {
-        // 这四行会在首次访问时自动创建 + DontDestroyOnLoad
-        var evts  = GlobalEventManager.Instance;
-        var batEv = BattleEventManager.Instance;
-        var aud   = GameplayAudioManager.Instance;
+        // 首次访问时自动创建 + DontDestroyOnLoad
+        var evts = GlobalEventManager.Instance;
+        var aud  = GameplayAudioManager.Instance;
 
-        Debug.Log($"[IIPBootstrap] 全局管理器就绪 — Events:{evts != null} Battle:{batEv != null} Audio:{aud != null}");
+        Debug.Log($"[IIPBootstrap] 全局管理器就绪 — Events:{evts != null} Audio:{aud != null}");
     }
 
     // ── Editor 快速创建 Bootstrap ──

@@ -43,6 +43,11 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     private bool summonWheelActive = false;
 
+    // ── 缓存引用（避免每帧 FindObjectOfType） ──
+    private InventoryUI cachedInventoryUI;
+    private AlchemyUI cachedAlchemyUI;
+    private PauseMenu cachedPauseMenu;
+
     void Start()
     {
         // 初始化组件引用
@@ -68,13 +73,18 @@ public class PlayerController : MonoBehaviour, IDashProvider
         {
             inventorySystem = GetComponent<InventorySystem>() ?? transform.Find("Inventory")?.GetComponent<InventorySystem>();
         }
-        
+
+        // 缓存 UI 引用（一次性查找）
+        cachedInventoryUI = FindObjectOfType<InventoryUI>();
+        cachedAlchemyUI = FindObjectOfType<AlchemyUI>();
+        cachedPauseMenu = FindObjectOfType<PauseMenu>();
+
         // 初始化方向
         currentDirection = targetDirection = Vector2.down;
-        
+
         // 设置玩家初始大小
         transform.localScale = Vector3.one * scaleMultiplier;
-        
+
         // 验证关键组件
         if (rb == null)
         {
@@ -84,21 +94,19 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     void Update()
     {
-        if (PauseMenu.Instance != null && PauseMenu.Instance.IsPaused())
+        if (cachedPauseMenu != null && cachedPauseMenu.IsPaused())
         {
             return;
         }
 
-        // 检查背包是否打开
-        InventoryUI inventoryUI = FindObjectOfType<InventoryUI>();
-        if (inventoryUI != null && inventoryUI.IsInventoryOpen())
+        // 检查背包是否打开（使用缓存引用）
+        if (cachedInventoryUI != null && cachedInventoryUI.IsInventoryOpen())
         {
             return;
         }
 
-        // 检查炼金界面是否打开
-        AlchemyUI alchemyUI = FindObjectOfType<AlchemyUI>();
-        if (alchemyUI != null && alchemyUI.IsAlchemyPanelOpen())
+        // 检查炼金界面是否打开（使用缓存引用）
+        if (cachedAlchemyUI != null && cachedAlchemyUI.IsAlchemyPanelOpen())
         {
             return;
         }
@@ -172,25 +180,25 @@ public class PlayerController : MonoBehaviour, IDashProvider
     {
         float horizontal = 0f;
         float vertical = 0f;
-        
-        if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) vertical = 1f;
-        else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) vertical = -1f;
-        
-        if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) horizontal = 1f;
-        else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) horizontal = -1f;
-        
+
+        if (Input.GetKey(IIPConstants.KeyMoveUp) || Input.GetKey(IIPConstants.KeyMoveUpAlt)) vertical = 1f;
+        else if (Input.GetKey(IIPConstants.KeyMoveDown) || Input.GetKey(IIPConstants.KeyMoveDownAlt)) vertical = -1f;
+
+        if (Input.GetKey(IIPConstants.KeyMoveRight) || Input.GetKey(IIPConstants.KeyMoveRightAlt)) horizontal = 1f;
+        else if (Input.GetKey(IIPConstants.KeyMoveLeft) || Input.GetKey(IIPConstants.KeyMoveLeftAlt)) horizontal = -1f;
+
         movement = new Vector2(horizontal, vertical);
         isMoving = movement.magnitude > 0.1f;
     }
 
     void HandleRunInput()
     {
-        isRunning = (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && isMoving && !isDashing;
+        isRunning = (Input.GetKey(IIPConstants.KeyRun) || Input.GetKey(IIPConstants.KeyRunAlt)) && isMoving && !isDashing;
     }
 
     void HandleDashInput()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && !isDashing && dashCooldownTimer <= 0 && isMoving)
+        if (Input.GetKeyDown(IIPConstants.KeyDash) && !isDashing && dashCooldownTimer <= 0 && isMoving)
         {
             StartDash();
         }
@@ -198,17 +206,17 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     void HandleInteractionInput()
     {
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(IIPConstants.KeyInteract))
         {
             TryInteract();
         }
-        
-        if (Input.GetKeyDown(KeyCode.I))
+
+        if (Input.GetKeyDown(IIPConstants.KeyInventory))
         {
             OpenInventory();
         }
     }
-    
+
     void OpenInventory()
     {
         if (inventorySystem != null)
@@ -224,7 +232,7 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     void HandleSummonWheelInput()
     {
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(IIPConstants.KeySummonWheel))
         {
             summonWheelActive = true;
             if (summonWheelUI != null)
@@ -234,7 +242,7 @@ public class PlayerController : MonoBehaviour, IDashProvider
             }
         }
 
-        if (Input.GetKeyUp(KeyCode.R) && summonWheelActive)
+        if (Input.GetKeyUp(IIPConstants.KeySummonWheel) && summonWheelActive)
         {
             summonWheelActive = false;
             if (summonWheelUI != null)
@@ -269,7 +277,7 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     void HandleQuickSummonInput()
     {
-        if (Input.GetKeyDown(KeyCode.G))
+        if (Input.GetKeyDown(IIPConstants.KeyQuickSummon))
         {
             if (summonSystem != null)
             {
@@ -280,7 +288,7 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     void HandleRecallAllInput()
     {
-        if (Input.GetKeyDown(KeyCode.LeftAlt) || Input.GetKeyDown(KeyCode.RightAlt))
+        if (Input.GetKeyDown(IIPConstants.KeyRecallAll) || Input.GetKeyDown(IIPConstants.KeyRecallAllAlt))
         {
             if (summonSystem != null)
             {
@@ -291,15 +299,15 @@ public class PlayerController : MonoBehaviour, IDashProvider
 
     void HandleQuickItemInput()
     {
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        if (Input.GetKeyDown(IIPConstants.KeyQuickItem1))
         {
             UseQuickItem(0);
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha2))
+        else if (Input.GetKeyDown(IIPConstants.KeyQuickItem2))
         {
             UseQuickItem(1);
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha3))
+        else if (Input.GetKeyDown(IIPConstants.KeyQuickItem3))
         {
             UseQuickItem(2);
         }

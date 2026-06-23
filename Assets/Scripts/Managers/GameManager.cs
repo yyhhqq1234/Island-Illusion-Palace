@@ -43,19 +43,10 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    void EnsureBattleEventManager()
+    void EnsureGlobalEventManager()
     {
-        if (BattleEventManager.Instance == null)
-        {
-            if (battleSystem != null)
-            {
-                return;
-            }
-
-            GameObject battleEventObj = new GameObject("BattleEventManager");
-            battleEventObj.AddComponent<BattleEventManager>();
-            Debug.Log("创建了临时的BattleEventManager");
-        }
+        // GlobalEventManager 通过 Instance getter 自动创建，无需手动确保
+        _ = GlobalEventManager.Instance;
     }
 
     void InitializeSystems()
@@ -84,23 +75,22 @@ public class GameManager : MonoBehaviour
         if (alchemySystem == null)
             alchemySystem = FindObjectOfType<AlchemySystem>();
 
-        EnsureBattleEventManager();
+        EnsureGlobalEventManager();
 
         systemsInitialized = playerHealth != null &&
                            playerBurden != null &&
                            battleSystem != null &&
                            summonSystem != null &&
-                           alchemySystem != null &&
-                           BattleEventManager.Instance != null;
+                           alchemySystem != null;
 
         if (systemsInitialized)
         {
             Debug.Log("所有系统初始化完成！");
 
-            BattleEventManager.Instance.onEnemyDefeated += OnEnemyDefeated;
-            BattleEventManager.Instance.onDamageDealt += OnDamageDealt;
-            BattleEventManager.Instance.onDamageTaken += OnDamageTaken;
-            BattleEventManager.Instance.onPlayerDeath += OnPlayerDeath;
+            GlobalEventManager.Instance.OnEnemyDefeated += OnEnemyDefeated;
+            GlobalEventManager.Instance.OnDamageDealt += OnDamageDealt;
+            GlobalEventManager.Instance.OnDamageTaken += OnDamageTaken;
+            GlobalEventManager.Instance.OnPlayerDeath += OnPlayerDeath;
         }
         else
         {
@@ -158,28 +148,7 @@ public class GameManager : MonoBehaviour
 
     string GetMaterialName(MaterialTypeEnum typeEnum)
     {
-        switch (typeEnum)
-        {
-            case MaterialTypeEnum.SoulDust: return "灵魂微尘";
-            case MaterialTypeEnum.PurifyingSalt: return "净化盐晶";
-            case MaterialTypeEnum.CloudyDew: return "浑浊露珠";
-            case MaterialTypeEnum.StarlightGrass: return "星光草";
-            case MaterialTypeEnum.BoneFragments: return "碎骨";
-            case MaterialTypeEnum.MoonlightFlower: return "月影花";
-            case MaterialTypeEnum.SoulEssence: return "灵魂精华";
-            case MaterialTypeEnum.MechCore: return "机械核心";
-            case MaterialTypeEnum.TimeFragment: return "时空碎片";
-            case MaterialTypeEnum.SoulCrystal: return "灵魂结晶";
-            case MaterialTypeEnum.MemoryResidue: return "记忆残渣";
-            case MaterialTypeEnum.RustedParts: return "锈蚀零件";
-            case MaterialTypeEnum.AncientRuneStone: return "远古铭文石";
-            case MaterialTypeEnum.CrystalizedCore: return "晶化残核";
-            case MaterialTypeEnum.LavaCore: return "熔岩核心";
-            case MaterialTypeEnum.AncientTreeResin: return "古树树脂";
-            case MaterialTypeEnum.ParadoxShard: return "悖时薄片";
-            case MaterialTypeEnum.LeylineCrystal: return "地脉结晶";
-            default: return typeEnum.ToString();
-        }
+        return MaterialDatabase.GetMaterialName(typeEnum);
     }
 
     IEnumerator RunSystemTests()
@@ -307,12 +276,9 @@ public class GameManager : MonoBehaviour
 
     void OnDestroy()
     {
-        if (BattleEventManager.Instance != null)
-        {
-            BattleEventManager.Instance.onEnemyDefeated -= OnEnemyDefeated;
-            BattleEventManager.Instance.onDamageDealt -= OnDamageDealt;
-            BattleEventManager.Instance.onDamageTaken -= OnDamageTaken;
-            BattleEventManager.Instance.onPlayerDeath -= OnPlayerDeath;
-        }
+        GlobalEventManager.Instance.OnEnemyDefeated -= OnEnemyDefeated;
+        GlobalEventManager.Instance.OnDamageDealt -= OnDamageDealt;
+        GlobalEventManager.Instance.OnDamageTaken -= OnDamageTaken;
+        GlobalEventManager.Instance.OnPlayerDeath -= OnPlayerDeath;
     }
 }

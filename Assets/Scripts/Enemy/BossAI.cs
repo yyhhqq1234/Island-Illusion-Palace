@@ -432,10 +432,7 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
         }
 
         // 触发BOSS击败事件
-        if (BattleEventManager.Instance != null)
-        {
-            BattleEventManager.Instance.TriggerBossDefeated(gameObject);
-        }
+        GlobalEventManager.Instance.TriggerBossDefeated(gameObject);
 
         // 销毁BOSS
         Destroy(gameObject, 2f);

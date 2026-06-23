@@ -69,8 +69,7 @@ public class TimeGuardianBoss : BossAI
     protected override void Die()
     {
         Debug.Log("[时空守护者] 被击败，时空屏障瓦解...");
-        if (BattleEventManager.Instance != null)
-            BattleEventManager.Instance.TriggerBossDefeated(gameObject);
+        GlobalEventManager.Instance.TriggerBossDefeated(gameObject);
         base.Die();
     }
 

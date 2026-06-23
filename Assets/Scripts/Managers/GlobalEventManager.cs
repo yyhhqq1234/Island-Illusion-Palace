@@ -4,7 +4,7 @@ using System;
 /// <summary>
 /// 负担等级枚举（供事件驱动架构使用）
 /// </summary>
-public enum BurdenLevel { Normal, High, Critical }
+public enum GlobalBurdenLevel { Normal, High, Critical }
 
 /// <summary>
 /// 全局事件管理器 — Singleton + DontDestroyOnLoad
@@ -94,12 +94,12 @@ public class GlobalEventManager : MonoBehaviour
     public event Action OnBurdenCleared;     // 营火清零
 
     // 负担等级变化事件（替代各系统直接查询 BurdenSystem）
-    public event Action<BurdenLevel> OnBurdenLevelChanged;
+    public event Action<GlobalBurdenLevel> OnGlobalBurdenLevelChanged;
 
     public void TriggerBurdenChanged(float current) => OnBurdenChanged?.Invoke(current);
-    public void TriggerBurdenLevelChanged(BurdenLevel level) => OnBurdenLevelChanged?.Invoke(level);
+    public void TriggerGlobalBurdenLevelChanged(GlobalBurdenLevel level) => OnGlobalBurdenLevelChanged?.Invoke(level);
 
-    private float _lastBurdenLevel = -1f;
+    private float _lastGlobalBurdenLevel = -1f;
     public void CheckBurdenThresholds(float currentBurden)
     {
         OnBurdenChanged?.Invoke(currentBurden);
@@ -107,13 +107,13 @@ public class GlobalEventManager : MonoBehaviour
         int level = currentBurden >= IIPConstants.BurdenCriticalThreshold ? 2
                   : currentBurden >= IIPConstants.BurdenHighThreshold      ? 1 : 0;
 
-        if (level != _lastBurdenLevel)
+        if (level != _lastGlobalBurdenLevel)
         {
             if (level >= 2)      OnBurdenCritical?.Invoke();
             else if (level >= 1) OnBurdenHigh?.Invoke();
-            else if (_lastBurdenLevel > 0) OnBurdenCleared?.Invoke();
+            else if (_lastGlobalBurdenLevel > 0) OnBurdenCleared?.Invoke();
         }
-        _lastBurdenLevel = level;
+        _lastGlobalBurdenLevel = level;
     }
 
     // ═══════════════════════════════════════════
@@ -161,6 +161,20 @@ public class GlobalEventManager : MonoBehaviour
         => OnRiftPreviewTimeout?.Invoke(selected);
     public void TriggerRiftPreviewCancelled()
         => OnRiftPreviewCancelled?.Invoke();
+
+    // ═══════════════════════════════════════════
+    // 音效请求（替代反射调用 AudioManager）
+    // ═══════════════════════════════════════════
+    public event Action<string> OnAudioRequested;  // 方法名参数
+
+    public void RequestAudio(string audioMethodName) => OnAudioRequested?.Invoke(audioMethodName);
+
+    // ═══════════════════════════════════════════
+    // 实体死亡（替代 HealthSystem 直接 GetComponent）
+    // ═══════════════════════════════════════════
+    public event Action<GameObject> OnEntityDied;
+
+    public void TriggerEntityDied(GameObject entity) => OnEntityDied?.Invoke(entity);
 
     // ═══════════════════════════════════════════
     // 营火存档（P0）

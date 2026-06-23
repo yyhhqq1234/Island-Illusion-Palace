@@ -159,15 +159,15 @@ public class BurdenSystem : MonoBehaviour, IBurdenProvider
         }
 
         // 广播负担等级变化事件
-        BurdenLevel newLevel = GetCurrentBurdenLevel();
-        GlobalEventManager.Instance.TriggerBurdenLevelChanged(newLevel);
+        GlobalBurdenLevel newLevel = GetCurrentGlobalBurdenLevel();
+        GlobalEventManager.Instance.TriggerGlobalBurdenLevelChanged(newLevel);
     }
 
-    public BurdenLevel GetCurrentBurdenLevel()
+    public GlobalBurdenLevel GetCurrentGlobalBurdenLevel()
     {
-        if (currentBurden >= criticalBurdenThreshold) return BurdenLevel.Critical;
-        if (currentBurden >= highBurdenThreshold) return BurdenLevel.High;
-        return BurdenLevel.Normal;
+        if (currentBurden >= criticalBurdenThreshold) return GlobalBurdenLevel.Critical;
+        if (currentBurden >= highBurdenThreshold) return GlobalBurdenLevel.High;
+        return GlobalBurdenLevel.Normal;
     }
 
     void ApplyBurdenEffects()

@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
+[System.Obsolete("请使用 GlobalEventManager 替代 BattleEventManager。此模块保留向后兼容，将在后续版本移除。")]
 public class BattleEventManager : MonoBehaviour
 {
     public static BattleEventManager Instance { get; private set; }

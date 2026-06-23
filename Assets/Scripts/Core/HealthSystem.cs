@@ -95,39 +95,31 @@ public class HealthSystem : MonoBehaviour, IHealthProvider
         Debug.Log(gameObject.name + " 死亡！");
         onDeath?.Invoke();
 
+        // 通过事件驱动音效播放（替代反射调用不存在的 AudioManager）
         if (CompareTag("Player"))
         {
-            try
-            {
-                var audioManagerType = System.Reflection.Assembly.GetExecutingAssembly().GetType("AudioManager");
-                var instance = audioManagerType?.GetProperty("Instance")?.GetValue(null);
-                audioManagerType?.GetMethod("PlayPlayerDeath")?.Invoke(instance, null);
-            }
-            catch { }
+            GlobalEventManager.Instance.RequestAudio("PlayPlayerDeath");
         }
 
-        // 调用EnemyAI的Die方法
-        var enemyAI = GetComponent<EnemyAI>();
-        if (enemyAI != null)
+        // 通过 IDieHandler 接口解耦（替代直接 GetComponent<EnemyAI/SummonedCreatureAI>）
+        var dieHandler = GetComponent<IDieHandler>();
+        if (dieHandler != null)
         {
-            enemyAI.Die();
+            dieHandler.OnDie();
         }
-        
-        // 调用SummonedCreatureAI的Die方法
-        var summonAI = GetComponent<SummonedCreatureAI>();
-        if (summonAI != null)
+        else
         {
-            summonAI.Die();
+            Debug.LogWarning($"[HealthSystem] {gameObject.name} 没有实现 IDieHandler，无法处理死亡逻辑");
         }
-        
+
+        // 广播实体死亡事件（供其他系统订阅）
+        GlobalEventManager.Instance.TriggerEntityDied(gameObject);
+
         if (CompareTag("Player"))
         {
-            // 触发玩家死亡事件
-            if (BattleEventManager.Instance != null)
-            {
-                BattleEventManager.Instance.TriggerPlayerDeath();
-            }
-            
+            // 触发玩家死亡事件（替代 BattleEventManager）
+            GlobalEventManager.Instance.TriggerPlayerDeath();
+
             // 死亡时重置负担
             var burdenSystem = GetComponent<BurdenSystem>();
             if (burdenSystem != null)

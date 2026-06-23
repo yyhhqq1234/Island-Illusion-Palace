@@ -295,25 +295,7 @@ public class SummonSystem : MonoBehaviour, ISummonService
 
     float GetBaseHealthForType(CreatureType type)
     {
-        return type switch
-        {
-            CreatureType.CorruptedVillager => 60f,
-            CreatureType.CrystalLizard => 45f,
-            CreatureType.SwampStalker => 80f,
-            CreatureType.IceWolf => 55f,
-            CreatureType.MechanicalDebris => 70f,
-            CreatureType.SkeletonWarrior => 40f,
-            CreatureType.Wraith => 45f,
-            CreatureType.Gargoyle => 110f,
-            CreatureType.SoulEater => 180f,
-            CreatureType.LavaElemental => 240f,
-            CreatureType.MechanicalConstruct => 300f,
-            CreatureType.TimeGuardian => 350f,
-            CreatureType.MemoryGuardian => 400f,
-            CreatureType.CorruptionGuardian => 600f,
-            CreatureType.ScarletSoulShana => 1000f,
-            _ => 50f
-        };
+        return CreatureStatsDatabase.GetBaseHealthForType(type);
     }
 
     void ApplyMemoryFragmentEffects(GameObject creature, SummonedCreatureAI summonAI)

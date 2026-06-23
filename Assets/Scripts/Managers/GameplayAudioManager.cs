@@ -155,32 +155,38 @@ public class GameplayAudioManager : MonoBehaviour
     void OnEnable()
     {
         var e = GlobalEventManager.Instance;
-        if (e != null)
-        {
-            e.OnSceneDidLoad += OnSceneChanged;
-            e.OnMapTypeChanged += OnMapTypeChanged;
-            e.OnMusicStateChange += OnMusicStateChange;
-            e.OnBurdenChanged += OnBurdenChanged;
-            e.OnPlayerEnterSafeZone += _ => GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Camp);
-            e.OnPlayerExitSafeZone += _ => GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
-            e.OnBattleStart += OnBattleStart;
-            e.OnBattleEnd += OnBattleEnd;
-            e.OnBossEncounter += OnBossEncounter;
-        }
+        e.OnSceneDidLoad += OnSceneChanged;
+        e.OnMapTypeChanged += OnMapTypeChanged;
+        e.OnMusicStateChange += OnMusicStateChange;
+        e.OnBurdenChanged += OnBurdenChanged;
+        e.OnPlayerEnterSafeZone += OnPlayerEnterSafeZoneHandler;
+        e.OnPlayerExitSafeZone += OnPlayerExitSafeZoneHandler;
+        e.OnBattleStart += OnBattleStart;
+        e.OnBattleEnd += OnBattleEnd;
+        e.OnBossEncounter += OnBossEncounter;
+        e.OnAudioRequested += OnAudioRequested;
     }
 
     void OnDisable()
     {
-        if (GlobalEventManager.Instance == null) return;
         var e = GlobalEventManager.Instance;
+        e.OnAudioRequested -= OnAudioRequested;
         e.OnSceneDidLoad -= OnSceneChanged;
         e.OnMapTypeChanged -= OnMapTypeChanged;
         e.OnMusicStateChange -= OnMusicStateChange;
         e.OnBurdenChanged -= OnBurdenChanged;
+        e.OnPlayerEnterSafeZone -= OnPlayerEnterSafeZoneHandler;
+        e.OnPlayerExitSafeZone -= OnPlayerExitSafeZoneHandler;
         e.OnBattleStart -= OnBattleStart;
         e.OnBattleEnd -= OnBattleEnd;
         e.OnBossEncounter -= OnBossEncounter;
     }
+
+    void OnPlayerEnterSafeZoneHandler(GameObject _) =>
+        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Camp);
+
+    void OnPlayerExitSafeZoneHandler(GameObject _) =>
+        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
 
     void OnMapTypeChanged(GameSystems.MapMusicType mapType)
     {
@@ -582,5 +588,30 @@ public class GameplayAudioManager : MonoBehaviour
             yield return null;
         }
         musicSource.volume = musicVolume * masterVolume;
+    }
+
+    // ═══════════════════════════════════════════
+    // 事件驱动音效播放（替代反射调用）
+    // ═══════════════════════════════════════════
+    void OnAudioRequested(string methodName)
+    {
+        switch (methodName)
+        {
+            case "PlayPlayerDeath":
+                // TODO: 实现玩家死亡音效
+                Debug.Log("[AudioManager] 请求播放: PlayPlayerDeath");
+                break;
+            case "PlayAlchemySuccess":
+                // TODO: 实现炼金成功音效
+                Debug.Log("[AudioManager] 请求播放: PlayAlchemySuccess");
+                break;
+            case "PlayAlchemyFail":
+                // TODO: 实现炼金失败音效
+                Debug.Log("[AudioManager] 请求播放: PlayAlchemyFail");
+                break;
+            default:
+                Debug.LogWarning($"[AudioManager] 未知音频请求: {methodName}");
+                break;
+        }
     }
 }
