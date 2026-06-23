@@ -529,6 +529,7 @@ Transform:
   - {fileID: 4075962957882556648}
   - {fileID: 8938347091204747595}
   - {fileID: 4548344852910717442}
+  - {fileID: 7326794262398010294}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!156049354 &6409833849754932922
@@ -556,7 +557,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   timeGuardianPrefab: {fileID: 190815862091450509, guid: 1673109568e0c01448e2df193d6c92a2, type: 3}
-  bossSpawnPoint: {fileID: 0}
+  bossSpawnPoint: {fileID: 7326794262398010294}
   timePortalPrefab: {fileID: 6820917116793413281, guid: b211971ef879c0c44ae3541927d07e3a, type: 3}
   treasureChestPrefab: {fileID: 0}
   spawnPortalOnDefeat: 1
@@ -1820,6 +1821,37 @@ CompositeCollider2D:
   m_OffsetDistance: 0.00005
   m_UseDelaunayMesh: 0
   m_CompositeGameObject: {fileID: 4036877081738663860}
+--- !u!1 &5190861652088173081
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7326794262398010294}
+  m_Layer: 0
+  m_Name: SpawnPoint1 (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7326794262398010294
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5190861652088173081}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 19, y: 13, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 0}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8571286008715916612}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8176851974692553759
 GameObject:
   m_ObjectHideFlags: 0

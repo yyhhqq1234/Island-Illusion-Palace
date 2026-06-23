@@ -940,11 +940,7 @@ MonoBehaviour:
   currentMapType: 1
   seed: -1
   currentCycle: 1
-  timeGuardianPrefab: {fileID: 0}
   bossRoomPrefab: {fileID: 0}
-  timePortalPrefab: {fileID: 6820917116793413281, guid: b211971ef879c0c44ae3541927d07e3a, type: 3}
-  timeRiftPrefab: {fileID: 3925113783251185547, guid: 201d813e159669a40b706d2723992b29, type: 3}
-  treasureChestPrefab: {fileID: 0}
   mapPrefabsByType:
     forest:
       safeRoomPrefab: {fileID: 8383670886340513263, guid: 1ec5b2d11c962d943ad6d624acd81baa, type: 3}
@@ -3080,28 +3076,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72ece51f2901e7445ab60da3685d6b5f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_ShowDebugText: 0
-  m_ShowCameraFrustum: 1
-  m_IgnoreTimeScale: 0
-  m_WorldUpOverride: {fileID: 0}
-  m_UpdateMethod: 2
-  m_BlendUpdateMethod: 1
-  m_DefaultBlend:
-    m_Style: 1
-    m_Time: 2
-    m_CustomCurve:
+  ShowDebugText: 0
+  ShowCameraFrustum: 1
+  IgnoreTimeScale: 0
+  WorldUpOverride: {fileID: 0}
+  ChannelMask: -1
+  UpdateMethod: 2
+  BlendUpdateMethod: 1
+  LensModeOverride:
+    Enabled: 0
+    DefaultMode: 2
+  DefaultBlend:
+    Style: 1
+    Time: 2
+    CustomCurve:
       serializedVersion: 2
       m_Curve: []
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-  m_CustomBlends: {fileID: 0}
-  m_CameraCutEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  m_CameraActivatedEvent:
-    m_PersistentCalls:
-      m_Calls: []
+  CustomBlends: {fileID: 0}
 --- !u!114 &952695444
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6237,14 +6231,14 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 952695447}
-  - {fileID: 1202451562}
-  - {fileID: 209497763}
+  - {fileID: 2027876280}
+  - {fileID: 2018213692}
   - {fileID: 1090978568}
   - {fileID: 610814045}
+  - {fileID: 209497763}
   - {fileID: 362386049}
-  - {fileID: 2018213692}
-  - {fileID: 252873221}
-  - {fileID: 2027876280}
   - {fileID: 149426546}
   - {fileID: 655468980}
+  - {fileID: 252873221}
+  - {fileID: 1202451562}
   - {fileID: 366329834}

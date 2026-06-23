@@ -28,7 +28,7 @@ public enum MapType
     TruthCorridor
 }
 
-public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
+public class IntegratedMapSystem : MonoBehaviour, IMapSystem
 {
     [Header("网格设置")]
     [Tooltip("网格大小（5x5表示25个小地图）")]
@@ -50,28 +50,6 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
     MapType IMapSystem.currentMapType { get => currentMapType; set => currentMapType = value; }
     MapCategory IMapSystem.currentMapCategory { get => currentMapCategory; set => currentMapCategory = value; }
     int IMapSystem.currentCycle { get => currentCycle; set => currentCycle = value; }
-
-    float ITimeRiftProvider.BaseProbability => 0.05f;
-    bool ITimeRiftProvider.IsRiftActive => false;
-    void ITimeRiftProvider.OnRiftEntered(MapType dst) { Debug.Log("Rift teleport to " + dst); }
-
-    [Header("Boss设置")]
-    [Tooltip("时空守护者预制体")]
-    public GameObject timeGuardianPrefab;
-    [Tooltip("Boss房间预制体")]
-    public GameObject bossRoomPrefab;
-
-    [Header("传送门设置")]
-    [Tooltip("时空传送门预制体")]
-    public GameObject timePortalPrefab;
-
-    [Header("时空裂隙设置")]
-    [Tooltip("时空裂隙预制体")]
-    public GameObject timeRiftPrefab;
-
-    [Header("宝箱设置")]
-    [Tooltip("宝箱预制体")]
-    public GameObject treasureChestPrefab;
 
     [Header("地图预制体")]
     [Tooltip("各类型地图的预制体配置")]
@@ -320,7 +298,6 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
                 PlaceMapPrefabAtPosition(pos, resourcePrefabs[Random.Range(0, resourcePrefabs.Count)]);
         }
 
-        GenerateTimeRifts();
         GenerateBoundaryWalls();
 
         Debug.Log("Grid generated: SafeRoom=" + safeRoomPos + ", BossRoom=" + bossRoomPos);
@@ -420,29 +397,6 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         float x = gridPosition.x * mapWidth - gridOffsetX;
         float y = gridPosition.y * mapHeight - gridOffsetY;
         return new Vector3(x, y, 0);
-    }
-
-    public void GenerateTimeRifts()
-    {
-        if (timeRiftPrefab == null) return;
-
-        float baseProb = 0.05f;
-        var bs = FindObjectOfType<BurdenSystem>();
-        if (bs != null)
-        {
-            if (bs.currentBurden > 50) baseProb += 0.10f;
-            if (bs.currentBurden > 70) baseProb += 0.10f;
-        }
-        var mf = FindObjectOfType<MemoryFragmentSystem>();
-        if (mf != null) baseProb += mf.GetFragmentCount() * 0.03f;
-        if (currentCycle >= 2) baseProb += 0.03f;
-
-        if (Random.value <= baseProb)
-        {
-            Vector3 riftPos = new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), 0);
-            Instantiate(timeRiftPrefab, riftPos, Quaternion.identity);
-            Debug.Log("[TimeRift] spawned, prob=" + baseProb);
-        }
     }
 
     public void ClearOldMaps()
