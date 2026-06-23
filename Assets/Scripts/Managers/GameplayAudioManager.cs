@@ -170,6 +170,7 @@ public class GameplayAudioManager : MonoBehaviour
     void OnDisable()
     {
         var e = GlobalEventManager.Instance;
+        if (e == null) return;
         e.OnAudioRequested -= OnAudioRequested;
         e.OnSceneDidLoad -= OnSceneChanged;
         e.OnMapTypeChanged -= OnMapTypeChanged;

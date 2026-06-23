@@ -80,7 +80,7 @@ public class BossRoomManager : MonoBehaviour
         }
     }
 
-    void OnDrawGizmos()
+    void OnDrawGizmosSelected()
     {
         Gizmos.color = bossDefeated ? Color.green : Color.red;
         Vector3 pos = bossSpawnPoint != null ? bossSpawnPoint.position : transform.position;
