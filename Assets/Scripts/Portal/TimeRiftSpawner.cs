@@ -67,7 +67,7 @@ public class TimeRiftSpawner : MonoBehaviour
 
     void Start()
     {
-        mapSystem = FindObjectOfType<IntegratedMapSystem>();
+        mapSystem = PortalUtility.GetMapSystem();
         ResetForNewMap();
     }
 

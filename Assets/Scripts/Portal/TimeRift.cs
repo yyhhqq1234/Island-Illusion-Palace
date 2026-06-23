@@ -58,8 +58,15 @@ public class TimeRift : MonoBehaviour
     {
         if (useProbabilityDestination)
         {
-            var currentMap = GetCurrentMapType();
-            var highDiffMaps = GetAvailableHighDifficultyMaps(currentMap);
+            var currentMap = PortalUtility.GetCurrentMapType();
+            var allHighDiffMaps = MapTypeMetaData.GetHighDifficultyMaps();
+
+            // 过滤掉当前地图类型，避免传送到同一地图
+            var highDiffMaps = new List<MapType>();
+            foreach (var m in allHighDiffMaps)
+            {
+                if (m != currentMap) highDiffMaps.Add(m);
+            }
 
             // 目的地A：80%高难 / 20%记忆
             if (Random.value < highDifficultyChance && highDiffMaps.Count > 0)
@@ -95,32 +102,6 @@ public class TimeRift : MonoBehaviour
         }
 
         Debug.Log($"[时空裂隙] 候选目的地 A={destinationA}, B={destinationB}");
-    }
-
-    List<MapType> GetAvailableHighDifficultyMaps(MapType currentMap)
-    {
-        MapType[] highDiffMaps = {
-            MapType.Volcano,
-            MapType.IceField,
-            MapType.RockLand,
-            MapType.RuinCity,
-            MapType.AncientTemple,
-            MapType.ForgottenManor,
-        };
-
-        var available = new List<MapType>();
-        foreach (var m in highDiffMaps)
-        {
-            if (m != currentMap)
-                available.Add(m);
-        }
-        return available;
-    }
-
-    MapType GetCurrentMapType()
-    {
-        var map = FindObjectOfType<IntegratedMapSystem>();
-        return map != null ? map.currentMapType : MapType.Forest;
     }
 
     void Update()
@@ -263,16 +244,11 @@ public class TimeRift : MonoBehaviour
     }
 
     /// <summary>
-    /// 执行传送
+    /// 执行传送（委托给 PortalUtility）
     /// </summary>
     void TeleportToDestination(MapType destination)
     {
-        var map = FindObjectOfType<IntegratedMapSystem>();
-        if (map != null)
-        {
-            map.SetMapType(destination);
-            map.GenerateNewMap();
-        }
+        PortalUtility.TeleportTo(destination);
         Destroy(gameObject);
     }
 

@@ -555,7 +555,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51985217fa28b1d41a8c147b9f810cf4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  timeGuardianPrefab: {fileID: 0}
+  timeGuardianPrefab: {fileID: 190815862091450509, guid: 1673109568e0c01448e2df193d6c92a2, type: 3}
   bossSpawnPoint: {fileID: 0}
   timePortalPrefab: {fileID: 6820917116793413281, guid: b211971ef879c0c44ae3541927d07e3a, type: 3}
   treasureChestPrefab: {fileID: 0}
