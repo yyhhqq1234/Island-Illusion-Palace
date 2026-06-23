@@ -368,7 +368,8 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem, ITimeRiftProvider
         collider.isTrigger = false;
         collider.size = colliderSize;
 
-        wall.layer = LayerMask.NameToLayer("Wall");
+        int wallLayer = LayerMask.NameToLayer("Wall");
+        wall.layer = wallLayer >= 0 ? wallLayer : LayerMask.NameToLayer("Default");
     }
 
     List<Vector2Int> GetEdgePositions()

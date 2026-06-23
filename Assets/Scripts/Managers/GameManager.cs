@@ -30,12 +30,33 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        InitializeSystems();
+        _ = GlobalEventManager.Instance;
+        StartCoroutine(InitializeSystemsWithRetry());
+    }
 
-        if (enableAutoTesting)
+    /// <summary>
+    /// 延迟初始化：每隔 1 秒重试查找系统组件，最多尝试 30 次。
+    /// Player 可能由 MapGenerator 动态生成，系统组件不一定在 Start 时就存在。
+    /// </summary>
+    IEnumerator InitializeSystemsWithRetry()
+    {
+        int maxAttempts = 30;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            testCoroutine = StartCoroutine(RunSystemTests());
+            if (TryInitializeSystems())
+            {
+                Debug.Log($"[GameManager] 所有系统初始化完成！（尝试次数: {attempt}）");
+                if (enableAutoTesting)
+                    testCoroutine = StartCoroutine(RunSystemTests());
+                yield break;
+            }
+
+            if (attempt == 1)
+                Debug.Log("[GameManager] 系统组件尚未就绪，等待地图生成...");
+            yield return new WaitForSeconds(1f);
         }
+
+        Debug.LogWarning($"[GameManager] 系统初始化超时（{maxAttempts}秒）。部分功能不可用。UI 仍可运行。");
     }
 
     void Update()
@@ -43,27 +64,15 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    void EnsureGlobalEventManager()
-    {
-        // GlobalEventManager 通过 Instance getter 自动创建，无需手动确保
-        _ = GlobalEventManager.Instance;
-    }
-
-    void InitializeSystems()
+    bool TryInitializeSystems()
     {
         if (player == null)
             player = GameObject.FindGameObjectWithTag("Player");
 
-        if (player != null && !player.activeSelf)
-        {
-            player.SetActive(true);
-            Debug.Log("玩家对象已激活");
-        }
-
-        if (playerHealth == null && player != null)
+        if (player != null && playerHealth == null)
             playerHealth = player.GetComponent<HealthSystem>();
 
-        if (playerBurden == null && player != null)
+        if (player != null && playerBurden == null)
             playerBurden = player.GetComponent<BurdenSystem>();
 
         if (battleSystem == null)
@@ -75,9 +84,8 @@ public class GameManager : MonoBehaviour
         if (alchemySystem == null)
             alchemySystem = FindObjectOfType<AlchemySystem>();
 
-        EnsureGlobalEventManager();
-
-        systemsInitialized = playerHealth != null &&
+        systemsInitialized = player != null &&
+                           playerHealth != null &&
                            playerBurden != null &&
                            battleSystem != null &&
                            summonSystem != null &&
@@ -85,17 +93,13 @@ public class GameManager : MonoBehaviour
 
         if (systemsInitialized)
         {
-            Debug.Log("所有系统初始化完成！");
-
             GlobalEventManager.Instance.OnEnemyDefeated += OnEnemyDefeated;
             GlobalEventManager.Instance.OnDamageDealt += OnDamageDealt;
             GlobalEventManager.Instance.OnDamageTaken += OnDamageTaken;
             GlobalEventManager.Instance.OnPlayerDeath += OnPlayerDeath;
         }
-        else
-        {
-            Debug.LogError("系统初始化失败！缺少必要的组件。");
-        }
+
+        return systemsInitialized;
     }
 
     void UpdateUI()

@@ -47,13 +47,13 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
     public float baseDamage = 20f;
     float IWeaponProvider.baseDamage { get => baseDamage; set => baseDamage = value; }
     [HideInInspector]
-    public float attackInterval = 0.833f;
+    public float attackInterval = 0.45f;
     float IWeaponProvider.attackInterval { get => attackInterval; set => attackInterval = value; }
     [Header("自定义攻击间隔")]
     [Tooltip("如果设置为true，将使用自定义的攻击间隔值，而不是武器默认值")]
     public bool useCustomAttackInterval = false;
     [Tooltip("自定义攻击间隔值，当useCustomAttackInterval为true时生效")]
-    public float customAttackInterval = 0.833f;
+    public float customAttackInterval = 0.45f;
     public float attackRange = 2f;
     public DamageType damageType = DamageType.Physical;
     public ElementType weaponElement = ElementType.None;
@@ -87,6 +87,12 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
     public float comboResetTime = 1.5f;
     private float lastAttackTime = 0f;
     private float comboTimer = 0f;
+
+    [Header("输入缓冲")]
+    [Tooltip("缓冲窗口（秒）：冷却期间点击会被缓存，冷却结束后自动触发攻击")]
+    public float inputBufferWindow = 0.3f;
+    private bool attackBuffered = false;
+    private float attackBufferExpireTime = 0f;
 
     [Header("晶能变体")]
     [Tooltip("当前激活的晶能变体类型")]
@@ -210,14 +216,40 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         // 获取当前攻击间隔值（应用晶能变体调整）
         float currentAttackInterval = useCustomAttackInterval ? customAttackInterval : attackInterval;
         currentAttackInterval *= GetCrystalAspectIntervalMultiplier();
-        
-        if (Input.GetMouseButtonDown(0) && Time.time - lastAttackTime >= currentAttackInterval)
+
+        float timeSinceLastAttack = Time.time - lastAttackTime;
+        bool canAttack = timeSinceLastAttack >= currentAttackInterval;
+
+        // 左键：缓冲输入 — 点击后无论是否在冷却都记录意图
+        if (Input.GetMouseButtonDown(0))
         {
-            PrimaryAttack();
-            lastAttackTime = Time.time;
+            if (canAttack)
+            {
+                PrimaryAttack();
+                lastAttackTime = Time.time;
+                attackBuffered = false;
+            }
+            else
+            {
+                // 冷却中，缓冲这次点击
+                attackBuffered = true;
+                attackBufferExpireTime = Time.time + inputBufferWindow;
+            }
         }
 
-        if (Input.GetMouseButtonDown(1) && Time.time - lastAttackTime >= currentAttackInterval)
+        // 消耗缓冲：冷却结束后自动触发
+        if (attackBuffered && canAttack)
+        {
+            if (Time.time <= attackBufferExpireTime)
+            {
+                PrimaryAttack();
+                lastAttackTime = Time.time;
+            }
+            attackBuffered = false;
+        }
+
+        // 右键：保持原有即时检测逻辑
+        if (Input.GetMouseButtonDown(1) && canAttack)
         {
             SecondaryAttack();
             lastAttackTime = Time.time;
@@ -1012,16 +1044,16 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         switch (currentWeaponType)
         {
             case WeaponType.Sword:
-                baseDamage = 25f; attackInterval = 0.833f; attackRange = 2f;
+                baseDamage = 25f; attackInterval = 0.45f; attackRange = 2f;
                 damageType = DamageType.Physical; weaponElement = ElementType.None; break;
             case WeaponType.Staff:
-                baseDamage = 20f; attackInterval = 1.25f; attackRange = 5f;
+                baseDamage = 20f; attackInterval = 0.75f; attackRange = 5f;
                 damageType = DamageType.Magic; weaponElement = ElementType.Soul; break;
             case WeaponType.Scythe:
-                baseDamage = 30f; attackInterval = 1.43f; attackRange = 2.5f;
+                baseDamage = 30f; attackInterval = 0.85f; attackRange = 2.5f;
                 damageType = DamageType.Mixed; weaponElement = ElementType.Soul; break;
             case WeaponType.CrystalArm:
-                baseDamage = 18f; attackInterval = 0.67f; attackRange = 3f;
+                baseDamage = 18f; attackInterval = 0.38f; attackRange = 3f;
                 damageType = DamageType.Mixed; weaponElement = ElementType.Frost; break;
         }
     }

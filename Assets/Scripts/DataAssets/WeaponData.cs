@@ -11,7 +11,7 @@ public class WeaponData : ScriptableObject
 
     public float baseDamageMin = 12f;
     public float baseDamageMax = 15f;
-    public float attackInterval = 0.833f;
+    public float attackInterval = 0.45f;
     public float attackRange = 2f;
     public Sprite icon;
     public Sprite weaponSprite;

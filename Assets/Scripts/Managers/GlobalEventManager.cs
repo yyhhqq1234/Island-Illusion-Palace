@@ -13,22 +13,37 @@ public enum GlobalBurdenLevel { Normal, High, Critical }
 public class GlobalEventManager : MonoBehaviour
 {
     private static GlobalEventManager _instance;
+    private static bool isQuitting = false;
+
     public static GlobalEventManager Instance
     {
         get
         {
+            if (isQuitting) return null;
             if (_instance == null)
             {
                 _instance = FindObjectOfType<GlobalEventManager>();
                 if (_instance == null)
                 {
                     var go = new GameObject("[IIP] GlobalEventManager");
+                    go.hideFlags = HideFlags.HideAndDontSave;
                     _instance = go.AddComponent<GlobalEventManager>();
                     DontDestroyOnLoad(go);
                 }
             }
             return _instance;
         }
+    }
+
+    void OnApplicationQuit()
+    {
+        isQuitting = true;
+    }
+
+    void OnDestroy()
+    {
+        if (_instance == this)
+            _instance = null;
     }
 
     // ═══════════════════════════════════════════
