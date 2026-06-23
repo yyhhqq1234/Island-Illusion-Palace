@@ -15,7 +15,7 @@
 - The `GamePlay` scene is the main gameplay scene (`Assets/Scenes/GamePlay.unity`)
 - The `MainMenu` scene is the title screen (`Assets/Scenes/MainMenu.unity`)
 - Build target: Windows (StandaloneWindows64)
-- Use `manage_editor` MCP tool for play/pause/stop operations
+- Use MCP `cinemachine-*` 工具进行相机控制，`timeline-*` 工具管理动画时间轴
 
 ---
 
@@ -316,8 +316,8 @@ Music:            OnMusicStateChange (MusicState: MainMenu, Exploration, Battle,
 ### Unity 2D Best Practices
 - Always use `Rigidbody2D` + `Collider2D`, control via velocity/forces in `FixedUpdate`
 - Z-axis used only for rendering sorting; set Transparency Sort Mode to Custom Axis (0,1,0)
-- Camera must be Orthographic; use `manage_camera` tool for adjustments
-- Tilemap system preferred for map construction
+- Camera must be Orthographic; use MCP `cinemachine-*` 工具进行相机配置
+- Tilemap system preferred for map construction; use MCP `tilemap-*` 工具进行地图编辑
 
 ### Code Style
 - C# comments in Chinese are acceptable (team is Chinese-speaking)
@@ -326,13 +326,16 @@ Music:            OnMusicStateChange (MusicState: MainMenu, Exploration, Battle,
 - Follow single responsibility: one class = one responsibility
 
 ### MCP Tool Usage (Unity Editor Interaction)
-- Use `mcp_unityMCP_batch_execute` for bulk operations (creating multiple objects, adding components)
-- Use `mcp_unityMCP_find_gameobjects` for searching, `mcp_unityMCP_manage_gameobject` for CRUD
-- Use `mcp_unityMCP_manage_components` for component management
-- Use `mcp_unityMCP_manage_asset` for asset operations
-- Use `mcp_unityMCP_execute_code` for ad-hoc C# code execution in the Editor
-- Never modify scenes during Play Mode
-- Always confirm with user before deleting/overwriting assets
+
+项目通过 [`.mcp.json`](./.mcp.json) 配置了 **AI Game Developer MCP Server** (`gamedev-mcp-server v8.0.1.0`)，地址 `http://localhost:23035`，提供 3 大类 Unity 编辑器工具：
+
+**Tilemap（地图编辑）**：`tilemap-create` / `tilemap-list` / `tilemap-get-tile` / `tilemap-set-tile` / `tilemap-box-fill` / `tilemap-clear` / `tilemap-create-tile-asset` / `tilemap-create-rule-tile` / `tilemap-set-collider-type` / `tilemap-set-orientation` / `tilemap-set-tile-flags`
+
+**Timeline（动画时间轴）**：`timeline-create` / `timeline-list` / `timeline-track-add` / `timeline-track-list` / `timeline-track-remove` / `timeline-track-bind` / `timeline-director-bind` / `timeline-clip-add` / `timeline-clip-move` / `timeline-clip-set-timing` / `timeline-marker-add`
+
+**Cinemachine（虚拟相机）**：`cinemachine-camera-create` / `cinemachine-camera-list` / `cinemachine-camera-get` / `cinemachine-set-body` / `cinemachine-set-aim` / `cinemachine-set-lens` / `cinemachine-set-noise` / `cinemachine-set-priority` / `cinemachine-set-targets` / `cinemachine-brain-ensure` / `cinemachine-add-extension`
+
+> 所有工具前缀为 `mcp_ai-game-developer_*`，由 Trae IDE 自动注册。使用前确保 Unity 编辑器已打开且 MCP Server 正在运行。
 
 ### Design Document Reference
 - All game design documents are in `Assets/I-IP markdown/` — 代码实现阶段视为只读参考；策划迭代阶段通过 AI策划团队 进行修改
