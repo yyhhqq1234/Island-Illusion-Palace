@@ -67,7 +67,24 @@ namespace GameSystems
 
 public class GameplayAudioManager : MonoBehaviour
 {
-    public static GameplayAudioManager Instance { get; private set; }
+    private static GameplayAudioManager _instance;
+    public static GameplayAudioManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindObjectOfType<GameplayAudioManager>();
+                if (_instance == null)
+                {
+                    var go = new GameObject("[IIP] GameplayAudioManager");
+                    _instance = go.AddComponent<GameplayAudioManager>();
+                    DontDestroyOnLoad(go);
+                }
+            }
+            return _instance;
+        }
+    }
 
     [Header("=== 音频源组件 ===")]
     public AudioSource musicSource;
@@ -125,14 +142,14 @@ public class GameplayAudioManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
+        if (_instance == null)
         {
-            Instance = this;
+            _instance = this;
             DontDestroyOnLoad(gameObject);
             InitializeAudioSources();
             InitializeMapType();
         }
-        else if (Instance != this)
+        else if (_instance != this)
         {
             Destroy(gameObject);
         }
@@ -342,7 +359,11 @@ public class GameplayAudioManager : MonoBehaviour
         var config = GetMapConfig(currentMapType);
         if (config != null && config.bossBattleMusic != null)
             return config.bossBattleMusic;
-        return defaultBossBattleMusic;
+        if (defaultBossBattleMusic != null)
+            return defaultBossBattleMusic;
+        // 降级：无 Boss 战斗曲时回退到普通战斗曲
+        Debug.LogWarning($"[AudioManager] Boss战斗曲未配置（Map:{currentMapType}），降级使用普通战斗曲");
+        return GetBattleMusicForCurrentMap();
     }
 
     GameSystems.MapMusicConfig GetMapConfig(GameSystems.MapMusicType mapType)
