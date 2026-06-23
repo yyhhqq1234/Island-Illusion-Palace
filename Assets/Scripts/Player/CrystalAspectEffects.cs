@@ -59,7 +59,7 @@ public class PullEffect : ICrystalAspectEffect
 
     public bool Execute(WeaponSystem ws, float damage)
     {
-        float pullRange = ws.AttackRange * ws.GetCrystalAspectRangeMultiplier();
+        float pullRange = ws.attackRange * ws.GetCrystalAspectRangeMultiplier();
         var hits = ws.FindEnemiesInRange(pullRange);
 
         foreach (var hit in hits)
@@ -113,10 +113,10 @@ public class ResonanceEffect : ICrystalAspectEffect
     /// <summary>计算共鸣伤害倍率</summary>
     public float CalculateMultiplier(WeaponSystem ws)
     {
-        if (!ws.HasCrystalCore || ws.CurrentCrystalAspect != CrystalAspectType.ResonanceCrystal)
+        if (!ws.hasCrystalCore || ws.currentCrystalAspect != CrystalAspectType.ResonanceCrystal)
             return 1f;
 
-        SummonSystem summonSystem = FindObjectOfType<SummonSystem>();
+        SummonSystem summonSystem = Object.FindObjectOfType<SummonSystem>();
         if (summonSystem == null) return 1f;
 
         int activeCount = ws.GetActiveSummonCount(summonSystem);
@@ -151,7 +151,7 @@ public class ReaperEffect : ICrystalAspectEffect
     /// <summary>计算收割后的伤害值</summary>
     public float ApplyBonus(WeaponSystem ws, float damage, EnemyAI enemy)
     {
-        if (!ws.HasCrystalCore || ws.CurrentCrystalAspect != CrystalAspectType.ReaperScythe)
+        if (!ws.hasCrystalCore || ws.currentCrystalAspect != CrystalAspectType.ReaperScythe)
             return damage;
         if (enemy == null) return damage;
 
