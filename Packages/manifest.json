@@ -42,19 +42,27 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0"
+    "com.unity.modules.xr": "1.0.0",
+    "com.ivanmurzak.unity.mcp": "0.82.1",
+    "com.ivanmurzak.unity.mcp.animation": "1.2.21",
+    "com.ivanmurzak.unity.mcp.cinemachine": "1.0.7",
+    "com.ivanmurzak.unity.mcp.tilemap": "1.0.6",
+    "com.ivanmurzak.unity.mcp.timeline": "1.0.7"
   },
   "scopedRegistries": [
     {
       "name": "package.openupm.com",
       "url": "https://package.openupm.com",
       "scopes": [
+        "com.coplaydev.unity-mcp",
         "com.ivanmurzak",
+        "com.ivanmurzak.unity.mcp",
         "extensions.unity",
+        "extensions.unity.playerprefsex",
         "org.nuget.com.ivanmurzak",
         "org.nuget.microsoft",
-        "org.nuget.system",
-        "org.nuget.r3"
+        "org.nuget.r3",
+        "org.nuget.system"
       ]
     }
   ]
