@@ -26,8 +26,12 @@ public class AttackTrigger : MonoBehaviour
 
     private readonly HashSet<GameObject> hitTargets = new();
 
+    /// <summary>是否延迟激活（追踪触发器场景使用，由外部控制判定时机）</summary>
+    [HideInInspector] public bool delayActivation = false;
+
     void Start()
     {
+        if (delayActivation) return; // 由外部协程控制激活时机
         PerformAreaAttack();
         Destroy(gameObject, lifetime);
     }
@@ -108,6 +112,9 @@ public class AttackTrigger : MonoBehaviour
         }
         return false;
     }
+
+    /// <summary>公开入口：供 BossCombatController 延迟激活伤害判定</summary>
+    public void PerformAreaAttackPublic() => PerformAreaAttack();
 
     void ApplyDamageToTarget(GameObject target, HealthSystem targetHealth)
     {

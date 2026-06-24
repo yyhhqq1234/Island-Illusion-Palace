@@ -26,6 +26,10 @@ public class HealthSystem : MonoBehaviour, IHealthProvider
     [Header("防御系统")]
     private float defenseMultiplier = 1f;
 
+    [Header("调试/作弊")]
+    [Tooltip("无敌模式 — F1 切换")]
+    public bool invincible = false;
+
     void Start()
     {
         currentHealth = maxHealth;
@@ -34,17 +38,33 @@ public class HealthSystem : MonoBehaviour, IHealthProvider
         UpdateUI();
     }
 
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            invincible = !invincible;
+            Debug.Log($"[HealthSystem] 无敌模式: {(invincible ? "开启" : "关闭")}");
+        }
+    }
+
     public void TakeDamage(float damage)
     {
-        // 确保伤害不为负数
-        if (damage <= 0) return;
-        
+        if (invincible || damage <= 0) return;
+
         float finalDamage = damage * defenseMultiplier;
         currentHealth = Mathf.Max(0, currentHealth - finalDamage);
         UpdateUI();
         ApplyHitEffect();
 
         if (currentHealth <= 0 && !IsDead()) Die();
+    }
+
+    /// <summary>右键菜单切换无敌</summary>
+    [ContextMenu("切换无敌模式")]
+    void ToggleInvincible()
+    {
+        invincible = !invincible;
+        Debug.Log($"[HealthSystem] 无敌模式: {(invincible ? "ON" : "OFF")}");
     }
 
     void ApplyHitEffect()

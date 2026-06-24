@@ -19,7 +19,7 @@ public enum BossPhase { Phase1, Phase2, Phase3, Enraged }
 /// - IEnemyProvider: damage/isBerserk/EnterBerserkState/TakeDamage
 /// - IBossPhaseProvider: currentPhase/UpdatePhase/OnPhaseTransition/AddAttackPattern/SwitchWeakness/ShowPhaseChangeEffect
 /// </summary>
-public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
+public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider, IDieHandler
 {
     // ═══════════════════════════════════════════
     // 接口实现 (IEnemyProvider)
@@ -37,6 +37,12 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
     BossPhase IBossPhaseProvider.currentPhase { get => currentPhase; set => currentPhase = value; }
 
     // ═══════════════════════════════════════════
+    // 接口实现 (IDieHandler)
+    // ═══════════════════════════════════════════
+
+    void IDieHandler.OnDie() => Die();
+
+    // ═══════════════════════════════════════════
     // BOSS属性
     // ═══════════════════════════════════════════
 
@@ -51,13 +57,13 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
     public float damage = 20f;
 
     [Tooltip("近战攻击范围")]
-    public float attackRange = 3f;
+    public float attackRange = 2f;
 
     private List<ElementType> weaknesses = new List<ElementType>();
     private List<ElementType> resistances = new List<ElementType>();
 
     [Tooltip("追索范围（进入此范围开始追踪玩家）")]
-    public float chaseRange = 15f;
+    public float chaseRange = 6f;
 
     [Tooltip("基础移动速度")]
     public float moveSpeed = 3f;
@@ -109,7 +115,7 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
     private float invulnerabilityTimer = 0f;
 
     /// <summary>Boss是否已被激活（用于延迟初始化）</summary>
-    protected bool isActivated = false;
+    public bool isActivated = false;
 
     // ═══════════════════════════════════════════
     // 引用
@@ -191,10 +197,11 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
     protected virtual void InitializeReferences()
     {
         rb = GetComponent<Rigidbody2D>();
+        if (rb != null) rb.mass = 5f; // 较重，玩家推动费劲但不会被Boss推动
         if (player == null)
             player = GameObject.FindGameObjectWithTag("Player")?.transform;
-        if (playerHealth == null)
-            playerHealth = FindObjectOfType<HealthSystem>();
+        if (playerHealth == null && player != null)
+            playerHealth = player.GetComponent<HealthSystem>();
         animator = GetComponent<Animator>();
         bossCollider = GetComponent<Collider2D>();
     }
@@ -405,7 +412,15 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
     void PlayHitAnimation()
     {
         if (animator != null)
-            animator.SetTrigger("hit"); // 或 "IsHitHit" 取决于Animator Controller
+            SetAnimatorTriggerSafe(animator, "Hit");
+    }
+
+    /// <summary>安全设置Animator Trigger（参数不存在时静默跳过）</summary>
+    void SetAnimatorTriggerSafe(Animator anim, string paramName)
+    {
+        foreach (var p in anim.parameters)
+            if (p.name == paramName && p.type == AnimatorControllerParameterType.Trigger)
+                { anim.SetTrigger(paramName); return; }
     }
 
     // ═══════════════════════════════════════════
@@ -429,9 +444,9 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
             rb.velocity = Vector2.zero;
         rb.isKinematic = true;
 
-        // 播放死亡动画
+        // 播放死亡动画（安全检测参数是否存在）
         if (animator != null)
-            animator.SetTrigger("die");
+            SetAnimatorTriggerSafe(animator, "die");
 
         // 生成死亡特效
         SpawnDeathEffect();
@@ -444,8 +459,8 @@ public class BossAI : MonoBehaviour, IEnemyProvider, IBossPhaseProvider
         GlobalEventManager.Instance.TriggerBattleEnd(gameObject);
         GlobalEventManager.Instance.TriggerEntityDied(gameObject);
 
-        // 延迟销毁
-        Destroy(gameObject, 2f);
+        // 尽快销毁，让奖励生成衔接更紧凑
+        Destroy(gameObject, 1f);
     }
 
     void SpawnDeathEffect()

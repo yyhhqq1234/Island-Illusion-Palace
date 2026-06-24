@@ -116,16 +116,16 @@ public class BossRoomManager : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
         if (bossDefeated) return;
-        if (playerEntered) return; // 防止重复触发
+        if (playerEntered) return;
 
         playerEntered = true;
-        SpawnBoss();
+        SpawnBoss(other.transform); // 传入触发的玩家 Transform
     }
 
     /// <summary>
-    /// 生成Boss — 核心入口方法
+    /// 生成Boss — playerTransform 由 OnTriggerEnter2D 传入，确保坐标正确
     /// </summary>
-    public void SpawnBoss()
+    public void SpawnBoss(Transform playerTransform = null)
     {
         if (spawnedBoss != null)
         {
@@ -139,21 +139,21 @@ public class BossRoomManager : MonoBehaviour
             return;
         }
 
-        // 确定生成位置
         Vector3 spawnPos = bossSpawnPoint != null ? bossSpawnPoint.position : transform.position;
+        Debug.LogWarning($"[BossRoomManager] 生成Boss bossPos={spawnPos} playerPos={playerTransform?.position}");
 
-        // 实例化Boss
         spawnedBoss = Instantiate(timeGuardianPrefab, spawnPos, Quaternion.identity);
         spawnedBoss.name = isFinalBossRoom ? "FinalBoss_SSN" : "TimeGuardian";
 
-        // 确保Boss标记为Enemy Tag
         if (!spawnedBoss.CompareTag("Enemy"))
             spawnedBoss.tag = "Enemy";
 
-        // 获取BossAI并激活
+        // 直接设置玩家引用，避免 FindGameObjectWithTag 找到错误对象
         var bossAI = spawnedBoss.GetComponent<BossAI>();
         if (bossAI != null)
         {
+            if (playerTransform != null)
+                bossAI.player = playerTransform;
             bossAI.Activate();
         }
 
@@ -177,46 +177,42 @@ public class BossRoomManager : MonoBehaviour
 
     /// <summary>
     /// Boss击败事件回调 — 由GlobalEventManager广播触发
+    /// 奖励在Boss消失后延迟生成
     /// </summary>
     void OnBossDefeated(GameObject boss)
     {
-        // 验证是否是本房间管理的Boss
         if (spawnedBoss == null || boss != spawnedBoss) return;
 
         bossDefeated = true;
         float battleDuration = Time.time - battleStartTime;
 
         Debug.Log($"[BossRoomManager] Boss被击败！战斗时长: {battleDuration:F1}s");
-        Debug.Log("========== 开始生成奖励 ==========");
-
-        // 1. 记录统计
         RecordBattleStatistics(battleDuration);
 
-        // 2. 执行掉落逻辑
+        // 延迟生成奖励，等Boss消失动画播放完毕
+        StartCoroutine(SpawnRewardsAfterDelay(battleDuration));
+    }
+
+    System.Collections.IEnumerator SpawnRewardsAfterDelay(float battleDuration)
+    {
+        // 等待Boss死亡动画 + 消失（BossAI.Die中 Destroy(gameObject, 1f)）
+        yield return new WaitForSeconds(1.5f);
+
+        Debug.Log("========== Boss已消失，开始生成奖励 ==========");
+
         ProcessRewardDrops();
 
-        // 3. 生成传送门
         if (spawnPortalOnDefeat && timePortalPrefab != null)
-        {
             SpawnTimePortal();
-        }
 
-        // 4. 生成宝箱
         if (spawnChestOnDefeat && treasureChestPrefab != null)
-        {
             SpawnTreasureChest();
-        }
 
-        // 5. 剧情触发（仅最终Boss）
         if (isFinalBossRoom)
-        {
             TriggerEndingSequence();
-        }
 
-        // 6. 恢复探索音乐
+        // Boss消失后再切换音乐
         GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
-
-        // 7. UI通知
         GlobalEventManager.Instance.ShowNotification("Boss被击败！奖励已掉落！", 3f);
 
         Debug.Log("========== 奖励生成完成 ==========");
@@ -284,12 +280,11 @@ public class BossRoomManager : MonoBehaviour
 
     void SpawnTimePortal()
     {
-        // 在Boss房间中心生成传送门
-        Vector3 portalPos = transform.position;
+        // 在Boss生成点位生成传送门
+        Vector3 portalPos = bossSpawnPoint != null ? bossSpawnPoint.position : transform.position;
         var portal = Instantiate(timePortalPrefab, portalPos, Quaternion.identity);
         portal.name = "TimePortal_BossReward";
 
-        // 解锁传送门
         var tp = portal.GetComponent<TimePortal>();
         if (tp != null) tp.Unlock();
 
@@ -298,8 +293,7 @@ public class BossRoomManager : MonoBehaviour
 
     void SpawnTreasureChest()
     {
-        // 在Boss位置偏右生成宝箱
-        Vector3 chestPos = transform.position + Vector3.right * 2f;
+        Vector3 chestPos = (bossSpawnPoint != null ? bossSpawnPoint.position : transform.position) + Vector3.right * 2f;
         var chest = Instantiate(treasureChestPrefab, chestPos, Quaternion.identity);
         chest.name = "TreasureChest_BossReward";
 

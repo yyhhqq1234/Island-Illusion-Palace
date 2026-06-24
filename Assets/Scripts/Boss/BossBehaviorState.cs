@@ -108,6 +108,11 @@ public struct BossDecisionContext
         ctx.isStunned = stunned;
         ctx.randomFactor = Random.value;
 
+        // 根据距离分类（3m内近战 / 12m内追击 / 其余巡逻）
+        ctx.distanceCategory = ctx.distanceToPlayer < 2f ? DistanceCategory.Close
+            : ctx.distanceToPlayer < 6f ? DistanceCategory.Medium
+            : DistanceCategory.Far;
+
         // 检查是否有技能就绪
         ctx.hasAnySkillReady = false;
         if (cooldowns != null)

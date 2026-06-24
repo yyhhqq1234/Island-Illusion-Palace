@@ -21,9 +21,9 @@ public class EnemyMovementComponent : MonoBehaviour
     public float patrolSpeed = 2f;
 
     [Header("动态追逐范围")]
-    public float chaseRange = 10f;
+    public float chaseRange = 6f;
     [Tooltip("动态追逐范围扩展值，当锁定目标时扩大范围")]
-    public float chaseRangeExpansion = 5f;
+    public float chaseRangeExpansion = 3f;
 
     /// <summary>
     /// 按敌人类型配置的基础移动速度（未配置的类型使用 baseMoveSpeed）
@@ -72,6 +72,7 @@ public class EnemyMovementComponent : MonoBehaviour
     public void Initialize(Rigidbody2D rigidbody, EnemyStateComponent state)
     {
         rb = rigidbody;
+        if (rb != null) rb.mass = 1f; // 轻量化，玩家可推动但费劲
         stateComponent = state;
         enemyAI = GetComponent<EnemyAI>();
         spawnPosition = transform.position;
@@ -110,11 +111,12 @@ public class EnemyMovementComponent : MonoBehaviour
     }
 
     /// <summary>
-    /// 设置移动方向和速度（自动应用安全区限制）
+    /// 设置移动方向和速度（自动应用安全区+BossRoom限制）
     /// </summary>
     public void SetMovementDirection(Vector2 direction)
     {
         Vector2 restrictedDirection = ApplySafeZoneRestriction(direction);
+        restrictedDirection = ApplyBossRoomRestriction(restrictedDirection);
         if (rb != null)
         {
             rb.velocity = restrictedDirection * GetCurrentMoveSpeed();
@@ -244,6 +246,25 @@ public class EnemyMovementComponent : MonoBehaviour
             isInSafeZone = false;
         }
 
+        return direction;
+    }
+
+    /// <summary>BossRoom 区域限制 — 阻挡敌人进入 Boss 房间</summary>
+    public Vector2 ApplyBossRoomRestriction(Vector2 direction)
+    {
+        Vector2 targetPos = (Vector2)transform.position + direction * GetCurrentMoveSpeed() * Time.deltaTime;
+
+        GameObject[] bossRooms = GameObject.FindGameObjectsWithTag("BossRoom");
+        foreach (var room in bossRooms)
+        {
+            Collider2D col = room.GetComponent<Collider2D>();
+            if (col != null && col.bounds.Contains(targetPos))
+            {
+                // 从 BossRoom 中心向外排斥
+                Vector2 awayFromRoom = ((Vector2)transform.position - (Vector2)room.transform.position).normalized;
+                return awayFromRoom.magnitude > 0.01f ? awayFromRoom : Vector2.up;
+            }
+        }
         return direction;
     }
 

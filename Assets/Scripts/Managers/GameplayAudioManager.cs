@@ -628,8 +628,11 @@ public class GameplayAudioManager : MonoBehaviour
                 Debug.Log("[AudioManager] 请求播放: PlayAlchemySuccess");
                 break;
             case "PlayAlchemyFail":
-                // TODO: 实现炼金失败音效
                 Debug.Log("[AudioManager] 请求播放: PlayAlchemyFail");
+                break;
+            case "PlayBossDefeat":
+                // Boss被击败音效 — 暂用通知音替代
+                Debug.Log("[AudioManager] Boss被击败！");
                 break;
             default:
                 Debug.LogWarning($"[AudioManager] 未知音频请求: {methodName}");

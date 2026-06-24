@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Forest.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 1
+    path: Assets/Scenes/Wasteland.unity
+    guid: 83d71858c3b76664c8b36bff3b53291e
   m_configObjects: {}

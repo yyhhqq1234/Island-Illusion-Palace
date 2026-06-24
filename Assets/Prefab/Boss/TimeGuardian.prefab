@@ -104,8 +104,8 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDrag: 3
+  m_Mass: 0.0001
+  m_LinearDrag: 5
   m_AngularDrag: 0.05
   m_GravityScale: 0
   m_Material: {fileID: 0}
@@ -200,7 +200,7 @@ MonoBehaviour:
   maxHealth: 500
   currentHealth: 0
   damage: 25
-  attackRange: 3.5
+  attackRange: 2
   chaseRange: 15
   moveSpeed: 2.5
   currentPhase: 0
@@ -214,16 +214,17 @@ MonoBehaviour:
   skillCooldown: 2
   isEnraged: 0
   isInvulnerable: 0
+  isActivated: 0
   rb: {fileID: 8239917442016398248}
-  player: {fileID: 0}
-  playerHealth: {fileID: 0}
+  player: {fileID: 8553195164299262668, guid: b568912edd2bda14e903298399723425, type: 3}
+  playerHealth: {fileID: 3619975317246155552, guid: b568912edd2bda14e903298399723425, type: 3}
   animator: {fileID: 1730838271282190111}
   bossCollider: {fileID: 2239977502719603242}
   deathEffect: {fileID: 0}
   hitEffect: {fileID: 0}
   phaseChangeEffect: {fileID: 0}
   isDead: 0
-  slowFieldRadius: 5
+  slowFieldRadius: 3
   slowFieldStrength: 0.5
   timeWarpInterval: 8
   guardianElement: 5
@@ -263,6 +264,7 @@ MonoBehaviour:
   healthSlider: {fileID: 0}
   hitMaterial: {fileID: 2100000, guid: 3bf90e10e4e0da8488a62a5c06b6e8b9, type: 2}
   hitEffectDuration: 0.2
+  invincible: 0
 --- !u!114 &2416810655904077777
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -281,9 +283,9 @@ MonoBehaviour:
   attackTriggerPos: {fileID: 7444171528308173683}
   patrolSpeedRatio: 0.3
   chaseSpeedRatio: 1
-  attackDistanceThreshold: 3
-  chaseDistanceThreshold: 12
-  alertDistanceThreshold: 18
+  attackDistanceThreshold: 2
+  chaseDistanceThreshold: 6
+  alertDistanceThreshold: 8
   stunDurationAfterHit: 0.3
   defendDuration: 0.8
   defenseDamageReduction: 0.5

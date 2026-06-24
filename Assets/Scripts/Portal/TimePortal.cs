@@ -1,5 +1,5 @@
 using UnityEngine;
-using System.Collections.Generic;
+using System.Collections;
 
 /// <summary>
 /// 时空门状态枚举
@@ -30,29 +30,16 @@ public class TimePortal : MonoBehaviour
     [Tooltip("解锁时是否触发目的地预览")]
     public bool showPreviewOnUnlock = true;
 
-    [Header("连接配置")]
-    [Tooltip("是否使用随机连接表（随机从2-3个可选目的地中选择）")]
-    public bool useConnectionTable = true;
-
-    private static readonly Dictionary<MapType, MapType[]> ConnectionTable = new Dictionary<MapType, MapType[]>
-    {
-        { MapType.Forest,         new[] { MapType.Wasteland, MapType.Desert, MapType.Wetland } },
-        { MapType.Wasteland,      new[] { MapType.Desert, MapType.RockLand, MapType.RuinCity } },
-        { MapType.Desert,         new[] { MapType.RockLand, MapType.Volcano, MapType.RuinCity } },
-        { MapType.RockLand,       new[] { MapType.Desert, MapType.IceField, MapType.Volcano } },
-        { MapType.Wetland,        new[] { MapType.Forest, MapType.IceField, MapType.RuinCity } },
-        { MapType.IceField,       new[] { MapType.Wetland, MapType.RockLand, MapType.ForgottenManor } },
-        { MapType.Volcano,        new[] { MapType.RockLand, MapType.AncientTemple, MapType.LabFragment } },
-        { MapType.RuinCity,       new[] { MapType.ForgottenManor, MapType.AncientTemple, MapType.LabFragment } },
-        { MapType.ForgottenManor, new[] { MapType.RuinCity, MapType.AncientTemple, MapType.MemoryFragment } },
-        { MapType.AncientTemple,  new[] { MapType.RuinCity, MapType.ForgottenManor, MapType.MemoryFragment } },
-        { MapType.LabFragment,    new[] { MapType.RuinCity, MapType.Volcano, MapType.MemoryFragment } },
-        { MapType.MemoryFragment, new[] { MapType.LabFragment, MapType.AncientTemple, MapType.TruthCorridor } },
-        { MapType.TruthCorridor,  new[] { MapType.MemoryFragment } },
-    };
+    [Header("交互设置")]
+    [Tooltip("玩家交互距离")]
+    public float interactRange = 3f;
+    [Tooltip("提示文字")]
+    public string interactHint = "按 E 进入时空传送门";
 
     private bool isUnlocked;
+    private bool playerInRange;
     private Collider2D portalCollider;
+    private GameObject playerRef;
 
     void Awake()
     {
@@ -64,6 +51,24 @@ public class TimePortal : MonoBehaviour
     void Start()
     {
         RefreshVisuals();
+    }
+
+    void Update()
+    {
+        if (!isUnlocked) return;
+
+        // 检测玩家是否在交互范围内
+        if (playerRef != null)
+        {
+            float dist = Vector3.Distance(transform.position, playerRef.transform.position);
+            playerInRange = dist <= interactRange;
+        }
+
+        // E键交互
+        if (playerInRange && Input.GetKeyDown(KeyCode.E))
+        {
+            TeleportPlayer();
+        }
     }
 
     /// <summary>
@@ -81,8 +86,8 @@ public class TimePortal : MonoBehaviour
         RefreshVisuals();
         Debug.Log("[时空传送门] 正在激活...");
 
-        if (useConnectionTable)
-            SelectDestinationFromTable();
+        // 从所有地图池中随机选择目的地
+        destinationMap = PortalUtility.GetRandomDestination();
 
         yield return new WaitForSeconds(unlockDelay);
 
@@ -115,23 +120,8 @@ public class TimePortal : MonoBehaviour
             $"时空门已激活 → {mapTypeName} [{difficulty}]\n{highlight}", 5f);
     }
 
-    void SelectDestinationFromTable()
-    {
-        var currentMap = PortalUtility.GetCurrentMapType();
-        if (ConnectionTable.TryGetValue(currentMap, out MapType[] destinations))
-        {
-            destinationMap = destinations[Random.Range(0, destinations.Length)];
-        }
-        else
-        {
-            destinationMap = MapType.Forest;
-            Debug.LogWarning($"[时空传送门] 未找到 {currentMap} 的连接表，默认传送到 Forest");
-        }
-    }
-
     void RefreshVisuals()
     {
-        // 粒子：Locked时停，Unlocking和Open时播
         switch (currentState)
         {
             case PortalState.Locked:
@@ -143,30 +133,53 @@ public class TimePortal : MonoBehaviour
                 break;
         }
 
-        // Animator由自身参数驱动，这里只触发动机
-        if (animator != null)
+        if (animator != null && animator.runtimeAnimatorController != null)
         {
-            animator.SetInteger("State", (int)currentState);
+            animator.speed = 1f; // 确保循环播放
+            SetAnimatorParamSafe("State", (int)currentState);
             if (currentState == PortalState.Unlocking)
-                animator.SetTrigger("Unlock");
+                SetAnimatorTriggerSafe("Unlock");
         }
 
         if (portalCollider != null)
             portalCollider.enabled = (currentState == PortalState.Open);
     }
 
+    void SetAnimatorParamSafe(string name, int value)
+    {
+        foreach (var p in animator.parameters)
+            if (p.name == name) { animator.SetInteger(name, value); return; }
+    }
+
+    void SetAnimatorTriggerSafe(string name)
+    {
+        foreach (var p in animator.parameters)
+            if (p.name == name) { animator.SetTrigger(name); return; }
+    }
+
     void OnTriggerEnter2D(Collider2D other)
     {
         if (!other.CompareTag("Player")) return;
-        if (!isUnlocked) return;
+        playerRef = other.gameObject;
+    }
 
-        Debug.Log($"[时空传送门] 玩家进入传送门，传送到 {destinationMap}");
+    void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            playerRef = null;
+            playerInRange = false;
+        }
+    }
+
+    /// <summary>
+    /// 从所有地图池中随机选择一个目的地并传送
+    /// </summary>
+    void TeleportPlayer()
+    {
+        destinationMap = PortalUtility.GetRandomDestination();
+        Debug.Log($"[时空传送门] 玩家使用传送门，目的地: {destinationMap}");
         PortalUtility.TeleportTo(destinationMap);
     }
 
-    void OnDrawGizmos()
-    {
-        Gizmos.color = currentState == PortalState.Open ? Color.magenta : Color.gray;
-        Gizmos.DrawWireSphere(transform.position, 1f);
-    }
 }

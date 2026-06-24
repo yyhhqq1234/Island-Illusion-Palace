@@ -92,7 +92,8 @@ public class SafeZoneDetector : MonoBehaviour
             }
             
             // 触发全局进入安全区事件
-            GlobalEventManager.Instance.TriggerPlayerEnterSafeZone(other.gameObject);
+            var gem = GlobalEventManager.Instance;
+            if (gem != null) gem.TriggerPlayerEnterSafeZone(other.gameObject);
         }
     }
     
@@ -109,7 +110,8 @@ public class SafeZoneDetector : MonoBehaviour
             }
             
             // 触发全局离开安全区事件
-            GlobalEventManager.Instance.TriggerPlayerExitSafeZone(other.gameObject);
+            var gem = GlobalEventManager.Instance;
+            if (gem != null) gem.TriggerPlayerExitSafeZone(other.gameObject);
         }
     }
     

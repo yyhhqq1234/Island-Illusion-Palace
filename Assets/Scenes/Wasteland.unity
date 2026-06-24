@@ -940,7 +940,6 @@ MonoBehaviour:
   currentMapType: 1
   seed: -1
   currentCycle: 1
-  bossRoomPrefab: {fileID: 0}
   mapPrefabsByType:
     forest:
       safeRoomPrefab: {fileID: 8383670886340513263, guid: 1ec5b2d11c962d943ad6d624acd81baa, type: 3}
@@ -1448,7 +1447,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!156049354 &366329833
 Grid:
   m_ObjectHideFlags: 0

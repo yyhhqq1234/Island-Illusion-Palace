@@ -23,8 +23,8 @@ public class EnemyStateComponent : MonoBehaviour
     public float lowHealthThreshold = 0.3f;
     [Tooltip("逃跑时检测敌人的范围")]
     public float fleeDetectionRange = 15f;
-    [Tooltip("逃跑时的移动速度倍率")]
-    public float fleeSpeedMultiplier = 1.5f;
+    [Tooltip("逃跑时的移动速度倍率（玩家步行5 < 逃跑 < 玩家跑步8）")]
+    public float fleeSpeedMultiplier = 1.9f;
     [Tooltip("逃跑时仍可攻击的间隔倍率")]
     public float fleeAttackIntervalMultiplier = 0.5f;
 

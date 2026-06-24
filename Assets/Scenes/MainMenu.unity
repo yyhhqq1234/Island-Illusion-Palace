@@ -302,7 +302,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   startButton: {fileID: 1613052611}
   quitButton: {fileID: 1681778732}
-  gameplaySceneName: GamePlay
 --- !u!1 &1184323361
 GameObject:
   m_ObjectHideFlags: 0
@@ -444,6 +443,16 @@ MonoBehaviour:
     explorationMusicLowBurden: {fileID: 8300000, guid: 4436ff5b0a07ee048ae4ff2d28802882, type: 3}
     explorationMusicMediumBurden: {fileID: 8300000, guid: 8aa301b68e4cacb498028b34c6e14e8a, type: 3}
     explorationMusicHighBurden: {fileID: 8300000, guid: f37c9c1d0a5398c4e99465dfd4d1dd57, type: 3}
+    battleMusic: {fileID: 8300000, guid: 2c3a80e22c418cf46b84f4ce9bf8e864, type: 3}
+    bossBattleMusic: {fileID: 8300000, guid: 899746734e893e14c87608ec604fadd8, type: 3}
+    isSpecialArea: 0
+    isFinalArea: 0
+  - mapType: 1
+    mapName: 
+    safeZoneMusic: {fileID: 8300000, guid: 2c8f51cecda9e87459baa43794dc792e, type: 3}
+    explorationMusicLowBurden: {fileID: 8300000, guid: 0585c135b553e5f439906846e0156af5, type: 3}
+    explorationMusicMediumBurden: {fileID: 8300000, guid: 40cb7a2892e5b5b4cb751fb25282c8d3, type: 3}
+    explorationMusicHighBurden: {fileID: 8300000, guid: 14fbf4d9c91a0ce409fce75a8fd7ed63, type: 3}
     battleMusic: {fileID: 8300000, guid: 2c3a80e22c418cf46b84f4ce9bf8e864, type: 3}
     bossBattleMusic: {fileID: 8300000, guid: 899746734e893e14c87608ec604fadd8, type: 3}
     isSpecialArea: 0

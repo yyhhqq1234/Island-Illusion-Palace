@@ -78,13 +78,13 @@ public class BossCombatController : MonoBehaviour
     public float chaseSpeedRatio = 1f;
 
     [Tooltip("攻击距离阈值（小于此距离进入Attack状态）")]
-    public float attackDistanceThreshold = 3f;
+    public float attackDistanceThreshold = 2f;
 
     [Tooltip("追击距离阈值（小于此距离进入Chase状态）")]
-    public float chaseDistanceThreshold = 12f;
+    public float chaseDistanceThreshold = 6f;
 
     [Tooltip("警戒距离阈值（小于此距离进入Alert状态）")]
-    public float alertDistanceThreshold = 18f;
+    public float alertDistanceThreshold = 8f;
 
     [Tooltip("硬直时间（受击后/攻击后摇结束后的最小硬直）")]
     public float stunDurationAfterHit = 0.3f;
@@ -106,7 +106,7 @@ public class BossCombatController : MonoBehaviour
     [Header("阶段行为参数")]
     [Tooltip("Phase1 技能使用概率(0~1) — 越低越倾向普攻")]
     [Range(0f, 1f)]
-    public float phase1SkillChance = 0.2f;
+    public float phase1SkillChance = 0.05f;
 
     [Tooltip("Phase2 移动速度倍率")]
     [Range(1f, 2f)]
@@ -151,8 +151,11 @@ public class BossCombatController : MonoBehaviour
     // 运行时状态
     // ═══════════════════════════════════════════
 
-    /// <summary>是否正在执行攻击（任何攻击模式）</summary>
-    public bool IsAttacking => currentExecutingAttack != null && currentState == BossBehaviorState.Attack;
+    private float statusLogTimer = 0f;
+    private float postAttackCooldown = 0f; // 攻击后冷却，期间不可再次攻击
+
+    /// <summary>是否正在执行攻击（涵盖 Attack/CastSkill/Enraged 所有攻击状态）</summary>
+    public bool IsAttacking => currentExecutingAttack != null;
 
     /// <summary>是否处于硬直</summary>
     public bool IsStunned => currentState == BossBehaviorState.Stunned;
@@ -190,11 +193,15 @@ public class BossCombatController : MonoBehaviour
     {
         if (bossAI == null)
             bossAI = GetComponent<BossAI>();
+
+        Debug.LogWarning($"[BossCombatController] 初始化完成 bossAI={bossAI?.name} 状态={currentState} 攻击数量={attackPatterns.Count}");
     }
 
     void Update()
     {
-        if (bossAI == null) return;
+        if (bossAI == null || !bossAI.isActivated || bossAI.isDead) return;
+
+        if (postAttackCooldown > 0f) postAttackCooldown -= Time.deltaTime;
 
         UpdateCooldowns();
         UpdateStunTimer();
@@ -215,6 +222,28 @@ public class BossCombatController : MonoBehaviour
 
         // 执行当前状态行为
         ExecuteCurrentState(context);
+
+        // attackTriggerPos 追踪玩家位置（每帧更新，确保触发器命中）
+        UpdateAttackTriggerPos();
+
+        // 每3秒输出状态日志
+        statusLogTimer += Time.deltaTime;
+        if (statusLogTimer >= 3f)
+        {
+            statusLogTimer = 0f;
+            float dist = bossAI.player != null ? Vector3.Distance(transform.position, bossAI.player.position) : -1f;
+            Debug.LogWarning($"[BossCombatController] 状态={currentState} 距离={dist:F1}m bossPos={transform.position} playerPos={bossAI.player?.position} phase={bossAI.currentPhase}");
+        }
+    }
+
+    /// <summary>attackTriggerPos 追踪玩家 — 攻击期间冻结，玩家可躲避</summary>
+    void UpdateAttackTriggerPos()
+    {
+        if (attackTriggerPos == null || bossAI == null || bossAI.player == null) return;
+        if (IsAttacking) return; // 攻击中不追踪，位置锁定
+        float dist = Vector3.Distance(transform.position, bossAI.player.position);
+        if (dist <= chaseDistanceThreshold)
+            attackTriggerPos.position = bossAI.player.position;
     }
 
     // ═══════════════════════════════════════════
@@ -307,14 +336,13 @@ public class BossCombatController : MonoBehaviour
     /// </summary>
     BossBehaviorState EvaluateDecision(BossDecisionContext ctx)
     {
-        // === 硬直状态锁 ===
         if (ctx.isStunned) return BossBehaviorState.Stunned;
-
-        // === 无敌期间保持追击 ===
         if (ctx.isInvulnerable) return BossBehaviorState.Chase;
+        if (IsAttacking) return currentState;
 
-        // === 正在执行攻击时不切换 ===
-        if (IsAttacking) return BossBehaviorState.Attack;
+        // === 攻击后冷却：强制追击2秒，确保Boss会移动 ===
+        if (postAttackCooldown > 0f)
+            return BossBehaviorState.Chase;
 
         // === 根据阶段和距离动态决策 ===
         switch (ctx.currentPhase)
@@ -498,27 +526,42 @@ public class BossCombatController : MonoBehaviour
             ChangeState(BossBehaviorState.Chase);
     }
 
+    private float chaseLogTimer = 0f;
+
     void ExecuteChase(BossDecisionContext ctx)
     {
         if (bossAI.rb != null && bossAI.player != null)
         {
-            bossAI.rb.velocity = ctx.directionToPlayer * CurrentEffectiveSpeed;
+            float speed = CurrentEffectiveSpeed;
+
+            // 保持最小距离，避免撞到/推动玩家
+            if (ctx.distanceToPlayer < 1.5f)
+            {
+                bossAI.rb.velocity = Vector2.zero;
+                return;
+            }
+
+            bossAI.rb.velocity = ctx.directionToPlayer * speed;
+
+            chaseLogTimer += Time.deltaTime;
+            if (chaseLogTimer >= 1f)
+            {
+                chaseLogTimer = 0f;
+                Debug.LogWarning($"[BossCombatController] 🏃 追击中 speed={speed:F1} dist={ctx.distanceToPlayer:F1}m");
+            }
         }
     }
 
     void ExecuteAttack(BossDecisionContext ctx)
     {
-        // 选择一个可用的近战攻击并执行
-        BossAttackPattern selected = SelectAttackPattern(true); // true=偏好近战
+        if (IsAttacking) return;
+        if (ctx.distanceToPlayer > attackDistanceThreshold) { ChangeState(BossBehaviorState.Chase); return; }
+
+        BossAttackPattern selected = SelectAttackPattern(true);
         if (selected != null)
-        {
             ExecuteAttackPattern(selected);
-        }
         else
-        {
-            // 没有可用攻击时转为追击
             ChangeState(BossBehaviorState.Chase);
-        }
     }
 
     void ExecuteDefend(BossDecisionContext ctx)
@@ -533,23 +576,20 @@ public class BossCombatController : MonoBehaviour
 
     void ExecuteCastSkill(BossDecisionContext ctx)
     {
-        // 选择一个可用的远程/范围技能并执行
-        BossAttackPattern selected = SelectAttackPattern(false); // false=不限制近战
+        if (IsAttacking) return;
+        if (ctx.distanceToPlayer > attackDistanceThreshold) { ChangeState(BossBehaviorState.Chase); return; }
+
+        BossAttackPattern selected = SelectAttackPattern(false);
         if (selected != null)
-        {
             ExecuteAttackPattern(selected);
-        }
         else
-        {
             ChangeState(BossBehaviorState.Chase);
-        }
     }
 
     void ExecuteEnragedBehavior(BossDecisionContext ctx)
     {
-        // 狂暴行为：最高速度追击+乱发技能
         ExecuteChase(ctx);
-        // 同时尝试追加攻击
+        if (IsAttacking) return;
         if (ctx.hasAnySkillReady && stateTimer > 0.3f)
         {
             BossAttackPattern selected = SelectAttackPattern(false);
@@ -597,8 +637,7 @@ public class BossCombatController : MonoBehaviour
         currentExecutingAttack = pattern;
         StartCoroutine(pattern.ExecuteAttack(this));
 
-        if (enableDebugLog)
-            Debug.Log($"[BossCombatController] 开始执行攻击: {pattern.attackName}");
+        Debug.LogWarning($"[BossCombatController] ⚔ {pattern.attackName} | 伤害:{bossAI.damage * pattern.damageMultiplier:F0} | 追踪:{pattern.useTracking}");
     }
 
     /// <summary>
@@ -607,37 +646,106 @@ public class BossCombatController : MonoBehaviour
     public void OnAttackExecutionFinished()
     {
         currentExecutingAttack = null;
-        EnterStun(stunDurationAfterHit);
+        postAttackCooldown = 2f; // 攻击后2秒冷却，期间强制移动
+        ChangeState(BossBehaviorState.Chase);
     }
 
     /// <summary>
-    /// 生成攻击触发器（参考 EnemyCombatComponent.DealDamageToTarget 模式）
-    /// 在Boss攻击的active阶段调用，生成AttackTrigger实例进行伤害判定
+    /// 生成攻击触发器 — 完全参考 EnemyCombatComponent.DealDamageToTarget 模式
+    /// 在 attackTriggerPos 位置实例化 BossAttackTrigger 预制件，
+    /// 以 attackTriggerPos 为父节点，通过 AttackTrigger 的 PerformAreaAttack 自动检测并伤害玩家。
     /// </summary>
     /// <param name="damage">本次攻击伤害值</param>
-    /// <param name="size">触发器大小（可选，覆盖预制件默认值）</param>
+    /// <param name="size">触发器大小（可选，覆盖预制件上 BoxCollider2D 的默认尺寸）</param>
     public void SpawnAttackTrigger(float damage, Vector2? size = null)
     {
         if (bossAttackTriggerPrefab == null)
         {
-            Debug.LogWarning("[BossCombatController] bossAttackTriggerPrefab 未设置，跳过攻击触发器生成");
+            // 降级：prefab 未配置时直接对玩家造成伤害
+            if (bossAI != null && bossAI.player != null)
+            {
+                var playerHealth = bossAI.player.GetComponent<HealthSystem>();
+                if (playerHealth != null && !playerHealth.IsDead())
+                    playerHealth.TakeDamage(damage);
+            }
             return;
         }
 
+        // 只在 attackTriggerPos 生成（追踪时跟随玩家，攻击时冻结，玩家可躲开）
         Vector3 spawnPos = attackTriggerPos != null ? attackTriggerPos.position : transform.position;
         GameObject trigger = Instantiate(bossAttackTriggerPrefab, spawnPos, Quaternion.identity);
 
-        if (size.HasValue)
-        {
-            BoxCollider2D col = trigger.GetComponent<BoxCollider2D>();
-            if (col != null) col.size = size.Value;
-        }
+        // 设置触发器尺寸（默认使用 attackRange × 2 保证覆盖玩家）
+        Vector2 triggerSize = size ?? new Vector2(attackDistanceThreshold * 2f, attackDistanceThreshold * 2f);
+        BoxCollider2D col = trigger.GetComponent<BoxCollider2D>();
+        if (col != null) col.size = triggerSize;
 
         AttackTrigger at = trigger.GetComponent<AttackTrigger>();
         if (at != null)
         {
             at.SetDamage((int)damage);
             at.SetAttacker(gameObject, false, false);
+        }
+    }
+
+    /// <summary>
+    /// 追踪式攻击触发器 — 前摇阶段跟随玩家位置移动，判定阶段锁定位置并造成伤害
+    /// 由 BossAttackPattern.ExecuteAttack 协程在 windup 阶段调用，
+    /// 返回的 GameObject 在 active 阶段停止追踪。
+    /// </summary>
+    public System.Collections.IEnumerator TrackingAttackCoroutine(float damage, float trackDuration, float lockDuration, Vector2? size = null)
+    {
+        if (bossAttackTriggerPrefab == null || bossAI == null) yield break;
+
+        Vector3 spawnPos = bossAI.player != null ? bossAI.player.position : transform.position;
+        GameObject trigger = Instantiate(bossAttackTriggerPrefab, spawnPos, Quaternion.identity);
+        Vector2 triggerSize = size ?? new Vector2(attackDistanceThreshold * 2f, attackDistanceThreshold * 2f);
+        BoxCollider2D col = trigger.GetComponent<BoxCollider2D>();
+        if (col != null) col.size = triggerSize;
+
+        // 可视指示器：红色半透明方块表示追踪区域
+        GameObject indicator = GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Sphere);
+        indicator.transform.SetParent(trigger.transform);
+        indicator.transform.localPosition = Vector3.zero;
+        indicator.transform.localScale = Vector3.one * 0.6f;
+        indicator.name = "TrackingIndicator";
+        var renderer = indicator.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.material.color = new Color(1f, 0.2f, 0.2f, 0.6f);
+        }
+        Destroy(indicator.GetComponent<Collider>());
+
+        AttackTrigger at = trigger.GetComponent<AttackTrigger>();
+        if (at != null)
+        {
+            at.SetDamage((int)damage);
+            at.SetAttacker(gameObject, false, false);
+            at.delayActivation = true;
+        }
+
+        // 阶段1：前摇追踪 — 触发器跟随玩家移动
+        Debug.LogWarning($"[BossCombatController] 🎯 追踪开始 player={(bossAI.player!=null)} playerPos={bossAI.player?.position} spawnPos={spawnPos}");
+        float elapsed = 0f;
+        while (elapsed < trackDuration && trigger != null)
+        {
+            if (bossAI.player != null)
+                trigger.transform.position = bossAI.player.position;
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // 阶段2：锁定判定 — 触发器停止移动，激活伤害
+        if (trigger != null && at != null)
+        {
+            if (renderer != null) renderer.material.color = Color.red;
+            at.PerformAreaAttackPublic();
+            Debug.LogWarning($"[BossCombatController] 💥 锁定！triggerPos={trigger.transform.position} playerPos={bossAI.player?.position}");
+            Destroy(trigger, lockDuration);
+        }
+        else if (trigger != null)
+        {
+            Destroy(trigger);
         }
     }
 
@@ -760,21 +868,25 @@ public class BossCombatController : MonoBehaviour
     // Gizmos 调试绘制
     // ═══════════════════════════════════════════
 
-    void OnDrawGizmosSelected()
+    void OnDrawGizmos()
     {
         if (!showDebugGizmos || bossAI == null) return;
 
-        // 攻击范围（红色）
-        Gizmos.color = Color.red;
+        // 攻击范围（红色实心）
+        Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.3f);
         Gizmos.DrawWireSphere(transform.position, attackDistanceThreshold);
 
-        // 追击范围（黄色）
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, chaseDistanceThreshold);
+        // 攻击触发器生成位置
+        if (attackTriggerPos != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireCube(attackTriggerPos.position, Vector3.one * 0.5f);
+            Gizmos.DrawLine(transform.position, attackTriggerPos.position);
+        }
 
-        // 警戒范围（橙色）
-        Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
-        Gizmos.DrawWireSphere(transform.position, alertDistanceThreshold);
+        // 追击范围（黄色）
+        Gizmos.color = new Color(1f, 1f, 0f, 0.15f);
+        Gizmos.DrawWireSphere(transform.position, chaseDistanceThreshold);
 
     }
 }

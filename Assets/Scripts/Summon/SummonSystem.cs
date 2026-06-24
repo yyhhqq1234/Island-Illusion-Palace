@@ -254,6 +254,10 @@ public class SummonSystem : MonoBehaviour, ISummonService
         GameObject summonedCreature = Instantiate(summonPrefab, position, Quaternion.identity);
         summonedCreature.tag = "SummonedCreature";
 
+        // 召唤物轻量化：玩家可推动但费劲，召唤物间互推力小
+        var summonRb = summonedCreature.GetComponent<Rigidbody2D>();
+        if (summonRb != null) summonRb.mass = 1.5f;
+
         var healthSystem = summonedCreature.GetComponent<HealthSystem>();
         if (healthSystem == null)
         {

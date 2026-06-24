@@ -504,9 +504,10 @@ GameObject:
   - component: {fileID: 8571286008715916612}
   - component: {fileID: 6409833849754932922}
   - component: {fileID: 2300285057586930750}
+  - component: {fileID: 3978250872427768450}
   m_Layer: 0
   m_Name: BossRoom
-  m_TagString: Untagged
+  m_TagString: BossRoom
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -558,12 +559,62 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   timeGuardianPrefab: {fileID: 190815862091450509, guid: 1673109568e0c01448e2df193d6c92a2, type: 3}
   bossSpawnPoint: {fileID: 7326794262398010294}
+  isFinalBossRoom: 0
   timePortalPrefab: {fileID: 6820917116793413281, guid: b211971ef879c0c44ae3541927d07e3a, type: 3}
   treasureChestPrefab: {fileID: 0}
   spawnPortalOnDefeat: 1
   spawnChestOnDefeat: 1
+  soulDropRange: {x: 60, y: 90}
+  essenceDropRange: {x: 3, y: 6}
+  memoryFragmentDropChance: 0.05
+  droppedSoulCoreQuality: 3
   enableRiftsInBossRoom: 0
   riftPrefab: {fileID: 3925113783251185547, guid: 201d813e159669a40b706d2723992b29, type: 3}
+--- !u!61 &3978250872427768450
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1459940193616944637}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 39, y: 26}
+  m_EdgeRadius: 0
 --- !u!1 &1968282179804707250
 GameObject:
   m_ObjectHideFlags: 0
@@ -1831,7 +1882,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7326794262398010294}
   m_Layer: 0
-  m_Name: SpawnPoint1 (1)
+  m_Name: SpawnPoint1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

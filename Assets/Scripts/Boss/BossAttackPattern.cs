@@ -48,6 +48,9 @@ public abstract class BossAttackPattern
     /// <summary>所属Boss引用</summary>
     protected BossAI ownerBoss;
 
+    /// <summary>是否使用追踪式攻击（前摇跟随玩家，判定时锁定位置）</summary>
+    public bool useTracking = false;
+
     // ═══════════════════════════════════════════
     // 公共接口
     // ═══════════════════════════════════════════
@@ -80,13 +83,26 @@ public abstract class BossAttackPattern
         if (isExecuting || ownerBoss == null) yield break;
         isExecuting = true;
 
+        float attackDamage = ownerBoss.damage * damageMultiplier;
+
         // === 阶段1: 前摇（蓄力提示）===
         OnWindupStart();
+
+        if (useTracking && ownerBoss.combatController != null)
+        {
+            // 追踪模式：启动追踪协程（在 windup 期间跟随玩家，active 时锁定）
+            var trackCoroutine = ownerBoss.combatController.TrackingAttackCoroutine(
+                attackDamage, windupDuration, activeDuration);
+            runner.StartCoroutine(trackCoroutine);
+        }
+
         yield return new WaitForSeconds(windupDuration);
         OnWindupEnd();
 
         // === 阶段2: 判定（激活攻击区域）===
         OnActiveStart();
+        if (!useTracking)
+            ownerBoss.combatController?.SpawnAttackTrigger(attackDamage);
         yield return new WaitForSeconds(activeDuration);
         OnActiveEnd();
 
@@ -95,10 +111,11 @@ public abstract class BossAttackPattern
         yield return new WaitForSeconds(recoveryDuration);
         OnRecoveryEnd();
 
-        // 攻击结束，进入冷却
         isExecuting = false;
         currentCooldown = cooldown;
         OnAttackComplete();
+        // 通知控制器攻击完成，重置 currentExecutingAttack 并进入冷却
+        ownerBoss.combatController?.OnAttackExecutionFinished();
     }
 
     // ═══════════════════════════════════════════
@@ -155,12 +172,13 @@ public class CrystalSlashAttack : BossAttackPattern
     {
         attackName = "晶能斩击";
         damageMultiplier = 1.0f;
-        windupDuration = 0.4f;
+        windupDuration = 0.7f;
         activeDuration = 0.3f;
         recoveryDuration = 0.5f;
         cooldown = 2.0f;
         minimumPhase = BossPhase.Phase1;
         elementType = ElementType.Soul;
+        useTracking = false;
     }
 
     protected override void OnWindupStart()
@@ -235,12 +253,13 @@ public class TimeShockwaveAttack : BossAttackPattern
     {
         attackName = "时空冲击波";
         damageMultiplier = 0.8f;
-        windupDuration = 0.6f;
+        windupDuration = 0.9f;
         activeDuration = 0.5f;
         recoveryDuration = 0.8f;
         cooldown = 4.0f;
         minimumPhase = BossPhase.Phase1;
         elementType = ElementType.Soul;
+        useTracking = false;
     }
 
     protected override void OnActiveStart()
@@ -320,12 +339,13 @@ public class CrystalCageAttack : BossAttackPattern
     {
         attackName = "水晶牢笼";
         damageMultiplier = 0.6f;
-        windupDuration = 0.8f;
+        windupDuration = 1.2f;
         activeDuration = 0.3f;
         recoveryDuration = 1.0f;
         cooldown = 6.0f;
         minimumPhase = BossPhase.Phase2;
         elementType = ElementType.Soul;
+        useTracking = false; // 追踪玩家位置，前摇时锁定
     }
 
     protected override void OnActiveStart()
@@ -400,12 +420,13 @@ public class RiftDashAttack : BossAttackPattern
     {
         attackName = "裂隙冲锋";
         damageMultiplier = 1.2f;
-        windupDuration = 0.3f;
+        windupDuration = 0.6f;
         activeDuration = 0.4f;
         recoveryDuration = 0.6f;
         cooldown = 5.0f;
         minimumPhase = BossPhase.Phase2;
         elementType = ElementType.Soul;
+        useTracking = false;
     }
 
     protected override void OnWindupStart()
@@ -514,12 +535,13 @@ public class SpaceCollapseAttack : BossAttackPattern
     {
         attackName = "时空崩坏";
         damageMultiplier = 1.5f;
-        windupDuration = 1.2f;               // 长前摇给玩家反应时间
+        windupDuration = 1.5f;               // 长前摇给玩家反应时间
         activeDuration = 0.5f;
-        recoveryDuration = 1.5f;             // 长后摇（高风险高回报的设计）
-        cooldown = 10.0f;                    // 长冷却
-        minimumPhase = BossPhase.Phase3;     // 仅第三阶段和狂暴可用
+        recoveryDuration = 1.5f;
+        cooldown = 10.0f;
+        minimumPhase = BossPhase.Phase3;
         elementType = ElementType.Soul;
+        useTracking = false; // 追踪玩家位置，超长前摇后锁定爆炸
     }
 
     protected override void OnWindupStart()

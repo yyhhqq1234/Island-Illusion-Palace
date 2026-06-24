@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PlayerController : MonoBehaviour, IDashProvider
+public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 {
     [Header("移动参数")]
     public float moveSpeed = 5f;
@@ -38,10 +38,26 @@ public class PlayerController : MonoBehaviour, IDashProvider
     float IDashProvider.dashSpeed => dashSpeed;
     float IDashProvider.dashDuration => dashDuration;
     float IDashProvider.dashCooldown => dashCooldown;
+
+    // IDieHandler 实现 — HealthSystem.Die() 触发时调用
+    void IDieHandler.OnDie()
+    {
+        Debug.Log("[PlayerController] 玩家死亡");
+        enabled = false;
+        if (TryGetComponent<Rigidbody2D>(out var rb))
+            rb.velocity = Vector2.zero;
+    }
+
     private float dashTimer = 0f;
     private float dashCooldownTimer = 0f;
 
     private bool summonWheelActive = false;
+
+    // 速度保护：防止 Boss 减速等外部修改造成数值错乱
+    private float originalMoveSpeed;
+    private float originalRunSpeed;
+    private int activeSlowCount = 0;
+    private int playerLayer, enemyLayer; // Dash 无敌用缓存
 
     // ── 缓存引用（避免每帧 FindObjectOfType） ──
     private InventoryUI cachedInventoryUI;
@@ -53,7 +69,7 @@ public class PlayerController : MonoBehaviour, IDashProvider
         // 初始化组件引用
         if (playerCamera == null) playerCamera = Camera.main;
         if (rb == null) rb = GetComponent<Rigidbody2D>();
-        if (rb != null) rb.freezeRotation = true;
+        if (rb != null) { rb.freezeRotation = true; rb.mass = 10f; } // 适中质量：可推敌人但费劲
         if (anim == null) anim = GetComponent<Animator>();
         if (weaponSystem == null)
         {
@@ -78,6 +94,14 @@ public class PlayerController : MonoBehaviour, IDashProvider
         cachedInventoryUI = FindObjectOfType<InventoryUI>();
         cachedAlchemyUI = FindObjectOfType<AlchemyUI>();
         cachedPauseMenu = FindObjectOfType<PauseMenu>();
+
+        // 保存原始速度（用于 Boss 减速恢复）
+        originalMoveSpeed = moveSpeed;
+        originalRunSpeed = runSpeed;
+
+        // 缓存层索引（Dash 无敌用）
+        playerLayer = LayerMask.NameToLayer("Player");
+        enemyLayer = LayerMask.NameToLayer("Enemy");
 
         // 初始化方向
         currentDirection = targetDirection = Vector2.down;
@@ -350,6 +374,13 @@ public class PlayerController : MonoBehaviour, IDashProvider
     {
         if (rb == null) return;
 
+        // 安全阀：速度异常时重置
+        if (moveSpeed < 0.1f || runSpeed < 0.1f)
+        {
+            moveSpeed = originalMoveSpeed;
+            runSpeed = originalRunSpeed;
+        }
+
         if (isDashing) HandleDashingMovement();
         else if (isMoving) rb.velocity = movement * (isRunning ? runSpeed : moveSpeed);
         else rb.velocity = Vector2.zero;
@@ -361,10 +392,12 @@ public class PlayerController : MonoBehaviour, IDashProvider
         Vector2 dashDirection = movement.sqrMagnitude > 0 ? movement.normalized : (currentDirection != Vector2.zero ? currentDirection : Vector2.down);
         rb.velocity = dashDirection * dashSpeed;
 
+        if (playerLayer < 0 || enemyLayer < 0) return; // 层不存在则跳过
+
         if (dashTimer >= dashDuration - 0.02f)
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);
+            Physics2D.IgnoreLayerCollision(playerLayer, enemyLayer, true);
         if (dashTimer <= 0.02f)
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);
+            Physics2D.IgnoreLayerCollision(playerLayer, enemyLayer, false);
     }
 
     public void StartDash()
@@ -463,12 +496,33 @@ public class PlayerController : MonoBehaviour, IDashProvider
     public bool IsMoving() => isMoving;
     public bool IsRunning() => isRunning;
 
+    /// <summary>受击或其他系统设置无敌</summary>
     public void SetInvulnerable(bool invulnerable)
     {
-        if (invulnerable)
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);
-        else
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);
+        if (playerLayer < 0 || enemyLayer < 0) return;
+        Physics2D.IgnoreLayerCollision(playerLayer, enemyLayer, invulnerable);
+    }
+
+    /// <summary>应用减速效果（Boss/环境）— 防止叠加错乱</summary>
+    public void ApplySlow(float multiplier, float duration)
+    {
+        if (multiplier >= 1f || multiplier <= 0f) return;
+        activeSlowCount++;
+        moveSpeed = Mathf.Max(originalMoveSpeed * multiplier, 1f); // 最低 1f
+        runSpeed = Mathf.Max(originalRunSpeed * multiplier, 1.5f);
+        int thisSlow = activeSlowCount;
+        StartCoroutine(RemoveSlowAfterDelay(duration, thisSlow));
+    }
+
+    System.Collections.IEnumerator RemoveSlowAfterDelay(float duration, int slowId)
+    {
+        yield return new WaitForSeconds(duration);
+        if (slowId == activeSlowCount)
+        {
+            moveSpeed = originalMoveSpeed;
+            runSpeed = originalRunSpeed;
+            activeSlowCount = 0;
+        }
     }
 
     // 调整玩家大小的方法

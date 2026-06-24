@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
@@ -104,10 +103,7 @@ public class TimeGuardianBoss : BossAI
     protected override void Start()
     {
         base.Start();
-
-        // 激活Boss（如果未被外部Activate的话）
-        if (!isActivated)
-            Activate();
+        // 不再自激活 — 由 BossRoomManager.SpawnBoss 显式 Activate
     }
 
     protected override void Update()
@@ -243,32 +239,7 @@ public class TimeGuardianBoss : BossAI
 
             var pc = hit.GetComponent<PlayerController>();
             if (pc != null)
-            {
-                StartCoroutine(ApplySlowCoroutine(pc));
-            }
-        }
-    }
-
-    IEnumerator ApplySlowCoroutine(PlayerController pc)
-    {
-        if (pc == null) yield break;
-
-        float originalSpeed = pc.moveSpeed;
-        float originalRunSpeed = pc.runSpeed;
-        pc.moveSpeed *= slowFieldStrength;
-        pc.runSpeed *= slowFieldStrength;
-
-        Debug.Log($"[时空守护者] 玩家被时空力场减速 {(1f - slowFieldStrength) * 100:F0}% " +
-                  $"持续 {timeWarpSlowDuration}s");
-
-        yield return new WaitForSeconds(timeWarpSlowDuration);
-
-        // 安全恢复（防止玩家在减速期间死亡/销毁导致空引用异常）
-        if (pc != null)
-        {
-            pc.moveSpeed = originalSpeed;
-            pc.runSpeed = originalRunSpeed;
-            Debug.Log("[时空守护者] 时空力场减速效果结束");
+                pc.ApplySlow(slowFieldStrength, timeWarpSlowDuration);
         }
     }
 
