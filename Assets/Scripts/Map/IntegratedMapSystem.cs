@@ -237,9 +237,6 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem
             return;
         }
 
-        float mapWidth = 39f;
-        float mapHeight = 26f;
-
         List<GameObject> resourcePrefabs = new List<GameObject>();
         List<GameObject> battlePrefabs = new List<GameObject>();
 

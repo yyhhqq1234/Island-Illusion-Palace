@@ -57,8 +57,7 @@ public class AlchemyUI : MonoBehaviour
     private RecipeType selectedRecipe = RecipeType.SoulStabilizer;
     private MaterialTypeEnum selectedMaterial = MaterialTypeEnum.RottenWood;
     private int currentBasketIndex = 0; // 当前选中的材料准备篮索引
-    private bool hasSelectedRecipe = false; // 是否已经选择了配方（用于控制准备篮和产出面板的显示）
-    
+
     // 自由炼金相关
     private MaterialTypeEnum[] basketMaterials = new MaterialTypeEnum[4]; // 每个准备篮中当前的材料
     private int[] basketMaterialCounts = new int[4]; // 每个准备篮中材料的数量（支持堆叠）
@@ -290,9 +289,6 @@ public class AlchemyUI : MonoBehaviour
             alchemyPanel.SetActive(false);
             Time.timeScale = 1f; // 恢复游戏
             isAlchemyPanelOpen = false;
-            
-            // 重置配方选择状态（下次打开面板时准备篮和产出面板为空）
-            hasSelectedRecipe = false;
             
             // 清空产出
             ClearProduceItems();
@@ -618,7 +614,6 @@ public class AlchemyUI : MonoBehaviour
                 
                 // 在篮子中堆叠
                 basketMaterialCounts[i]++;
-                hasSelectedRecipe = true; // 标记已选择（进入自由炼金模式）
                 UpdateAlchemyUI();
                 Debug.Log($"[AlchemyUI] 材料 {materialType} 已堆叠到准备篮 {i+1}，当前数量: {basketMaterialCounts[i]}");
                 return;
@@ -637,7 +632,6 @@ public class AlchemyUI : MonoBehaviour
                 basketMaterials[i] = materialType;
                 basketMaterialCounts[i] = 1;
                 basketIsEmpty[i] = false; // 标记篮子不为空
-                hasSelectedRecipe = true; // 标记已选择（进入自由炼金模式）
                 UpdateAlchemyUI();
                 Debug.Log($"[AlchemyUI] 材料 {materialType} 已添加到准备篮 {i+1}");
                 return;

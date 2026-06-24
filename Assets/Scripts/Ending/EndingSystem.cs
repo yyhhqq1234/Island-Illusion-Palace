@@ -68,6 +68,14 @@ namespace IIP.Ending
             return EndingType.IncompleteReturn;
         }
 
+        /// <summary>由BossRoomManager在最终Boss被击败后调用</summary>
+        public void TriggerEnding(int fragmentCount)
+        {
+            memoryFragments = fragmentCount;
+            EndingType ending = DetermineEnding();
+            Debug.Log($"[EndingSystem] 结局触发: {ending} (碎片数={fragmentCount}");
+        }
+
         public string GetEndingHint()
         {
             string hint = coreFragments == 3

@@ -161,7 +161,6 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider, IDieHandler
     // 状态
     private bool isChasing = false;
     private bool isDead = false;
-    private bool playerInAttackRange = false;
 
     // 距离缓存
     private float cachedDistanceToTargetSqr = float.MaxValue;
@@ -367,7 +366,7 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider, IDieHandler
     {
         if (collision.CompareTag("Player"))
         {
-            playerInAttackRange = true;
+            isChasing = true;
         }
     }
 
@@ -375,7 +374,7 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider, IDieHandler
     {
         if (collision.CompareTag("Player"))
         {
-            playerInAttackRange = false;
+            isChasing = false;
         }
     }
 

@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: 1730838271282190111}
   - component: {fileID: 8337641199189236352}
   - component: {fileID: 5117123518307077802}
+  - component: {fileID: 2449525389197400319}
+  - component: {fileID: 2416810655904077777}
   m_Layer: 0
   m_Name: TimeGuardian
   m_TagString: Enemy
@@ -34,7 +36,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 7444171528308173683}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &7497183132438661434
@@ -200,15 +203,17 @@ MonoBehaviour:
   attackRange: 3.5
   chaseRange: 15
   moveSpeed: 2.5
-  phaseChangeThreshold: 0.7
   currentPhase: 0
   phaseHealthThresholds:
   - 1
   - 0.7
   - 0.4
   - 0.1
+  combatController: {fileID: 2416810655904077777}
   skills: []
   skillCooldown: 2
+  isEnraged: 0
+  isInvulnerable: 0
   rb: {fileID: 8239917442016398248}
   player: {fileID: 0}
   playerHealth: {fileID: 0}
@@ -217,10 +222,18 @@ MonoBehaviour:
   deathEffect: {fileID: 0}
   hitEffect: {fileID: 0}
   phaseChangeEffect: {fileID: 0}
+  isDead: 0
   slowFieldRadius: 5
   slowFieldStrength: 0.5
   timeWarpInterval: 8
   guardianElement: 5
+  timeWarpInvulnDuration: 1.5
+  timeWarpHealPercent: 0.05
+  timeWarpSlowDuration: 2
+  phase1MaxHealth: 800
+  tgPhase2SpeedMult: 1.2
+  tgPhase3SpeedMult: 1.5
+  enragedDamageMult: 1.8
 --- !u!114 &5117123518307077802
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -233,3 +246,86 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ff303030d4f7c0441a8fbca8bd19fe4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &2449525389197400319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 190815862091450509}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1948fc0ca1c972749ad514e567efd65e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 500
+  currentHealth: 500
+  healthSlider: {fileID: 0}
+  hitMaterial: {fileID: 2100000, guid: 3bf90e10e4e0da8488a62a5c06b6e8b9, type: 2}
+  hitEffectDuration: 0.2
+--- !u!114 &2416810655904077777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 190815862091450509}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c721d5222e1f4b94caad807f5c9faddf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bossAI: {fileID: 8337641199189236352}
+  currentState: 0
+  bossAttackTriggerPrefab: {fileID: 422948469954690478, guid: ea2715c93e9be0b49977bc45669dbe5c, type: 3}
+  attackTriggerPos: {fileID: 7444171528308173683}
+  patrolSpeedRatio: 0.3
+  chaseSpeedRatio: 1
+  attackDistanceThreshold: 3
+  chaseDistanceThreshold: 12
+  alertDistanceThreshold: 18
+  stunDurationAfterHit: 0.3
+  defendDuration: 0.8
+  defenseDamageReduction: 0.5
+  phaseTransitionInvulnDuration: 1.5
+  phase1SkillChance: 0.2
+  phase2SpeedMultiplier: 1.2
+  phase2SkillChance: 0.5
+  phase3SpeedMultiplier: 1.5
+  phase3SkillChance: 0.7
+  phase3DefendChance: 0.15
+  enragedCooldownMultiplier: 0.3
+  enragedSkillChance: 0.95
+  enableDebugLog: 0
+  showDebugGizmos: 1
+--- !u!1 &8655758545678781431
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7444171528308173683}
+  m_Layer: 0
+  m_Name: AttackTriggerPos
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7444171528308173683
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8655758545678781431}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.5, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8330003168122591005}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

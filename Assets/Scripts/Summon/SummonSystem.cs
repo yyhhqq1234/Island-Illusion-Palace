@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public enum SoulCoreQuality { Common, Elite, Boss }
+public enum SoulCoreQuality { Common, Elite, Boss, Gold }
 
 
 
@@ -39,7 +39,6 @@ public class SummonSystem : MonoBehaviour, ISummonService
     private List<GameObject> activeSummons = new List<GameObject>();
     private float lastSummonTime = 0f;
     private int lastSummonedSlot = 0;
-    private bool summonWheelOpen = false;
 
     List<SoulCoreData> ISummonService.soulCoreInventory => soulCoreInventory;
     List<SoulCoreData> ISummonService.battleSummons => battleSummons;
@@ -72,14 +71,11 @@ public class SummonSystem : MonoBehaviour, ISummonService
 
     public void OpenSummonWheel()
     {
-        summonWheelOpen = true;
         Debug.Log("打开召唤轮盘");
     }
 
     public void SelectSummonFromWheel(Vector2 direction)
     {
-        summonWheelOpen = false;
-
         int slotIndex = GetSlotIndexFromDirection(direction);
 
         if (slotIndex >= 0 && slotIndex < battleSummons.Count)

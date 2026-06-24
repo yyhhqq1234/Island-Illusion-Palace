@@ -152,7 +152,6 @@ public class MemoryFragmentSystem : MonoBehaviour, IMemoryFragmentService
     public SummonSystem summonSystem;
 
     [Header("状态")]
-    private bool isProcessingResonance = false;
     private int fragmentsCollected = 0;
 
     void Start()
