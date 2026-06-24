@@ -194,6 +194,12 @@ public class CrystalSlashAttack : BossAttackPattern
 
     protected override void OnActiveStart()
     {
+        // 伤害由 SpawnAttackTrigger 在 attackTriggerPos 处理
+        Debug.Log("[晶能斩击] 判定阶段 — 触发器已生成");
+    }
+
+    void OnActiveStart_Legacy()
+    {
         // 扇形范围检测
         Vector2 bossPos = ownerBoss.transform.position;
         Vector2 playerPos = ownerBoss.player != null ? (Vector2)ownerBoss.player.position : bossPos;
@@ -263,6 +269,11 @@ public class TimeShockwaveAttack : BossAttackPattern
     }
 
     protected override void OnActiveStart()
+    {
+        Debug.Log("[时空冲击波] 判定阶段 — 触发器已生成");
+    }
+
+    void OnActiveStart_Legacy()
     {
         Vector2 bossPos = ownerBoss.transform.position;
         Vector2 direction = Vector2.up; // 默认向上发射
@@ -349,6 +360,11 @@ public class CrystalCageAttack : BossAttackPattern
     }
 
     protected override void OnActiveStart()
+    {
+        Debug.Log("[水晶牢笼] 判定阶段 — 触发器已生成");
+    }
+
+    void OnActiveStart_Legacy()
     {
         // 以玩家当前位置为中心生成牢笼
         Vector3 cageCenter = ownerBoss.player != null
@@ -446,6 +462,11 @@ public class RiftDashAttack : BossAttackPattern
     }
 
     protected override void OnActiveStart()
+    {
+        Debug.Log("[裂隙冲锋] 判定阶段 — 触发器已生成");
+    }
+
+    void OnActiveStart_Legacy()
     {
         trailActive = true;
         // 给Boss一个瞬间的冲力
@@ -558,6 +579,11 @@ public class SpaceCollapseAttack : BossAttackPattern
     }
 
     protected override void OnActiveStart()
+    {
+        Debug.Log("[时空崩坏] 判定阶段 — 触发器已生成");
+    }
+
+    void OnActiveStart_Legacy()
     {
         Vector2 bossPos = ownerBoss.transform.position;
 
