@@ -50,10 +50,10 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 
     void Respawn()
     {
-        // 传送到安全屋（地图网格中心 (2,2)）
-        var map = FindObjectOfType<IntegratedMapSystem>();
-        if (map != null)
-            transform.position = map.GetWorldPosition(new Vector2Int(2, 2));
+        // 通过 PlayerSpawnManager 在安全区生成点复活
+        var spawnMgr = FindObjectOfType<PlayerSpawnManager>();
+        if (spawnMgr != null)
+            spawnMgr.ResetPlayerToSafeRoom();
         else
             transform.position = Vector3.zero;
 
@@ -69,7 +69,7 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
         enabled = true;
         moveSpeed = originalMoveSpeed;
         runSpeed = originalRunSpeed;
-        Debug.LogWarning("[PlayerController] 已在安全屋复活，Boss房间已重置");
+        Debug.LogWarning($"[PlayerController] 已在安全区复活 位置={transform.position}，Boss房间已重置");
     }
 
     private float dashTimer = 0f;
