@@ -154,6 +154,7 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
 
     void ApplyRecoverEffects()
     {
+        InitializeReferences(); // 每次恢复前刷新玩家引用
         // 重置负担
         if (playerBurden != null)
         {
@@ -188,10 +189,12 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
 
         lastVisitedCampfire = this;
 
-        // 恢复后完整状态播报
-        float hp = playerHealth != null ? playerHealth.currentHealth : -1;
-        float maxHp = playerHealth != null ? playerHealth.maxHealth : -1;
-        float burden = playerBurden != null ? playerBurden.currentBurden : -1;
+        // 完整状态播报
+        float hp = playerHealth != null ? playerHealth.currentHealth : 0;
+        float maxHp = playerHealth != null ? playerHealth.maxHealth : 0;
+        float burden = playerBurden != null ? playerBurden.currentBurden : 0;
+        if (playerHealth == null) Debug.LogWarning("[营火] ⚠ 未找到玩家 HealthSystem");
+        if (playerBurden == null) Debug.LogWarning("[营火] ⚠ 未找到玩家 BurdenSystem");
         Debug.LogWarning($"[营火] ======== 状态恢复完成 ========");
         Debug.LogWarning($"[营火] HP: {hp:F0}/{maxHp:F0} | 负担: {burden:F0}");
         Debug.LogWarning($"[营火] 位置: {transform.position}");
