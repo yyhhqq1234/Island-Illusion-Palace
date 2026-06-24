@@ -50,10 +50,10 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 
     void Respawn()
     {
-        // 通过 PlayerSpawnManager 在安全区生成点复活
+        // 传送到安全区生成点（保留所有状态）
         var spawnMgr = FindObjectOfType<PlayerSpawnManager>();
         if (spawnMgr != null)
-            spawnMgr.ResetPlayerToSafeRoom();
+            spawnMgr.MovePlayerToSafeRoom(gameObject);
         else
             transform.position = Vector3.zero;
 

@@ -260,6 +260,19 @@ public class PlayerSpawnManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 将现有玩家传送到安全区生成点（不销毁，保留所有状态）
+    /// </summary>
+    public void MovePlayerToSafeRoom(GameObject player)
+    {
+        if (player == null) return;
+        Vector3 safeRoomWorldPos = GetSafeRoomWorldPosition();
+        Vector3 spawnPosition = GetSpawnPosition(safeRoomWorldPos);
+        player.transform.position = spawnPosition;
+        currentPlayer = player;
+        Debug.Log($"[PlayerSpawnManager] 玩家移动到安全区: {spawnPosition}");
+    }
+
+    /// <summary>
     /// 重置玩家位置到安全区
     /// </summary>
     public void ResetPlayerToSafeRoom()
