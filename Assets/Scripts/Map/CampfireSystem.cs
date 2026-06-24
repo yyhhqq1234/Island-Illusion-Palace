@@ -33,17 +33,26 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
     [Header("引用")]
     private HealthSystem playerHealth;
     private BurdenSystem playerBurden;
-    private ManaSystem playerMana;
     private SummonSystem summonSystem;
     private IntegratedMapSystem mapSystem;
 
-    // P0: 存档追踪
-    private static CampfireSystem lastVisitedCampfire; // 最近访问的营火
+    private static CampfireSystem lastVisitedCampfire;
 
     void Start()
     {
-        InitializeReferences();
         InitializeVisuals();
+    }
+
+    void InitializeReferences()
+    {
+        var playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj != null)
+        {
+            playerHealth = playerObj.GetComponent<HealthSystem>();
+            playerBurden = playerObj.GetComponent<BurdenSystem>();
+            summonSystem = playerObj.GetComponent<SummonSystem>();
+        }
+        mapSystem = FindObjectOfType<IntegratedMapSystem>();
     }
 
     void OnEnable()
@@ -61,18 +70,11 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
     void Update()
     {
         // 检查玩家是否在范围内且按下了E键
-        if (playerInRange && Input.GetKeyDown(KeyCode.E) && IsCampfireUsable())
+        if (playerInRange && Input.GetKeyDown(KeyCode.E))
         {
-            InteractWithCampfire();
+            if (currentState == CampfireState.Idle) LightCampfire();
+            if (currentState == CampfireState.Burning) ApplyRecoverEffects();
         }
-    }
-
-    void InitializeReferences()
-    {
-        playerHealth = FindObjectOfType<HealthSystem>();
-        playerBurden = FindObjectOfType<BurdenSystem>();
-        summonSystem = FindObjectOfType<SummonSystem>();
-        mapSystem = FindObjectOfType<IntegratedMapSystem>();
     }
 
     void InitializeVisuals()
@@ -184,9 +186,16 @@ public class CampfireSystem : MonoBehaviour, ICampfireService
             Debug.Log("房间敌人已重置");
         }
 
-        // P0: 标记为最近访问的营火（用于退出时自动存档）
         lastVisitedCampfire = this;
-        Debug.Log($"[营火] 已记录为最近访问营火，位置={transform.position}");
+
+        // 恢复后完整状态播报
+        float hp = playerHealth != null ? playerHealth.currentHealth : -1;
+        float maxHp = playerHealth != null ? playerHealth.maxHealth : -1;
+        float burden = playerBurden != null ? playerBurden.currentBurden : -1;
+        Debug.LogWarning($"[营火] ======== 状态恢复完成 ========");
+        Debug.LogWarning($"[营火] HP: {hp:F0}/{maxHp:F0} | 负担: {burden:F0}");
+        Debug.LogWarning($"[营火] 位置: {transform.position}");
+        Debug.LogWarning($"[营火] ================================");
     }
 
     // ═══════════════════════════════════════════
