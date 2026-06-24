@@ -39,13 +39,37 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
     float IDashProvider.dashDuration => dashDuration;
     float IDashProvider.dashCooldown => dashCooldown;
 
-    // IDieHandler 实现 — HealthSystem.Die() 触发时调用
     void IDieHandler.OnDie()
     {
-        Debug.Log("[PlayerController] 玩家死亡");
+        Debug.LogWarning("[PlayerController] 玩家死亡");
         enabled = false;
-        if (TryGetComponent<Rigidbody2D>(out var rb))
-            rb.velocity = Vector2.zero;
+        if (TryGetComponent<Rigidbody2D>(out var rbDie))
+            rbDie.velocity = Vector2.zero;
+        Invoke(nameof(Respawn), 2f);
+    }
+
+    void Respawn()
+    {
+        // 传送到安全屋（地图网格中心 (2,2)）
+        var map = FindObjectOfType<IntegratedMapSystem>();
+        if (map != null)
+            transform.position = map.GetWorldPosition(new Vector2Int(2, 2));
+        else
+            transform.position = Vector3.zero;
+
+        // 满血复活
+        var hs = GetComponent<HealthSystem>();
+        if (hs != null) hs.currentHealth = hs.maxHealth;
+
+        // 重置所有Boss房间
+        var bossRooms = FindObjectsOfType<BossRoomManager>();
+        foreach (var room in bossRooms)
+            room.ResetBossRoom();
+
+        enabled = true;
+        moveSpeed = originalMoveSpeed;
+        runSpeed = originalRunSpeed;
+        Debug.LogWarning("[PlayerController] 已在安全屋复活，Boss房间已重置");
     }
 
     private float dashTimer = 0f;
@@ -118,22 +142,12 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 
     void Update()
     {
-        if (cachedPauseMenu != null && cachedPauseMenu.IsPaused())
-        {
-            return;
-        }
+        // 防止意外禁用
+        if (!enabled) { enabled = true; Debug.LogWarning("[PlayerController] 自动恢复 enabled"); }
 
-        // 检查背包是否打开（使用缓存引用）
-        if (cachedInventoryUI != null && cachedInventoryUI.IsInventoryOpen())
-        {
-            return;
-        }
-
-        // 检查炼金界面是否打开（使用缓存引用）
-        if (cachedAlchemyUI != null && cachedAlchemyUI.IsAlchemyPanelOpen())
-        {
-            return;
-        }
+        if (cachedPauseMenu != null && cachedPauseMenu.IsPaused()) return;
+        if (cachedInventoryUI != null && cachedInventoryUI.IsInventoryOpen()) return;
+        if (cachedAlchemyUI != null && cachedAlchemyUI.IsAlchemyPanelOpen()) return;
 
         HandleMouseInput();
         HandleKeyboardInput();
@@ -372,33 +386,36 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 
     void HandleMovement()
     {
-        if (rb == null) return;
+        if (rb == null || !enabled) return;
 
-        // 安全阀：速度异常时重置
-        if (moveSpeed < 0.1f || runSpeed < 0.1f)
+        // 速度自动修复
+        if (moveSpeed <= 0f) moveSpeed = originalMoveSpeed;
+        if (runSpeed <= 0f) runSpeed = originalRunSpeed;
+
+        if (isDashing)
         {
-            moveSpeed = originalMoveSpeed;
-            runSpeed = originalRunSpeed;
+            Vector2 dashDirection = movement.sqrMagnitude > 0 ? movement.normalized : (currentDirection != Vector2.zero ? currentDirection : Vector2.down);
+            rb.velocity = dashDirection * dashSpeed;
+
+            if (playerLayer >= 0 && enemyLayer >= 0)
+            {
+                if (dashTimer >= dashDuration - 0.02f)
+                    Physics2D.IgnoreLayerCollision(playerLayer, enemyLayer, true);
+                else if (dashTimer <= 0.02f)
+                    Physics2D.IgnoreLayerCollision(playerLayer, enemyLayer, false);
+            }
         }
-
-        if (isDashing) HandleDashingMovement();
-        else if (isMoving) rb.velocity = movement * (isRunning ? runSpeed : moveSpeed);
-        else rb.velocity = Vector2.zero;
+        else if (isMoving)
+        {
+            rb.velocity = movement * (isRunning ? runSpeed : moveSpeed);
+        }
+        else
+        {
+            rb.velocity = Vector2.zero;
+        }
     }
 
-    void HandleDashingMovement()
-    {
-        if (rb == null) return;
-        Vector2 dashDirection = movement.sqrMagnitude > 0 ? movement.normalized : (currentDirection != Vector2.zero ? currentDirection : Vector2.down);
-        rb.velocity = dashDirection * dashSpeed;
-
-        if (playerLayer < 0 || enemyLayer < 0) return; // 层不存在则跳过
-
-        if (dashTimer >= dashDuration - 0.02f)
-            Physics2D.IgnoreLayerCollision(playerLayer, enemyLayer, true);
-        if (dashTimer <= 0.02f)
-            Physics2D.IgnoreLayerCollision(playerLayer, enemyLayer, false);
-    }
+    void HandleDashingMovement() { /* moved inline */ }
 
     public void StartDash()
     {

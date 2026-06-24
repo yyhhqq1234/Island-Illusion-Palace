@@ -27,7 +27,7 @@ public class HealthSystem : MonoBehaviour, IHealthProvider
     private float defenseMultiplier = 1f;
 
     [Header("调试/作弊")]
-    [Tooltip("无敌模式 — F1 切换")]
+    [Tooltip("无敌模式（仅测试用 — F1 切换）")]
     public bool invincible = false;
 
     void Start()

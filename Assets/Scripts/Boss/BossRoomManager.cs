@@ -171,6 +171,41 @@ public class BossRoomManager : MonoBehaviour
         Debug.Log($"[BossRoomManager] {spawnedBoss.name} 已生成于 ({spawnPos.x:F1}, {spawnPos.y:F1})");
     }
 
+    /// <summary>重置Boss房间（玩家死亡后调用）— 清Boss+奖励，恢复初始状态</summary>
+    public void ResetBossRoom()
+    {
+        // 销毁已生成的Boss
+        if (spawnedBoss != null)
+        {
+            Destroy(spawnedBoss);
+            spawnedBoss = null;
+        }
+
+        // 重置状态
+        bossDefeated = false;
+        playerEntered = false;
+
+        // 销毁已生成的传送门和宝箱
+        var portals = GameObject.FindObjectsOfType<TimePortal>();
+        foreach (var p in portals)
+        {
+            if (p != null && p.currentState == PortalState.Open)
+                Destroy(p.gameObject);
+        }
+        // 清理Boss奖励宝箱（按名称识别）
+        var allObjects = GameObject.FindObjectsOfType<GameObject>();
+        foreach (var obj in allObjects)
+        {
+            if (obj != null && obj.name.StartsWith("TreasureChest_BossReward"))
+                Destroy(obj);
+        }
+
+        // 恢复探索音乐
+        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
+
+        Debug.Log("[BossRoomManager] Boss房间已重置");
+    }
+
     // ═══════════════════════════════════════════
     // Boss击败处理（核心奖励流程）
     // ═══════════════════════════════════════════
