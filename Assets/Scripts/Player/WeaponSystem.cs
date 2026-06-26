@@ -1029,19 +1029,16 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
             }
             return;
         }
+        // 无 WeaponData 时保留 Inspector 设置（不覆盖 attackInterval 等字段）
         switch (currentWeaponType)
         {
             case WeaponType.Sword:
-                baseDamage = 25f; attackInterval = 0.45f; attackRange = 2f;
                 damageType = DamageType.Physical; weaponElement = ElementType.None; break;
             case WeaponType.Staff:
-                baseDamage = 20f; attackInterval = 0.75f; attackRange = 5f;
                 damageType = DamageType.Magic; weaponElement = ElementType.Soul; break;
             case WeaponType.Scythe:
-                baseDamage = 30f; attackInterval = 0.85f; attackRange = 2.5f;
                 damageType = DamageType.Mixed; weaponElement = ElementType.Soul; break;
             case WeaponType.CrystalArm:
-                baseDamage = 18f; attackInterval = 0.38f; attackRange = 3f;
                 damageType = DamageType.Mixed; weaponElement = ElementType.Frost; break;
         }
     }
