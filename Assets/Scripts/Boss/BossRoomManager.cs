@@ -133,9 +133,8 @@ public class BossRoomManager : MonoBehaviour
         if (bossDefeated || playerEntered) return;
 
         playerInsideTimer += Time.deltaTime;
-        // 确认条件：停留超过0.5秒 + 在房间中心半径15m内（排除边缘擦碰）
-        float distFromCenter = Vector3.Distance(other.transform.position, transform.position);
-        if (playerInsideTimer >= EntryConfirmDuration && distFromCenter < 15f)
+        // 确认条件：停留超过0.5秒（OnTriggerStay已确保在碰撞体内）
+        if (playerInsideTimer >= EntryConfirmDuration)
         {
             playerEntered = true;
             SpawnBoss(other.transform);
