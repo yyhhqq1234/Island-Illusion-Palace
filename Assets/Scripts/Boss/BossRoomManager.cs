@@ -146,8 +146,16 @@ public class BossRoomManager : MonoBehaviour
         if (!other.CompareTag("Player")) return;
         playerInsideTimer = 0f;
 
-        // 缓冲期过后离开 → 重置Boss房间
-        if (!gracePeriodActive && !bossDefeated && spawnedBoss != null)
+        // 缓冲期内离开 → 直接重置（玩家误入后退出）
+        if (gracePeriodActive && spawnedBoss != null)
+        {
+            Debug.LogWarning("[BossRoomManager] 缓冲期内玩家离开 — 重置Boss房间");
+            ResetBossRoom();
+            return;
+        }
+
+        // 缓冲期过后离开 → 重置
+        if (!bossDefeated && spawnedBoss != null)
         {
             Debug.LogWarning("[BossRoomManager] 玩家离开Boss房间，重置战斗");
             ResetBossRoom();
@@ -156,14 +164,14 @@ public class BossRoomManager : MonoBehaviour
 
     System.Collections.IEnumerator TickGracePeriod()
     {
-        while (gracePeriodActive)
+        while (gracePeriodActive && spawnedBoss != null)
         {
             graceTimer -= Time.deltaTime;
             if (graceTimer <= 0f)
             {
                 gracePeriodActive = false;
                 if (battleBarriers != null) battleBarriers.SetActive(true);
-                Debug.LogWarning("[BossRoomManager] 误入缓冲结束 — 房间已封锁");
+                Debug.LogWarning("[BossRoomManager] 缓冲结束 — 房间已封锁");
                 yield break;
             }
             yield return null;
