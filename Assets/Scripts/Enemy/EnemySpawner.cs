@@ -226,10 +226,15 @@ public class EnemySpawner : MonoBehaviour
             }
         }
 
-        // 检测清空：有敌人被清理且当前数量归零时进入滞空
+        // 全部敌人被杀 → 进入长冷却
         if (countBefore > 0 && activeEnemies.Count == 0 && !isInClearZoneCooldown)
         {
             EnterClearZoneCooldown();
+        }
+        // 个别敌人被杀 → 重置计时器，避免同点位立即补兵
+        else if (activeEnemies.Count < countBefore && !isInClearZoneCooldown)
+        {
+            CalculateNextSpawnTime();
         }
     }
 

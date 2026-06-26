@@ -24,6 +24,9 @@ public class BossRoomManager : MonoBehaviour
     [Tooltip("Boss生成点")]
     public Transform bossSpawnPoint;
 
+    [Tooltip("战斗屏障（Boss战期间封锁房间）")]
+    public GameObject battleBarriers;
+
     [Tooltip("是否为最终Boss房间（S-SN）")]
     public bool isFinalBossRoom = false;
 
@@ -81,8 +84,13 @@ public class BossRoomManager : MonoBehaviour
     private bool bossDefeated = false;
     private bool playerEntered = false;
 
-    /// <summary>Boss战开始时间</summary>
     private float battleStartTime;
+    private float playerInsideTimer = 0f;
+    private const float EntryConfirmDuration = 0.5f;
+    private bool gracePeriodActive = false;
+    private float graceTimer = 0f;
+    private const float GraceDuration = 3f;
+    private bool subscribedToUpdate = false;
 
     /// <summary>当前Boss引用（供外部查询）</summary>
     public GameObject SpawnedBoss => spawnedBoss;
@@ -115,11 +123,52 @@ public class BossRoomManager : MonoBehaviour
     void OnTriggerEnter2D(Collider2D other)
     {
         if (!other.CompareTag("Player")) return;
-        if (bossDefeated) return;
-        if (playerEntered) return;
+        if (bossDefeated || playerEntered) return;
+        playerInsideTimer = 0f; // 开始计时
+    }
 
-        playerEntered = true;
-        SpawnBoss(other.transform); // 传入触发的玩家 Transform
+    void OnTriggerStay2D(Collider2D other)
+    {
+        if (!other.CompareTag("Player")) return;
+        if (bossDefeated || playerEntered) return;
+
+        playerInsideTimer += Time.deltaTime;
+        // 确认条件：停留超过0.5秒 + 在房间中心半径15m内（排除边缘擦碰）
+        float distFromCenter = Vector3.Distance(other.transform.position, transform.position);
+        if (playerInsideTimer >= EntryConfirmDuration && distFromCenter < 15f)
+        {
+            playerEntered = true;
+            SpawnBoss(other.transform);
+        }
+    }
+
+    void OnTriggerExit2D(Collider2D other)
+    {
+        if (!other.CompareTag("Player")) return;
+        playerInsideTimer = 0f;
+
+        // 缓冲期过后离开 → 重置Boss房间
+        if (!gracePeriodActive && !bossDefeated && spawnedBoss != null)
+        {
+            Debug.LogWarning("[BossRoomManager] 玩家离开Boss房间，重置战斗");
+            ResetBossRoom();
+        }
+    }
+
+    System.Collections.IEnumerator TickGracePeriod()
+    {
+        while (gracePeriodActive)
+        {
+            graceTimer -= Time.deltaTime;
+            if (graceTimer <= 0f)
+            {
+                gracePeriodActive = false;
+                if (battleBarriers != null) battleBarriers.SetActive(true);
+                Debug.LogWarning("[BossRoomManager] 误入缓冲结束 — 房间已封锁");
+                yield break;
+            }
+            yield return null;
+        }
     }
 
     /// <summary>
@@ -165,10 +214,15 @@ public class BossRoomManager : MonoBehaviour
         string bossName = isFinalBossRoom ? "Scarlet Soul Shana" : "时空守护者";
         GlobalEventManager.Instance.ShowNotification($"警告：{bossName} 出现了！", 4f);
 
-        // 切换音乐到Boss战状态
         GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.BossBattle);
 
-        Debug.Log($"[BossRoomManager] {spawnedBoss.name} 已生成于 ({spawnPos.x:F1}, {spawnPos.y:F1})");
+        // 开启误入缓冲 — 3秒后激活屏障
+        gracePeriodActive = true;
+        graceTimer = GraceDuration;
+        Debug.Log($"[BossRoomManager] {spawnedBoss.name} 已生成 | 误入缓冲 {GraceDuration}秒");
+
+        // 订阅 Update 以处理缓冲计时
+        if (!subscribedToUpdate) { subscribedToUpdate = true; StartCoroutine(TickGracePeriod()); }
     }
 
     /// <summary>重置Boss房间（玩家死亡后调用）— 清Boss+奖励，恢复初始状态</summary>
@@ -200,7 +254,10 @@ public class BossRoomManager : MonoBehaviour
                 Destroy(obj);
         }
 
-        // 恢复探索音乐
+        // 清理战斗状态
+        if (battleBarriers != null) battleBarriers.SetActive(false);
+        gracePeriodActive = false;
+        subscribedToUpdate = false;
         GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
 
         Debug.Log("[BossRoomManager] Boss房间已重置");
@@ -246,7 +303,9 @@ public class BossRoomManager : MonoBehaviour
         if (isFinalBossRoom)
             TriggerEndingSequence();
 
-        // Boss消失后再切换音乐
+        // 解除战斗屏障
+        if (battleBarriers != null) battleBarriers.SetActive(false);
+
         GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
         GlobalEventManager.Instance.ShowNotification("Boss被击败！奖励已掉落！", 3f);
 
