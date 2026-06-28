@@ -85,10 +85,12 @@ public class PauseMenu : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            SceneManager.sceneLoaded += OnSceneLoaded;
         }
         else
         {
             Destroy(gameObject);
+            return;
         }
     }
 
@@ -100,10 +102,42 @@ public class PauseMenu : MonoBehaviour
         // 初始化按钮事件
         InitializeButtons();
         
+        // 场景感知：在主菜单中禁用整个 GameManager（含 Canvas/暂停功能）
+        if (SceneManager.GetActiveScene().name == IIPConstants.SceneMainMenu)
+        {
+            gameObject.SetActive(false);
+            Debug.Log("[PauseMenu] 主菜单场景中禁用 GameManager");
+            return;
+        }
+        
         // 启动时隐藏暂停菜单
         if (hideOnStart)
         {
             HidePauseMenuImmediate();
+        }
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (Instance == this) Instance = null;
+    }
+
+    /// <summary>
+    /// 场景加载回调：游戏场景启用 GameManager，主菜单禁用
+    /// </summary>
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name == IIPConstants.SceneMainMenu)
+        {
+            gameObject.SetActive(false);
+            Debug.Log("[PauseMenu] 返回主菜单，禁用 GameManager");
+        }
+        else
+        {
+            gameObject.SetActive(true);
+            HidePauseMenuImmediate();
+            Debug.Log($"[PauseMenu] 进入游戏场景 {scene.name}，启用 GameManager");
         }
     }
 
