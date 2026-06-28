@@ -1,8 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using System.Collections;
 
 /// <summary>
 /// 暂停菜单管理器 - 负责处理游戏暂停和恢复
+/// 完整功能实现：ESC键触发、按钮交互、确认对话框、动画效果
 /// </summary>
 public class PauseMenu : MonoBehaviour
 {
@@ -29,8 +32,51 @@ public class PauseMenu : MonoBehaviour
     [Tooltip("屏幕调暗遮罩")]
     public Image dimMask;
 
+    [Header("暂停菜单按钮")]
+    [Tooltip("继续游戏按钮")]
+    public Button resumeButton;
+    
+    [Tooltip("设置按钮")]
+    public Button settingsButton;
+    
+    [Tooltip("返回主菜单按钮")]
+    public Button mainMenuButton;
+    
+    [Tooltip("退出游戏按钮")]
+    public Button quitButton;
+
+    [Header("确认对话框")]
+    [Tooltip("确认对话框面板")]
+    public GameObject confirmDialogPanel;
+    
+    [Tooltip("对话框文本")]
+    public Text dialogText;
+    
+    [Tooltip("确认按钮")]
+    public Button confirmButton;
+    
+    [Tooltip("取消按钮")]
+    public Button cancelButton;
+
+    [Header("设置面板（可选）")]
+    [Tooltip("设置面板Prefab或引用")]
+    public GameObject settingsPanelPrefab;
+    
+    private GameObject settingsPanelInstance;
+
     private bool isPaused = false;
     private CanvasGroup pausePanelCanvasGroup;
+    private CanvasGroup dimMaskCanvasGroup;
+    private CanvasGroup confirmDialogCanvasGroup;
+    private Coroutine currentAnimation;
+    private ConfirmAction pendingAction;
+
+    // 确认动作类型
+    private enum ConfirmAction
+    {
+        MainMenu,
+        QuitGame
+    }
 
     void Awake()
     {
@@ -51,10 +97,13 @@ public class PauseMenu : MonoBehaviour
         // 初始化UI组件
         InitializeUI();
         
+        // 初始化按钮事件
+        InitializeButtons();
+        
         // 启动时隐藏暂停菜单
         if (hideOnStart)
         {
-            HidePauseMenu();
+            HidePauseMenuImmediate();
         }
     }
 
@@ -63,7 +112,15 @@ public class PauseMenu : MonoBehaviour
         // 检测ESC键按下
         if (useESCKey && Input.GetKeyDown(KeyCode.Escape))
         {
-            TogglePause();
+            // 如果确认对话框打开，ESC关闭对话框
+            if (confirmDialogPanel != null && confirmDialogPanel.activeSelf)
+            {
+                HideConfirmDialog();
+            }
+            else
+            {
+                TogglePause();
+            }
         }
     }
 
@@ -72,7 +129,7 @@ public class PauseMenu : MonoBehaviour
     /// </summary>
     void InitializeUI()
     {
-        // 初始化暂停面板
+        // 初始化暂停面板CanvasGroup
         if (pausePanel != null)
         {
             pausePanelCanvasGroup = pausePanel.GetComponent<CanvasGroup>();
@@ -82,11 +139,91 @@ public class PauseMenu : MonoBehaviour
             }
         }
         
-        // 初始化屏幕调暗遮罩
+        // 初始化屏幕调暗遮罩CanvasGroup
         if (dimScreen && dimMask != null)
         {
+            dimMaskCanvasGroup = dimMask.GetComponent<CanvasGroup>();
+            if (dimMaskCanvasGroup == null)
+            {
+                dimMaskCanvasGroup = dimMask.gameObject.AddComponent<CanvasGroup>();
+            }
             dimMask.color = new Color(0f, 0f, 0f, dimOpacity);
-            dimMask.gameObject.SetActive(false);
+        }
+        
+        // 初始化确认对话框CanvasGroup
+        if (confirmDialogPanel != null)
+        {
+            confirmDialogCanvasGroup = confirmDialogPanel.GetComponent<CanvasGroup>();
+            if (confirmDialogCanvasGroup == null)
+            {
+                confirmDialogCanvasGroup = confirmDialogPanel.AddComponent<CanvasGroup>();
+            }
+            confirmDialogPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 初始化按钮事件监听
+    /// </summary>
+    void InitializeButtons()
+    {
+        // 继续游戏按钮
+        if (resumeButton != null)
+        {
+            resumeButton.onClick.AddListener(() =>
+            {
+                IIPBootstrap.Audio?.PlayClick();
+                ResumeGame();
+            });
+        }
+        
+        // 设置按钮
+        if (settingsButton != null)
+        {
+            settingsButton.onClick.AddListener(() =>
+            {
+                IIPBootstrap.Audio?.PlayClick();
+                OnSettingsButtonClicked();
+            });
+        }
+        
+        // 返回主菜单按钮
+        if (mainMenuButton != null)
+        {
+            mainMenuButton.onClick.AddListener(() =>
+            {
+                IIPBootstrap.Audio?.PlayClick();
+                ShowConfirmDialog(ConfirmAction.MainMenu);
+            });
+        }
+        
+        // 退出游戏按钮
+        if (quitButton != null)
+        {
+            quitButton.onClick.AddListener(() =>
+            {
+                IIPBootstrap.Audio?.PlayClick();
+                ShowConfirmDialog(ConfirmAction.QuitGame);
+            });
+        }
+        
+        // 确认对话框按钮
+        if (confirmButton != null)
+        {
+            confirmButton.onClick.AddListener(() =>
+            {
+                IIPBootstrap.Audio?.PlayClick();
+                OnConfirmAction();
+            });
+        }
+        
+        if (cancelButton != null)
+        {
+            cancelButton.onClick.AddListener(() =>
+            {
+                IIPBootstrap.Audio?.PlayClick();
+                HideConfirmDialog();
+            });
         }
     }
 
@@ -115,16 +252,13 @@ public class PauseMenu : MonoBehaviour
         isPaused = true;
         Time.timeScale = 0f;
         
-        // 显示暂停菜单
+        // 触发暂停事件
+        IIPBootstrap.Events?.TriggerGamePaused();
+        
+        // 显示暂停菜单（带动画）
         ShowPauseMenu();
         
-        // 调暗游戏界面
-        if (dimScreen && dimMask != null)
-        {
-            dimMask.gameObject.SetActive(true);
-        }
-        
-        Debug.Log("游戏已暂停");
+        Debug.Log("[PauseMenu] 游戏已暂停");
     }
 
     /// <summary>
@@ -137,39 +271,168 @@ public class PauseMenu : MonoBehaviour
         isPaused = false;
         Time.timeScale = 1f;
         
-        // 隐藏暂停菜单
+        // 触发恢复事件
+        IIPBootstrap.Events?.TriggerGameResumed();
+        
+        // 隐藏暂停菜单（带动画）
         HidePauseMenu();
         
-        // 取消屏幕调暗
-        if (dimScreen && dimMask != null)
-        {
-            dimMask.gameObject.SetActive(false);
-        }
-        
-        Debug.Log("游戏已恢复");
+        Debug.Log("[PauseMenu] 游戏已恢复");
     }
 
     /// <summary>
-    /// 显示暂停菜单
+    /// 显示暂停菜单（带动画）
     /// </summary>
     void ShowPauseMenu()
     {
+        // 停止正在进行的动画
+        if (currentAnimation != null)
+        {
+            StopCoroutine(currentAnimation);
+        }
+        
+        currentAnimation = StartCoroutine(ShowPauseMenuAnimation());
+    }
+    
+    /// <summary>
+    /// 显示暂停菜单动画协程
+    /// </summary>
+    IEnumerator ShowPauseMenuAnimation()
+    {
+        // 阶段1：屏幕调暗淡入（0.15s）
+        if (dimScreen && dimMask != null)
+        {
+            dimMask.gameObject.SetActive(true);
+            if (dimMaskCanvasGroup != null)
+            {
+                dimMaskCanvasGroup.alpha = 0f;
+                float duration = 0.15f;
+                float elapsed = 0f;
+                while (elapsed < duration)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    dimMaskCanvasGroup.alpha = Mathf.Lerp(0f, dimOpacity, elapsed / duration);
+                    yield return null;
+                }
+                dimMaskCanvasGroup.alpha = dimOpacity;
+            }
+        }
+        
+        // 阶段2：暂停面板淡入+缩放（0.25s Back ease）
         if (pausePanel != null)
         {
             pausePanel.SetActive(true);
             if (pausePanelCanvasGroup != null)
             {
-                pausePanelCanvasGroup.alpha = 1f;
+                pausePanelCanvasGroup.alpha = 0f;
                 pausePanelCanvasGroup.interactable = true;
                 pausePanelCanvasGroup.blocksRaycasts = true;
+                
+                // 缩放动画：0.8 → 1.1 → 1 (Back ease)
+                pausePanel.transform.localScale = Vector3.one * 0.8f;
+                
+                float duration = 0.15f;
+                float elapsed = 0f;
+                Vector3 startScale = Vector3.one * 0.8f;
+                Vector3 midScale = Vector3.one * 1.1f;
+                
+                // 阶段2a: 0.8 → 1.1 (0.15s) - Back ease approximation
+                while (elapsed < duration)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    float t = elapsed / duration;
+                    // Back ease approximation: 先超出目标值再回弹
+                    float backT = t * t * (2.70158f * t - 1.70158f);
+                    pausePanel.transform.localScale = Vector3.Lerp(startScale, midScale, backT);
+                    pausePanelCanvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsed / 0.25f);
+                    yield return null;
+                }
+                pausePanel.transform.localScale = midScale;
+                pausePanelCanvasGroup.alpha = 0.6f;
+                
+                // 阶段2b: 1.1 → 1 (0.1s)
+                elapsed = 0f;
+                duration = 0.1f;
+                Vector3 endScale = Vector3.one;
+                while (elapsed < duration)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    pausePanel.transform.localScale = Vector3.Lerp(midScale, endScale, elapsed / duration);
+                    pausePanelCanvasGroup.alpha = Mathf.Lerp(0.6f, 1f, elapsed / duration);
+                    yield return null;
+                }
+                pausePanel.transform.localScale = endScale;
+                pausePanelCanvasGroup.alpha = 1f;
             }
         }
+        
+        currentAnimation = null;
     }
 
     /// <summary>
-    /// 隐藏暂停菜单
+    /// 隐藏暂停菜单（带动画）
     /// </summary>
     void HidePauseMenu()
+    {
+        // 停止正在进行的动画
+        if (currentAnimation != null)
+        {
+            StopCoroutine(currentAnimation);
+        }
+        
+        currentAnimation = StartCoroutine(HidePauseMenuAnimation());
+    }
+    
+    /// <summary>
+    /// 隐藏暂停菜单动画协程
+    /// </summary>
+    IEnumerator HidePauseMenuAnimation()
+    {
+        // 阶段1：暂停面板淡出+缩放（0.15s）
+        if (pausePanel != null && pausePanelCanvasGroup != null)
+        {
+            float duration = 0.15f;
+            float elapsed = 0f;
+            Vector3 startScale = pausePanel.transform.localScale;
+            Vector3 endScale = Vector3.one * 0.9f;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                pausePanelCanvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
+                pausePanel.transform.localScale = Vector3.Lerp(startScale, endScale, elapsed / duration);
+                yield return null;
+            }
+            
+            pausePanel.SetActive(false);
+            pausePanelCanvasGroup.interactable = false;
+            pausePanelCanvasGroup.blocksRaycasts = false;
+        }
+        
+        // 阶段2：屏幕调暗淡出（0.1s）
+        if (dimScreen && dimMask != null && dimMaskCanvasGroup != null)
+        {
+            float duration = 0.1f;
+            float elapsed = 0f;
+            float startAlpha = dimMaskCanvasGroup.alpha;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                dimMaskCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, elapsed / duration);
+                yield return null;
+            }
+            
+            dimMask.gameObject.SetActive(false);
+        }
+        
+        currentAnimation = null;
+    }
+
+    /// <summary>
+    /// 立即隐藏暂停菜单（无动画）
+    /// </summary>
+    void HidePauseMenuImmediate()
     {
         if (pausePanel != null)
         {
@@ -181,6 +444,199 @@ public class PauseMenu : MonoBehaviour
                 pausePanelCanvasGroup.blocksRaycasts = false;
             }
         }
+        
+        if (dimScreen && dimMask != null)
+        {
+            dimMask.gameObject.SetActive(false);
+            if (dimMaskCanvasGroup != null)
+            {
+                dimMaskCanvasGroup.alpha = 0f;
+            }
+        }
+        
+        if (confirmDialogPanel != null)
+        {
+            confirmDialogPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 设置按钮点击处理
+    /// </summary>
+    void OnSettingsButtonClicked()
+    {
+        // 检查是否已有设置面板Prefab
+        if (settingsPanelPrefab != null)
+        {
+            // 如果还没有实例化，则实例化
+            if (settingsPanelInstance == null)
+            {
+                settingsPanelInstance = Instantiate(settingsPanelPrefab, pausePanel.transform.parent);
+                settingsPanelInstance.transform.SetAsLastSibling(); // 确保显示在暂停面板之上
+            }
+            
+            // 显示设置面板
+            settingsPanelInstance.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning("[PauseMenu] settingsPanelPrefab未设置，无法打开设置面板");
+        }
+    }
+
+    /// <summary>
+    /// 显示确认对话框
+    /// </summary>
+    void ShowConfirmDialog(ConfirmAction action)
+    {
+        pendingAction = action;
+        
+        // 设置对话框文本
+        if (dialogText != null)
+        {
+            switch (action)
+            {
+                case ConfirmAction.MainMenu:
+                    dialogText.text = "确定返回主菜单吗？当前进度将会丢失。";
+                    break;
+                case ConfirmAction.QuitGame:
+                    dialogText.text = "确定退出游戏吗？";
+                    break;
+            }
+        }
+        
+        // 显示确认对话框（带动画）
+        if (confirmDialogPanel != null)
+        {
+            confirmDialogPanel.SetActive(true);
+            confirmDialogPanel.transform.SetAsLastSibling(); // 确保显示在暂停面板之上
+            
+            if (confirmDialogCanvasGroup != null)
+            {
+                // 启动动画协程
+                StartCoroutine(ShowConfirmDialogAnimation());
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 显示确认对话框动画协程
+    /// </summary>
+    IEnumerator ShowConfirmDialogAnimation()
+    {
+        if (confirmDialogCanvasGroup != null)
+        {
+            confirmDialogCanvasGroup.alpha = 0f;
+            confirmDialogCanvasGroup.interactable = true;
+            confirmDialogCanvasGroup.blocksRaycasts = true;
+            
+            // 缩放动画：0.8 → 1.05 → 1 (Back ease)
+            confirmDialogPanel.transform.localScale = Vector3.one * 0.8f;
+            
+            float duration = 0.15f;
+            float elapsed = 0f;
+            Vector3 startScale = Vector3.one * 0.8f;
+            Vector3 midScale = Vector3.one * 1.05f;
+            
+            // 阶段a: 0.8 → 1.05 (0.15s) - Back ease
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t = elapsed / duration;
+                float backT = t * t * (2.70158f * t - 1.70158f);
+                confirmDialogPanel.transform.localScale = Vector3.Lerp(startScale, midScale, backT);
+                confirmDialogCanvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsed / 0.2f);
+                yield return null;
+            }
+            confirmDialogPanel.transform.localScale = midScale;
+            
+            // 阶段b: 1.05 → 1 (0.05s)
+            elapsed = 0f;
+            duration = 0.05f;
+            Vector3 endScale = Vector3.one;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                confirmDialogPanel.transform.localScale = Vector3.Lerp(midScale, endScale, elapsed / duration);
+                yield return null;
+            }
+            confirmDialogPanel.transform.localScale = endScale;
+            confirmDialogCanvasGroup.alpha = 1f;
+        }
+    }
+
+    /// <summary>
+    /// 隐藏确认对话框
+    /// </summary>
+    void HideConfirmDialog()
+    {
+        // 启动动画协程
+        StartCoroutine(HideConfirmDialogAnimation());
+    }
+    
+    /// <summary>
+    /// 隐藏确认对话框动画协程
+    /// </summary>
+    IEnumerator HideConfirmDialogAnimation()
+    {
+        if (confirmDialogPanel != null && confirmDialogCanvasGroup != null)
+        {
+            float duration = 0.15f;
+            float elapsed = 0f;
+            Vector3 startScale = confirmDialogPanel.transform.localScale;
+            Vector3 endScale = Vector3.one * 0.9f;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                confirmDialogCanvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
+                confirmDialogPanel.transform.localScale = Vector3.Lerp(startScale, endScale, elapsed / duration);
+                yield return null;
+            }
+            
+            confirmDialogPanel.SetActive(false);
+            confirmDialogCanvasGroup.interactable = false;
+            confirmDialogCanvasGroup.blocksRaycasts = false;
+        }
+        
+        pendingAction = ConfirmAction.MainMenu; // 重置
+    }
+
+    /// <summary>
+    /// 确认动作执行
+    /// </summary>
+    void OnConfirmAction()
+    {
+        switch (pendingAction)
+        {
+            case ConfirmAction.MainMenu:
+                // 恢复时间流速
+                Time.timeScale = 1f;
+                // 切换到主菜单场景
+                IIPBootstrap.SwitchToScene(IIPConstants.SceneMainMenu);
+                break;
+                
+            case ConfirmAction.QuitGame:
+                // 退出游戏
+                IIPBootstrap.Events?.TriggerGameQuit();
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.isPlaying = false;
+#else
+                Application.Quit();
+#endif
+                break;
+        }
+        
+        // 关闭确认对话框
+        StartCoroutine(HideConfirmDialogAfterAction());
+    }
+    
+    /// <summary>
+    /// 执行动作后关闭确认对话框（带动画）
+    /// </summary>
+    IEnumerator HideConfirmDialogAfterAction()
+    {
+        yield return StartCoroutine(HideConfirmDialogAnimation());
     }
 
     /// <summary>
@@ -189,5 +645,16 @@ public class PauseMenu : MonoBehaviour
     public bool IsPaused()
     {
         return isPaused;
+    }
+    
+    /// <summary>
+    /// 外部调用 - 关闭设置面板（如果有）
+    /// </summary>
+    public void CloseSettingsPanel()
+    {
+        if (settingsPanelInstance != null)
+        {
+            settingsPanelInstance.SetActive(false);
+        }
     }
 }

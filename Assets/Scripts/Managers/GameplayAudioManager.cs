@@ -299,10 +299,15 @@ public class GameplayAudioManager : MonoBehaviour
 
     void InitializeMapType()
     {
-        // 获取当前场景名称并确定地图类型
         currentSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         currentMapType = GetMapTypeFromScene(currentSceneName);
-        Debug.Log($"[AudioManager] 初始化地图类型: {currentMapType}");
+        
+        if (currentMapType == GameSystems.MapMusicType.MainMenu)
+        {
+            baseMusicState = GlobalEventManager.MusicState.MainMenu;
+        }
+        
+        Debug.Log($"[AudioManager] 初始化地图类型: {currentMapType}, 基础状态: {baseMusicState}");
     }
 
     void OnEnable()
