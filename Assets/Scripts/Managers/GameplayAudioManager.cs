@@ -140,6 +140,142 @@ public class GameplayAudioManager : MonoBehaviour
     private float musicFadeTime = 1f;
     private Coroutine musicFadeCoroutine;
 
+    // ═══════════════════════════════════════════
+    // 音乐状态优先级系统
+    // ═══════════════════════════════════════════
+
+    [Header("=== 优先级系统 ===")]
+    [Tooltip("是否启用音乐状态优先级控制（推荐开启）")]
+    public bool enablePrioritySystem = true;
+
+    /// <summary>
+    /// 音乐状态优先级 — 数值越大优先级越高
+    /// BossBattle 和 Camp(安全区) 同级最高，Battle 次之，Exploration 为基础态
+    /// </summary>
+    private System.Collections.Generic.Dictionary<GlobalEventManager.MusicState, int> statePriority = new System.Collections.Generic.Dictionary<GlobalEventManager.MusicState, int>
+    {
+        { GlobalEventManager.MusicState.Silence, 0 },
+        { GlobalEventManager.MusicState.MainMenu, 10 },
+        { GlobalEventManager.MusicState.Exploration, 20 },
+        { GlobalEventManager.MusicState.Battle, 50 },
+        { GlobalEventManager.MusicState.BossBattle, 100 },
+        { GlobalEventManager.MusicState.Camp, 100 },
+    };
+
+    /// <summary>当前活跃的音乐状态集合（可能同时有多个，取最高优先级播放）</summary>
+    private System.Collections.Generic.HashSet<GlobalEventManager.MusicState> activeMusicStates = new System.Collections.Generic.HashSet<GlobalEventManager.MusicState>();
+
+    /// <summary>基础状态（Exploration或MainMenu），当所有高层状态都退出时回退到此</summary>
+    private GlobalEventManager.MusicState baseMusicState = GlobalEventManager.MusicState.Exploration;
+
+    /// <summary>
+    /// 进入一个音乐状态（加入活跃集合，可能触发音乐切换）
+    /// 高优先级会覆盖低优先级；同优先级直接替换
+    /// </summary>
+    void EnterMusicState(GlobalEventManager.MusicState state)
+    {
+        if (!enablePrioritySystem)
+        {
+            DirectPlayMusicState(state);
+            return;
+        }
+
+        activeMusicStates.Add(state);
+        UpdateMusicByPriority();
+        Debug.Log($"[AudioManager] 进入状态: {state} | 当前活跃: {activeMusicStates.Count}个 | 播放: {currentMusicState}");
+    }
+
+    /// <summary>
+    /// 退出一个音乐状态（从活跃集合移除，回退到次高优先级）
+    /// </summary>
+    void ExitMusicState(GlobalEventManager.MusicState state)
+    {
+        if (!enablePrioritySystem)
+        {
+            // 降级模式：退出Battle/Boss/Camp时直接回到Exploration
+            if (state == GlobalEventManager.MusicState.Battle ||
+                state == GlobalEventManager.MusicState.BossBattle ||
+                state == GlobalEventManager.MusicState.Camp)
+            {
+                DirectPlayMusicState(GlobalEventManager.MusicState.Exploration);
+            }
+            return;
+        }
+
+        if (activeMusicStates.Remove(state))
+        {
+            UpdateMusicByPriority();
+            Debug.Log($"[AudioManager] 退出状态: {state} | 当前活跃: {activeMusicStates.Count}个 | 播放: {currentMusicState}");
+        }
+    }
+
+    /// <summary>
+    /// 根据活跃状态集合中最高优先级的状态播放音乐
+    /// </summary>
+    void UpdateMusicByPriority()
+    {
+        GlobalEventManager.MusicState highestState = baseMusicState;
+        int highestPriority = -1;
+
+        foreach (var state in activeMusicStates)
+        {
+            int priority = statePriority.TryGetValue(state, out int p) ? p : 0;
+            if (priority > highestPriority)
+            {
+                highestPriority = priority;
+                highestState = state;
+            }
+            else if (priority == highestPriority && priority == 100)
+            {
+                // 同级最高（BossBattle和Camp）：后者覆盖前者（游戏逻辑上不会同时出现）
+                highestState = state;
+            }
+        }
+
+        if (highestState != currentMusicState)
+        {
+            currentMusicState = highestState;
+            AudioClip target = GetTargetMusic(highestState);
+            if (highestState == GlobalEventManager.MusicState.Silence) StopMusic();
+            else PlayMusic(target, true);
+            Debug.Log($"[AudioManager] 优先级切换 → {highestState} (Map: {currentMapType})");
+        }
+    }
+
+    /// <summary>设置基础音乐状态（当无活跃高层状态时播放）</summary>
+    void SetBaseMusicState(GlobalEventManager.MusicState state)
+    {
+        baseMusicState = state;
+        // 如果当前没有更高优先级的活跃状态，立即切换
+        bool hasHigherActive = false;
+        int basePriority = statePriority.TryGetValue(state, out int bp) ? bp : 0;
+        foreach (var s in activeMusicStates)
+        {
+            if (statePriority.TryGetValue(s, out int sp) && sp > basePriority)
+            {
+                hasHigherActive = true;
+                break;
+            }
+        }
+        if (!hasHigherActive)
+        {
+            currentMusicState = state;
+            AudioClip target = GetTargetMusic(state);
+            if (state == GlobalEventManager.MusicState.Silence) StopMusic();
+            else PlayMusic(target, true);
+        }
+    }
+
+    /// <summary>直接播放指定状态音乐（兼容旧模式，绕过优先级）</summary>
+    void DirectPlayMusicState(GlobalEventManager.MusicState state)
+    {
+        currentMusicState = state;
+        AudioClip target = GetTargetMusic(state);
+        if (state == GlobalEventManager.MusicState.Silence) StopMusic();
+        else PlayMusic(target, true);
+        Debug.Log($"[AudioManager] 直接切换 → {state} (Map: {currentMapType})");
+    }
+
     void Awake()
     {
         if (_instance == null)
@@ -181,6 +317,7 @@ public class GameplayAudioManager : MonoBehaviour
         e.OnBattleStart += OnBattleStart;
         e.OnBattleEnd += OnBattleEnd;
         e.OnBossEncounter += OnBossEncounter;
+        e.OnBossDefeated += OnBossDefeated;
         e.OnAudioRequested += OnAudioRequested;
     }
 
@@ -198,13 +335,14 @@ public class GameplayAudioManager : MonoBehaviour
         e.OnBattleStart -= OnBattleStart;
         e.OnBattleEnd -= OnBattleEnd;
         e.OnBossEncounter -= OnBossEncounter;
+        e.OnBossDefeated -= OnBossDefeated;
     }
 
     void OnPlayerEnterSafeZoneHandler(GameObject _) =>
-        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Camp);
+        EnterMusicState(GlobalEventManager.MusicState.Camp);
 
     void OnPlayerExitSafeZoneHandler(GameObject _) =>
-        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
+        ExitMusicState(GlobalEventManager.MusicState.Camp);
 
     void OnMapTypeChanged(GameSystems.MapMusicType mapType)
     {
@@ -212,7 +350,16 @@ public class GameplayAudioManager : MonoBehaviour
         {
             currentMapType = mapType;
             Debug.Log($"[AudioManager] 接收地图类型广播: {mapType}");
-            RefreshMusicForCurrentState();
+            // 地图类型变化时重置所有活跃状态，切换到新的探索音乐
+            if (enablePrioritySystem)
+            {
+                activeMusicStates.Clear();
+                SetBaseMusicState(GlobalEventManager.MusicState.Exploration);
+            }
+            else
+            {
+                RefreshMusicForCurrentState();
+            }
         }
     }
 
@@ -223,6 +370,20 @@ public class GameplayAudioManager : MonoBehaviour
         if (mapType != currentMapType)
         {
             currentMapType = mapType;
+        }
+
+        // 场景切换时重置所有活跃高层状态
+        if (enablePrioritySystem)
+        {
+            activeMusicStates.Clear();
+            GlobalEventManager.MusicState baseState =
+                (mapType == GameSystems.MapMusicType.MainMenu)
+                    ? GlobalEventManager.MusicState.MainMenu
+                    : GlobalEventManager.MusicState.Exploration;
+            SetBaseMusicState(baseState);
+        }
+        else
+        {
             RefreshMusicForCurrentState();
         }
     }
@@ -249,28 +410,56 @@ public class GameplayAudioManager : MonoBehaviour
 
     void OnBattleStart(GameObject enemy)
     {
-        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Battle);
+        EnterMusicState(GlobalEventManager.MusicState.Battle);
     }
 
     void OnBossEncounter(GameObject boss)
     {
-        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.BossBattle);
+        EnterMusicState(GlobalEventManager.MusicState.BossBattle);
+    }
+
+    void OnBossDefeated(GameObject boss)
+    {
+        ExitMusicState(GlobalEventManager.MusicState.BossBattle);
+        Debug.Log($"[AudioManager] Boss被击败，退出Boss战音乐状态");
     }
 
     void OnBattleEnd(GameObject enemy)
     {
-        GlobalEventManager.Instance.RequestMusicState(GlobalEventManager.MusicState.Exploration);
+        ExitMusicState(GlobalEventManager.MusicState.Battle);
     }
 
     void OnMusicStateChange(GlobalEventManager.MusicState state)
     {
-        currentMusicState = state;
+        if (!enablePrioritySystem)
+        {
+            DirectPlayMusicState(state);
+            return;
+        }
 
-        // 所有区域互不重叠，直接按请求状态播放
-        AudioClip target = GetTargetMusic(state);
-        if (state == GlobalEventManager.MusicState.Silence) StopMusic();
-        else PlayMusic(target, true);
-        Debug.Log($"[AudioManager] BGM → {state} (Map: {currentMapType})");
+        // 根据状态类型选择处理方式
+        switch (state)
+        {
+            case GlobalEventManager.MusicState.Exploration:
+            case GlobalEventManager.MusicState.MainMenu:
+                // 基础状态：设置为底层，被高层状态压制时不立即切换
+                SetBaseMusicState(state);
+                break;
+
+            case GlobalEventManager.MusicState.Battle:
+            case GlobalEventManager.MusicState.BossBattle:
+            case GlobalEventManager.MusicState.Camp:
+                // 高层状态：进入该状态
+                EnterMusicState(state);
+                break;
+
+            case GlobalEventManager.MusicState.Silence:
+            default:
+                // 静音和其他：直接切换（清空所有活跃状态）
+                activeMusicStates.Clear();
+                DirectPlayMusicState(state);
+                break;
+        }
     }
 
     AudioClip GetTargetMusic(GlobalEventManager.MusicState state)
@@ -369,7 +558,15 @@ public class GameplayAudioManager : MonoBehaviour
 
     void RefreshMusicForCurrentState()
     {
-        PlayMusic(GetTargetMusic(currentMusicState), true);
+        if (enablePrioritySystem)
+        {
+            // 优先级模式下重新计算最高优先级状态
+            UpdateMusicByPriority();
+        }
+        else
+        {
+            PlayMusic(GetTargetMusic(currentMusicState), true);
+        }
     }
 
     GameSystems.MapMusicType GetMapTypeFromScene(string sceneName)
@@ -449,20 +646,59 @@ public class GameplayAudioManager : MonoBehaviour
         {
             currentBurdenLevel = burden;
         }
-        PlayMusic(GetExplorationMusicForCurrentMap(), true);
+        // 优先级模式下设置为基础状态；否则直接播放
+        if (enablePrioritySystem)
+            SetBaseMusicState(GlobalEventManager.MusicState.Exploration);
+        else
+            PlayMusic(GetExplorationMusicForCurrentMap(), true);
     }
 
     public void PlayBattleMusic(bool isBoss = false)
     {
-        if (isBoss)
-            PlayMusic(GetBossBattleMusicForCurrentMap(), true);
+        if (enablePrioritySystem)
+        {
+            if (isBoss)
+                EnterMusicState(GlobalEventManager.MusicState.BossBattle);
+            else
+                EnterMusicState(GlobalEventManager.MusicState.Battle);
+        }
         else
-            PlayMusic(GetBattleMusicForCurrentMap(), true);
+        {
+            if (isBoss)
+                PlayMusic(GetBossBattleMusicForCurrentMap(), true);
+            else
+                PlayMusic(GetBattleMusicForCurrentMap(), true);
+        }
     }
 
-    public void PlayCampMusic() => PlayMusic(GetSafeZoneMusic(), true);
-    public void PlayMainMenuMusic() => PlayMusic(mainMenuMusic, true);
-    public void PlayEndingMusic() => PlayMusic(endingMusic, true);
+    public void PlayCampMusic()
+    {
+        if (enablePrioritySystem)
+            EnterMusicState(GlobalEventManager.MusicState.Camp);
+        else
+            PlayMusic(GetSafeZoneMusic(), true);
+    }
+
+    public void PlayMainMenuMusic()
+    {
+        if (enablePrioritySystem)
+        {
+            activeMusicStates.Clear();
+            SetBaseMusicState(GlobalEventManager.MusicState.MainMenu);
+        }
+        else
+            PlayMusic(mainMenuMusic, true);
+    }
+
+    public void PlayEndingMusic()
+    {
+        if (enablePrioritySystem)
+        {
+            activeMusicStates.Clear();
+            DirectPlayMusicState(GlobalEventManager.MusicState.Silence); // 临时用静音替代，后续可加Ending状态
+        }
+        PlayMusic(endingMusic, true);
+    }
 
     public void SetMapType(GameSystems.MapMusicType mapType)
     {
@@ -471,7 +707,11 @@ public class GameplayAudioManager : MonoBehaviour
         {
             currentMapType = mapType;
             Debug.Log($"[AudioManager] 地图类型从 {oldType} 切换到 {currentMapType}");
-            RefreshMusicForCurrentState();
+            // 优先级模式下如果当前是基础状态则刷新音乐
+            if (enablePrioritySystem)
+                UpdateMusicByPriority();
+            else
+                RefreshMusicForCurrentState();
         }
     }
 

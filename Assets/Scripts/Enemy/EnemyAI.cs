@@ -195,6 +195,15 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider, IDieHandler
         animationComponent = GetComponent<EnemyAnimationComponent>();
         lootComponent = GetComponent<EnemyLootComponent>();
 
+        // Boss级单位自动禁用区域限制（安全区、Boss房间等）
+        if (movementComponent != null && enemyQuality == EnemyQuality.Boss)
+        {
+            movementComponent.isBossUnit = true;
+            movementComponent.blockBySafeZone = false;
+            movementComponent.blockByBossRoom = false;
+            Debug.Log($"[EnemyAI] {enemyType} 是Boss级单位，已禁用区域移动限制");
+        }
+
         // 初始化组件
         stateComponent?.Initialize(enemyHealth);
         animationComponent?.Initialize(anim, rb, scaleMultiplier);
@@ -335,7 +344,7 @@ public class EnemyAI : MonoBehaviour, IEnemyProvider, ILootProvider, IDieHandler
         }
 
         Vector2 fleeVelocity = fleeDirection * (movementComponent != null ? movementComponent.GetCurrentMoveSpeed() : 3f);
-        movementComponent?.SetMovementVelocity(fleeVelocity);
+        movementComponent?.SetMovementVelocityWithRestriction(fleeVelocity);
 
         // 逃跑时反击
         if (combatComponent != null && targetingComponent != null)

@@ -13,6 +13,10 @@ public class EnemyMovementComponent : MonoBehaviour
     public bool blockBySafeZone = true;
     [Tooltip("安全区警戒距离（在进入安全区前多少距离开始避开）")]
     public float safeZoneAvoidDistance = 2f;
+    [Tooltip("是否会被Boss房间阻挡（Boss单位应设为false）")]
+    public bool blockByBossRoom = true;
+    [Tooltip("是否是Boss级单位（自动禁用所有区域限制）")]
+    public bool isBossUnit = false;
 
     [Header("巡逻设置")]
     public bool enablePatrol = true;
@@ -60,6 +64,12 @@ public class EnemyMovementComponent : MonoBehaviour
 
     // 安全区相关
     private bool isInSafeZone = false;
+
+    // BossRoom 全局缓存（所有敌人共享，避免重复FindGameObjectsWithTag）
+    private static List<Collider2D> cachedBossRooms = new List<Collider2D>();
+    private static bool bossRoomCacheDirty = true;
+    private static float lastBossRoomCacheTime = -1f;
+    private const float BOSS_ROOM_CACHE_INTERVAL = 2f;
 
     // 动态追逐范围
     public bool IsChaseRangeExpanded { get; private set; }
@@ -112,9 +122,17 @@ public class EnemyMovementComponent : MonoBehaviour
 
     /// <summary>
     /// 设置移动方向和速度（自动应用安全区+BossRoom限制）
+    /// Boss单位自动跳过所有限制
     /// </summary>
     public void SetMovementDirection(Vector2 direction)
     {
+        if (isBossUnit)
+        {
+            if (rb != null) rb.velocity = direction * GetCurrentMoveSpeed();
+            OnMovementDirectionChanged?.Invoke(direction);
+            return;
+        }
+
         Vector2 restrictedDirection = ApplySafeZoneRestriction(direction);
         restrictedDirection = ApplyBossRoomRestriction(restrictedDirection);
         if (rb != null)
@@ -125,7 +143,7 @@ public class EnemyMovementComponent : MonoBehaviour
     }
 
     /// <summary>
-    /// 设置移动方向和指定速度（不自动应用安全区限制）
+    /// 设置移动方向和指定速度（默认不应用区域限制，用于特殊移动）
     /// </summary>
     public void SetMovementVelocity(Vector2 velocity)
     {
@@ -134,6 +152,31 @@ public class EnemyMovementComponent : MonoBehaviour
             rb.velocity = velocity;
         }
         OnMovementDirectionChanged?.Invoke(velocity.normalized);
+    }
+
+    /// <summary>
+    /// 设置移动方向和指定速度（应用安全区+BossRoom限制）
+    /// 用于逃跑等需要限制区域的速度直接控制场景
+    /// </summary>
+    public void SetMovementVelocityWithRestriction(Vector2 velocity)
+    {
+        if (isBossUnit)
+        {
+            if (rb != null) rb.velocity = velocity;
+            OnMovementDirectionChanged?.Invoke(velocity.normalized);
+            return;
+        }
+
+        Vector2 direction = velocity.normalized;
+        float speed = velocity.magnitude;
+        Vector2 restrictedDir = ApplySafeZoneRestriction(direction);
+        restrictedDir = ApplyBossRoomRestriction(restrictedDir);
+
+        if (rb != null)
+        {
+            rb.velocity = restrictedDir * speed;
+        }
+        OnMovementDirectionChanged?.Invoke(restrictedDir);
     }
 
     /// <summary>
@@ -176,10 +219,30 @@ public class EnemyMovementComponent : MonoBehaviour
         else
         {
             Vector2 direction = ((Vector2)(patrolTarget - transform.position)).normalized;
-            if (rb != null)
+
+            if (isBossUnit)
             {
-                rb.velocity = direction * patrolSpeed;
+                if (rb != null) rb.velocity = direction * patrolSpeed;
             }
+            else
+            {
+                Vector2 restrictedDir = ApplySafeZoneRestriction(direction);
+                restrictedDir = ApplyBossRoomRestriction(restrictedDir);
+
+                if (restrictedDir != direction)
+                {
+                    // 如果被限制阻挡，重新选择巡逻目标
+                    patrolWaitTimer = 0.5f;
+                    SetNewPatrolTarget();
+                    isPatrolling = false;
+                    StopMovement();
+                    OnPatrolStateChanged?.Invoke(false);
+                    return;
+                }
+
+                if (rb != null) rb.velocity = restrictedDir * patrolSpeed;
+            }
+
             isPatrolling = true;
             OnPatrolStateChanged?.Invoke(true);
         }
@@ -249,23 +312,50 @@ public class EnemyMovementComponent : MonoBehaviour
         return direction;
     }
 
-    /// <summary>BossRoom 区域限制 — 阻挡敌人进入 Boss 房间</summary>
+    /// <summary>BossRoom 区域限制 — 阻挡敌人进入 Boss 房间（使用全局缓存，性能优化）</summary>
     public Vector2 ApplyBossRoomRestriction(Vector2 direction)
     {
+        if (!blockByBossRoom) return direction;
+
         Vector2 targetPos = (Vector2)transform.position + direction * GetCurrentMoveSpeed() * Time.deltaTime;
 
-        GameObject[] bossRooms = GameObject.FindGameObjectsWithTag("BossRoom");
-        foreach (var room in bossRooms)
+        var rooms = GetCachedBossRooms();
+        foreach (var col in rooms)
         {
-            Collider2D col = room.GetComponent<Collider2D>();
-            if (col != null && col.bounds.Contains(targetPos))
+            if (col == null) continue;
+            if (col.bounds.Contains(targetPos))
             {
                 // 从 BossRoom 中心向外排斥
-                Vector2 awayFromRoom = ((Vector2)transform.position - (Vector2)room.transform.position).normalized;
+                Vector2 awayFromRoom = ((Vector2)transform.position - (Vector2)col.transform.position).normalized;
                 return awayFromRoom.magnitude > 0.01f ? awayFromRoom : Vector2.up;
             }
         }
         return direction;
+    }
+
+    /// <summary>获取缓存的Boss房间列表（每2秒刷新一次，所有敌人共享缓存）</summary>
+    private static List<Collider2D> GetCachedBossRooms()
+    {
+        float now = Time.time;
+        if (bossRoomCacheDirty || now - lastBossRoomCacheTime > BOSS_ROOM_CACHE_INTERVAL)
+        {
+            cachedBossRooms.Clear();
+            GameObject[] rooms = GameObject.FindGameObjectsWithTag("BossRoom");
+            foreach (var room in rooms)
+            {
+                Collider2D col = room.GetComponent<Collider2D>();
+                if (col != null) cachedBossRooms.Add(col);
+            }
+            lastBossRoomCacheTime = now;
+            bossRoomCacheDirty = false;
+        }
+        return cachedBossRooms;
+    }
+
+    /// <summary>标记BossRoom缓存为脏（Boss房间数量变化时调用）</summary>
+    public static void MarkBossRoomCacheDirty()
+    {
+        bossRoomCacheDirty = true;
     }
 
     /// <summary>

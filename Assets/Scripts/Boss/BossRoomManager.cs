@@ -77,6 +77,14 @@ public class BossRoomManager : MonoBehaviour
     public GameObject riftPrefab;
 
     // ═══════════════════════════════════════════
+    // 奖励系统引用
+    // ═══════════════════════════════════════════
+
+    [Header("奖励系统")]
+    [Tooltip("奖励系统（自动初始化）")]
+    private IRewardSystem rewardSystem;
+
+    // ═══════════════════════════════════════════
     // 运行时状态
     // ═══════════════════════════════════════════
 
@@ -104,8 +112,17 @@ public class BossRoomManager : MonoBehaviour
 
     void Start()
     {
+        // 初始化奖励系统
+        InitializeRewardSystem();
+
         // 订阅全局事件
         GlobalEventManager.Instance.OnBossDefeated += OnBossDefeated;
+    }
+
+    void InitializeRewardSystem()
+    {
+        rewardSystem = RewardManager.Instance;
+        Debug.Log($"[BossRoomManager] 奖励系统初始化: {rewardSystem != null}");
     }
 
     void OnDestroy()
@@ -326,52 +343,31 @@ public class BossRoomManager : MonoBehaviour
     /// <summary>处理所有奖励掉落</summary>
     void ProcessRewardDrops()
     {
+        if (rewardSystem == null)
+        {
+            Debug.LogError("[BossRoomManager] 奖励系统未初始化，跳过奖励分发");
+            return;
+        }
+
+        EnemyAI.EnemyType bossType = isFinalBossRoom 
+            ? EnemyAI.EnemyType.ScarletSoulShana 
+            : EnemyAI.EnemyType.TimeGuardian;
+
         // A. 灵魂掉落（必掉）
-        DropSouls();
+        int soulAmount = Random.Range(soulDropRange.x, soulDropRange.y + 1);
+        rewardSystem.GrantSoulReward(soulAmount, "Boss击杀");
 
         // B. 灵魂之核掉落（必掉，金色品质）
-        DropSoulCore();
+        rewardSystem.GrantSoulCoreReward(bossType, droppedSoulCoreQuality);
 
         // C. 灵魂精华掉落（必掉）
-        DropEssence();
+        int essenceCount = Random.Range(essenceDropRange.x, essenceDropRange.y + 1);
+        rewardSystem.GrantEssenceReward(essenceCount);
 
         // D. 记忆碎片概率掉落
-        TryDropMemoryFragment();
-    }
-
-    void DropSouls()
-    {
-        int soulAmount = Random.Range(soulDropRange.x, soulDropRange.y + 1);
-        // 通过InventorySystem或事件系统添加灵魂
-        // 这里使用事件广播让其他系统处理实际添加
-        Debug.Log($"[BossRoomManager] 灵魂掉落: x{soulAmount}");
-        // TODO: 调用 InventorySystem.AddSouls(soulAmount);
-    }
-
-    void DropSoulCore()
-    {
-        Debug.Log($"[BossRoomManager] 灵魂之核掉落: 品质={droppedSoulCoreQuality} (金色)");
-        // TODO: 调用 SummonSystem.AddSoulCore(droppedSoulCoreQuality, enemyType);
-    }
-
-    void DropEssence()
-    {
-        int essenceCount = Random.Range(essenceDropRange.x, essenceDropRange.y + 1);
-        Debug.Log($"[BossRoomManager] 灵魂精华掉落: x{essenceCount}");
-        // TODO: 调用 InventorySystem.AddEssence(essenceCount);
-    }
-
-    void TryDropMemoryFragment()
-    {
         if (Random.value <= memoryFragmentDropChance)
         {
-            Debug.Log($"[BossRoomManager] ★ 记忆碎片掉落成功！(概率{memoryFragmentDropChance:P0})");
-            // TODO: 调用 MemoryFragmentSystem.GrantRandomFragment();
-            GlobalEventManager.Instance.ShowNotification("获得：记忆碎片！", 3f);
-        }
-        else
-        {
-            Debug.Log($"[BossRoomManager] 记忆碎片未掉落 (概率{memoryFragmentDropChance:P0})");
+            rewardSystem.GrantMemoryFragmentReward();
         }
     }
 
