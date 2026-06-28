@@ -305,6 +305,7 @@ public class GameplayAudioManager : MonoBehaviour
         if (currentMapType == GameSystems.MapMusicType.MainMenu)
         {
             baseMusicState = GlobalEventManager.MusicState.MainMenu;
+            currentMusicState = GlobalEventManager.MusicState.Silence;
         }
         
         Debug.Log($"[AudioManager] 初始化地图类型: {currentMapType}, 基础状态: {baseMusicState}");
