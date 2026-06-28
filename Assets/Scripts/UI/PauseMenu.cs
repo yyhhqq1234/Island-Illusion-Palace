@@ -136,6 +136,16 @@ public class PauseMenu : MonoBehaviour
         else
         {
             gameObject.SetActive(true);
+
+            // 如果之前是暂停状态（如从主菜单"继续修复"返回），正确恢复游戏状态
+            if (isPaused)
+            {
+                isPaused = false;
+                Time.timeScale = 1f;
+                IIPBootstrap.Events?.TriggerGameResumed();
+                Debug.Log("[PauseMenu] 检测到残留暂停状态，已自动恢复");
+            }
+
             HidePauseMenuImmediate();
             Debug.Log($"[PauseMenu] 进入游戏场景 {scene.name}，启用 GameManager");
         }
