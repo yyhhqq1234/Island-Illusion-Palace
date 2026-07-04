@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 {
@@ -151,6 +151,34 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
         {
             Debug.LogWarning("PlayerController: Rigidbody2D component not found!");
         }
+
+        // 如果依赖注入未完成，尝试自动注入（降级保护）
+        if (spawnManager == null)
+        {
+            PlayerControllerDependencyInjector.InjectToController(this);
+        }
+    }
+
+    /// <summary>
+    /// 设置依赖项 - 由PlayerControllerDependencyInjector调用
+    /// </summary>
+    public void SetDependencies(
+        PlayerSpawnManager spawnMgr,
+        InventoryUI invUI,
+        AlchemyUI alcUI,
+        PauseMenu pauseMenu)
+    {
+        spawnManager = spawnMgr;
+        injectedInventoryUI = invUI;
+        injectedAlchemyUI = alcUI;
+        injectedPauseMenu = pauseMenu;
+
+        // 同步更新缓存，确保Update()在注入完成后立即生效
+        if (invUI != null) cachedInventoryUI = invUI;
+        if (alcUI != null) cachedAlchemyUI = alcUI;
+        if (pauseMenu != null) cachedPauseMenu = pauseMenu;
+
+        Debug.Log("[PlayerController] 依赖项已设置");
     }
 
     void Update()
@@ -158,9 +186,14 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
         // 防止意外禁用
         if (!enabled) { enabled = true; Debug.LogWarning("[PlayerController] 自动恢复 enabled"); }
 
-        if (cachedPauseMenu != null && cachedPauseMenu.IsPaused()) return;
-        if (cachedInventoryUI != null && cachedInventoryUI.IsInventoryOpen()) return;
-        if (cachedAlchemyUI != null && cachedAlchemyUI.IsAlchemyPanelOpen()) return;
+        // UI状态检查：优先使用注入依赖，降级到缓存
+        PauseMenu activePauseMenu = injectedPauseMenu != null ? injectedPauseMenu : cachedPauseMenu;
+        InventoryUI activeInventoryUI = injectedInventoryUI != null ? injectedInventoryUI : cachedInventoryUI;
+        AlchemyUI activeAlchemyUI = injectedAlchemyUI != null ? injectedAlchemyUI : cachedAlchemyUI;
+
+        if (activePauseMenu != null && activePauseMenu.IsPaused()) return;
+        if (activeInventoryUI != null && activeInventoryUI.IsInventoryOpen()) return;
+        if (activeAlchemyUI != null && activeAlchemyUI.IsAlchemyPanelOpen()) return;
 
         HandleMouseInput();
         HandleKeyboardInput();
