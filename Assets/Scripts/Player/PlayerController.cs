@@ -28,6 +28,12 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
     [Tooltip("玩家缩放倍率")]
     public float scaleMultiplier = 1.0f;
 
+    // 依赖注入字段（由PlayerControllerDependencyInjector注入）
+    private PlayerSpawnManager spawnManager;
+    private InventoryUI injectedInventoryUI;
+    private AlchemyUI injectedAlchemyUI;
+    private PauseMenu injectedPauseMenu;
+
     private Vector2 movement;
     private Vector2 currentDirection;
     private Vector2 targetDirection;
@@ -50,10 +56,17 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 
     void Respawn()
     {
-        // 传送到安全区生成点（保留所有状态）
-        var spawnMgr = FindObjectOfType<PlayerSpawnManager>();
-        if (spawnMgr != null)
-            spawnMgr.MovePlayerToSafeRoom(gameObject);
+        // 传送到安全区生成点（保留所有状态）— 使用注入的依赖，降级到查找
+        PlayerSpawnManager activeSpawnMgr = spawnManager;
+        if (activeSpawnMgr == null)
+        {
+            activeSpawnMgr = FindObjectOfType<PlayerSpawnManager>();
+            if (activeSpawnMgr != null)
+                Debug.LogWarning("[PlayerController] 依赖注入未就绪，降级查找PlayerSpawnManager");
+        }
+
+        if (activeSpawnMgr != null)
+            activeSpawnMgr.MovePlayerToSafeRoom(gameObject);
         else
             transform.position = Vector3.zero;
 
