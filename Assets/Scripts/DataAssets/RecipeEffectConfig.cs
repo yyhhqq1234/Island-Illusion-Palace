@@ -33,4 +33,16 @@ public class RecipeEffectConfig : ScriptableObject
             if (effect != null) effect.Execute(context);
         }
     }
+
+    public RecipeData ToRecipeData()
+    {
+        Dictionary<MaterialTypeEnum, int> requiredMaterials = new Dictionary<MaterialTypeEnum, int>();
+        foreach (var req in materials)
+        {
+            if (req.count > 0)
+                requiredMaterials[req.materialType] = req.count;
+        }
+
+        return new RecipeData(recipeType, displayName, tier, requiredMaterials, description, alchemicalValue);
+    }
 }

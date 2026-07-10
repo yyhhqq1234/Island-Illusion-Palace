@@ -74,6 +74,14 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
 
     [Header("可用配方")]
     public List<RecipeData> availableRecipes = new List<RecipeData>();
+
+    [Header("配方配置资源（配置驱动模式）")]
+    [Tooltip("从ScriptableObject资源加载配方。若为空则使用硬编码降级方案。")]
+    public List<RecipeEffectConfig> recipeConfigs = new List<RecipeEffectConfig>();
+    [Tooltip("未配置任何资源时是否回退到硬编码配方")]
+    public bool fallbackToHardcoded = true;
+    
+    
     
     [Header("已发现配方（炼金笔记）")]
     public List<RecipeType> discoveredRecipes = new List<RecipeType>();
@@ -148,6 +156,40 @@ public class AlchemySystem : MonoBehaviour, IAlchemyService, IRecipeEffectProvid
     }
 
     void InitializeRecipes()
+    {
+        availableRecipes.Clear();
+
+        // 优先：从ScriptableObject配置资源加载配方（配置驱动模式）
+        if (recipeConfigs != null && recipeConfigs.Count > 0)
+        {
+            int loadedCount = 0;
+            foreach (var config in recipeConfigs)
+            {
+                if (config == null) continue;
+                RecipeData data = config.ToRecipeData();
+                if (data != null)
+                {
+                    availableRecipes.Add(data);
+                    loadedCount++;
+                }
+            }
+            Debug.Log($"[AlchemySystem] 配置驱动模式：从ScriptableObject加载 {loadedCount} 个配方");
+            return;
+        }
+
+        // 降级方案：使用硬编码配方
+        if (fallbackToHardcoded)
+        {
+            Debug.LogWarning("[AlchemySystem] 未配置配方资源，回退到硬编码降级方案");
+            InitializeHardcodedRecipes();
+        }
+        else
+        {
+            Debug.LogError("[AlchemySystem] 未配置配方资源且禁用降级方案，炼金系统将无法工作！");
+        }
+    }
+
+    void InitializeHardcodedRecipes()
     {
         Dictionary<MaterialTypeEnum, int> soulStabilizerRecipe = new Dictionary<MaterialTypeEnum, int>();
         soulStabilizerRecipe[MaterialTypeEnum.CloudyDew] = 3;
