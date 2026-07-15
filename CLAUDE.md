@@ -327,7 +327,7 @@ Music:            OnMusicStateChange (MusicState: MainMenu, Exploration, Battle,
 
 ### MCP Tool Usage (Unity Editor Interaction)
 
-项目通过 [`.mcp.json`](./.mcp.json) 配置了 **AI Game Developer MCP Server** (`gamedev-mcp-server v8.0.1.0`)，地址 `http://localhost:23035`，提供 3 大类 Unity 编辑器工具：
+项目通过 [`.mcp.json`](./.mcp.json) 配置了 **AI Game Developer MCP Server** (`gamedev-mcp-server v9.0.0.0`)，地址 `http://localhost:23035`（HTTP 传输，根路径直连，共 119 个工具），提供 3 大类 Unity 编辑器工具：
 
 **Tilemap（地图编辑）**：`tilemap-create` / `tilemap-list` / `tilemap-get-tile` / `tilemap-set-tile` / `tilemap-box-fill` / `tilemap-clear` / `tilemap-create-tile-asset` / `tilemap-create-rule-tile` / `tilemap-set-collider-type` / `tilemap-set-orientation` / `tilemap-set-tile-flags`
 
