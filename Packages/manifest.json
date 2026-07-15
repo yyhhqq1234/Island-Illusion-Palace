@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "com.ivanmurzak.unity.mcp": "0.83.0",
-    "com.ivanmurzak.unity.mcp.animation": "1.2.21",
-    "com.ivanmurzak.unity.mcp.cinemachine": "1.0.7",
-    "com.ivanmurzak.unity.mcp.tilemap": "1.0.6",
-    "com.ivanmurzak.unity.mcp.timeline": "1.0.7",
+    "com.ivanmurzak.unity.mcp": "0.84.0",
+    "com.ivanmurzak.unity.mcp.animation": "1.2.25",
+    "com.ivanmurzak.unity.mcp.cinemachine": "1.0.11",
+    "com.ivanmurzak.unity.mcp.tilemap": "1.0.10",
+    "com.ivanmurzak.unity.mcp.timeline": "1.0.11",
     "com.unity.cinemachine": "2.10.5",
     "com.unity.collab-proxy": "2.10.2",
     "com.unity.feature.2d": "2.0.1",
