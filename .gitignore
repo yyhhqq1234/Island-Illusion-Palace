@@ -96,3 +96,10 @@ $RECYCLE.BIN/
 
 # Cursor IDE
 .cursor/
+
+# Claude Code 任务断点文件（跨会话续传，不入库）
+TASK_PROGRESS.md
+
+# 本地视觉分析截图（临时文件）
+tools/local-vision/shots/
+_gv_shot.png

@@ -350,6 +350,29 @@ Music:            OnMusicStateChange (MusicState: MainMenu, Exploration, Battle,
 - 读取大型资产（场景 / Prefab / 大脚本）时优先用 `viewQuery` 或 `paths` 参数做**路径级精确读取**，避免全量序列化。
 - 长会话接近上限时主动用 `/compact` 压缩，或开新会话延续。
 
+### 跨会话任务续传（断点机制）
+
+主模型 `glm_for_coding` 200K 上下文限制下，复杂多步任务常执行到一半被截断，重开对话会丢失全部上下文。本项目用 **`TASK_PROGRESS.md` 断点文件 + `/checkpoint` + `/resume` 两个 slash command** 解决续传问题。
+
+**机制**：
+- `TASK_PROGRESS.md`（项目根，已 `.gitignore`）：任务断点文件，记录目标、拆解进度、已完成详情、**下一步行动**、关键上下文锚点、已读已改文件清单。
+- `/checkpoint`（[`.claude/commands/checkpoint.md`](./.claude/commands/checkpoint.md)）：写断点。把当前任务状态结构化写入 `TASK_PROGRESS.md`。
+- `/resume`（[`.claude/commands/resume.md`](./.claude/commands/resume.md)）：读断点。新会话首条消息发 `/resume`，Agent 读断点 + 相关文件后从卡点处无缝续做。
+
+**Agent 自感知规则**（重要）：
+- 执行多步任务时，Agent 须**自我监控上下文健康度**。当出现以下信号，**主动提示用户执行 `/checkpoint` 后重开会话**：
+  - 估计已用上下文接近 150K（留 50K 余量给收尾）
+  - 刚读取过大文件（如完整 `.unity` 场景、1000+ 行脚本、`assets-get-data` 全量序列化）
+  - 刚触发过截图/大规模工具返回
+  - 任务还剩 ≥3 个子步骤未完成
+- 提示话术示例：「⚠️ 上下文已用约 ~XXXK/200K，当前任务还剩 N 步。建议执行 `/checkpoint` 保存断点后开新会话用 `/resume` 继续，避免被截断丢失进度。」
+- **不要硬撑到 200K 被截断**——主动 checkpoint 比被动截断可靠得多。
+
+**断点文件填写要点**：
+- 「下一步行动」块必须写到**新会话无需重新探索就能动手**的颗粒度（卡点文件:行号、函数签名、必须遵守的约束）。
+- 不要塞大段代码原文，只放路径 + 行号 + 改动摘要。
+- 任务全部完成后清空 `TASK_PROGRESS.md`。
+
 ### 本地视觉分析（Game View 截图 → 本地 VL 模型）
 
 主模型 `glm_for_coding` **不支持多模态**且上下文上限 20 万 token。`screenshot-game-view` / `screenshot-camera` / `screenshot-scene-view` 会把图片二进制（base64）**直接返回到主 Agent 对话上下文**，一张 1920×1080 截图被算作 ~479k token，直接触发 `API Error: 400 context length 426484 exceeds limit 200000`。
