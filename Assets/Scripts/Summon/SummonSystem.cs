@@ -170,6 +170,7 @@ public class SummonSystem : MonoBehaviour, ISummonService
 
         activeSummons.Remove(summon);
         Destroy(summon, 0.5f);
+        BroadcastSummonStatus();
     }
 
     public void AddSoulCore(EnemyAI.EnemyType enemyType, SoulCoreQuality quality)
@@ -291,6 +292,7 @@ public class SummonSystem : MonoBehaviour, ISummonService
 
         activeSummons.Add(summonedCreature);
         Debug.Log($"成功召唤 {core.enemyType} (Lv.{core.level})！");
+        BroadcastSummonStatus();
     }
 
     float GetBaseHealthForType(CreatureType type)
@@ -477,6 +479,15 @@ public class SummonSystem : MonoBehaviour, ISummonService
     public List<GameObject> GetActiveSummons() => activeSummons;
     public float GetSummonCooldownRemaining() => Mathf.Max(0f, summonCooldown - (Time.time - lastSummonTime));
     public float GetQuickSummonCooldownRemaining() => Mathf.Max(0f, quickSummonCooldown - (Time.time - lastSummonTime));
+
+    /// <summary>广播召唤状态（活跃数量/上限/冷却剩余）给 HUD</summary>
+    void BroadcastSummonStatus()
+    {
+        UpdateActiveSummons();
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerSummonStatusChanged(
+                activeSummons.Count, maxActiveSummons, GetSummonCooldownRemaining());
+    }
 }
 
 

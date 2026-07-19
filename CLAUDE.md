@@ -337,6 +337,70 @@ Music:            OnMusicStateChange (MusicState: MainMenu, Exploration, Battle,
 
 > 所有工具前缀为 `mcp_ai-game-developer_*`，由 Trae IDE 自动注册。使用前确保 Unity 编辑器已打开且 MCP Server 正在运行。
 
+#### 上下文预算与 200K 限制防护
+
+主模型 `glm_for_coding` 上下文硬上限 **200K token**。119 个 MCP 工具的 JSON Schema 会随每次请求注入 system prompt，叠加历史消息极易触发 `API Error: 400 context length exceeds limit 200000`。已落地以下减负措施：
+
+1. **`.claude/skills/` 下 123 个自动生成 SKILL.md（944KB ≈ 236K token）已 `git mv` 到 `.claude/skills-disabled/`** —— 这些是 MCP 工具 schema 的复述，移走后工具仍可通过 `mcp__ai-game-developer__*` 直接调用，不依赖 SKILL.md。恢复方法见 [`.claude/MCP_TOOLS_GUIDE.md`](./.claude/MCP_TOOLS_GUIDE.md)。
+2. **运行时用 `tool-set-enabled-state` 临时禁用 92 个低频工具**，仅保留 27 个高频工具 schema 注入。⚠️ 此状态存于 Unity 编辑器内存，**Unity 重启后失效**需重新禁用。按需启用流程见 [`.claude/MCP_TOOLS_GUIDE.md`](./.claude/MCP_TOOLS_GUIDE.md)。
+
+**Agent 操作规范**：
+- 任务涉及 tilemap / timeline / cinemachine / profiler / animation / package 等被禁用类别时，**先用 `tool-set-enabled-state` 启用所需工具，用完后再禁用**，避免 schema 长期占用上下文。
+- 禁止用 `screenshot-*` 工具直接看画面（见下一节「本地视觉分析」）。
+- 读取大型资产（场景 / Prefab / 大脚本）时优先用 `viewQuery` 或 `paths` 参数做**路径级精确读取**，避免全量序列化。
+- 长会话接近上限时主动用 `/compact` 压缩，或开新会话延续。
+
+### 本地视觉分析（Game View 截图 → 本地 VL 模型）
+
+主模型 `glm_for_coding` **不支持多模态**且上下文上限 20 万 token。`screenshot-game-view` / `screenshot-camera` / `screenshot-scene-view` 会把图片二进制（base64）**直接返回到主 Agent 对话上下文**，一张 1920×1080 截图被算作 ~479k token，直接触发 `API Error: 400 context length 426484 exceeds limit 200000`。
+
+**因此禁止用 `screenshot-*` 工具直接看 Game View**。需要"看画面"时，走以下落盘链路，图片字节永不进入主上下文：
+
+1. `script-execute` 跑一段 C#：反射拿 GameView 私有字段 `m_RenderTexture` → 从 RT 读像素 → 缩放到最长边 1024 → JPG 落盘到 `tools/local-vision/shots/`
+2. `mcp__local-vision__analyze_image(image="<落盘路径>", question="<具体问题>")` → LM Studio `qwen3-vl-4b` 返回结构化中文描述
+
+**关键坑**：`Screen.ReadPixels` / `Texture2D.ReadPixels` 在编辑器 PlayMode 下读到的是空灰色（即使 `gvWin.Focus()` + `Repaint()` + `Thread.Sleep(300)` 也救不回来，`nonGray` 统计全 0）。**唯一可靠方法**是反射读 `m_RenderTexture`（验证 `nonGray=8625/9216`，真实画面识别成功）。
+
+C# 模板（`script-execute` 直接用，`isMethodBody=false`，类名 `CaptureFromRT`，方法 `Run`）：
+
+```csharp
+using UnityEngine; using UnityEditor; using System; using System.IO; using System.Reflection;
+
+public static class CaptureFromRT {
+    public static string Run() {
+        var asm = typeof(EditorWindow).Assembly;
+        var gvType = asm.GetType("UnityEditor.GameView");
+        var gv = EditorWindow.GetWindow(gvType);
+        var rt = gvType.GetField("m_RenderTexture",
+            BindingFlags.NonPublic | BindingFlags.Instance).GetValue(gv) as RenderTexture;
+        int w = rt.width, h = rt.height;
+        var prev = RenderTexture.active; RenderTexture.active = rt;
+        var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0, false); tex.Apply();
+        RenderTexture.active = prev;
+        int maxSide = 1024; float scale = Mathf.Min(1f, (float)maxSide / Mathf.Max(w, h));
+        int tw = Mathf.RoundToInt(w * scale), th = Mathf.RoundToInt(h * scale);
+        var scaled = new Texture2D(tw, th, TextureFormat.RGB24, false);
+        var src = tex.GetPixels(); var dst = new Color[tw * th];
+        for (int y = 0; y < th; y++) { int sy = Mathf.Clamp(Mathf.RoundToInt(y/scale),0,h-1);
+            for (int x = 0; x < tw; x++) { int sx = Mathf.Clamp(Mathf.RoundToInt(x/scale),0,w-1);
+                dst[y*tw+x] = src[sy*w+sx]; } }
+        scaled.SetPixels(dst); scaled.Apply();
+        string path = @"d:\Program Files\Unity\U3Dproject\Island-Illusion-Palace\tools\local-vision\shots\gameview.jpg";
+        File.WriteAllBytes(path, scaled.EncodeToJPG(82));
+        UnityEngine.Object.DestroyImmediate(tex); UnityEngine.Object.DestroyImmediate(scaled);
+        return $"OK {tw}x{th} -> {path}";
+    }
+}
+```
+
+基础设施：
+- vision_server：`tools/local-vision/vision_server.py`（stdio MCP，LM Studio OpenAI 兼容接口）
+- 缩略图落盘目录：`tools/local-vision/shots/`（已 `.gitignore`）
+- LM Studio：`http://192.168.100.1:1234`，模型 `qwen/qwen3-vl-4b`
+
+> `question` 越具体越好（如"描述玩家位置、敌人数量、左上角血条数值"），4B 小模型对模糊问题容易泛泛而谈。
+
 ### Design Document Reference
 - All game design documents are in `Assets/I-IP markdown/` — 代码实现阶段视为只读参考；策划迭代阶段通过 AI策划团队 进行修改
 - When implementing features, cross-reference the relevant system breakdown document

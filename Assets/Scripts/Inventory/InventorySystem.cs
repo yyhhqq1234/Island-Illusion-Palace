@@ -1035,7 +1035,7 @@ public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollec
     }
 
     public bool HasEnoughSouls(int amount) => currentSouls >= amount;
-    public void ConsumeSouls(int amount) => currentSouls = Mathf.Max(0, currentSouls - amount);
+    public void ConsumeSouls(int amount) { currentSouls = Mathf.Max(0, currentSouls - amount); BroadcastInventory(); }
 
     private const float SoulSoftCap = 15000f;         // 软上限
     private const float SoulHardCap = 50000f;          // 硬上限
@@ -1060,6 +1060,7 @@ public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollec
         }
 
         currentSouls = Mathf.Min((int)current, (int)SoulHardCap);
+        BroadcastInventory();
     }
 
     public void CollectSoul(int amount, string source)
@@ -1072,7 +1073,15 @@ public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollec
     {
         currentSoulEssence = Mathf.Min(maxSoulEssence, currentSoulEssence + amount);
         Debug.Log($"获得灵魂精华 ×{amount}");
+        BroadcastInventory();
     }
 
     public bool HasEnoughSoulEssence(int amount) => currentSoulEssence >= amount;
+
+    /// <summary>广播背包资源变化（灵魂/灵魂精华）给 HUD</summary>
+    void BroadcastInventory()
+    {
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerInventoryChanged(currentSouls, currentSoulEssence);
+    }
 }

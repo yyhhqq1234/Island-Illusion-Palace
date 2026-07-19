@@ -3,6 +3,19 @@
     "ai-game-developer": {
       "type": "http",
       "url": "http://localhost:23035"
+    },
+    "local-vision": {
+      "command": "C:\\ProgramData\\anaconda3\\python.exe",
+      "args": [
+        "d:\\Program Files\\Unity\\U3Dproject\\Island-Illusion-Palace\\tools\\local-vision\\vision_server.py"
+      ],
+      "env": {
+        "LM_STUDIO_URL": "http://192.168.100.1:1234",
+        "LM_STUDIO_MODEL": "qwen/qwen3-vl-4b",
+        "LM_STUDIO_TIMEOUT": "120",
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1"
+      }
     }
   }
 }

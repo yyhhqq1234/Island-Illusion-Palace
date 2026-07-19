@@ -1,9 +1,14 @@
 using UnityEngine;
-using UnityEngine.UI;
 using System.Collections.Generic;
 
 public enum UIPanelType { MainMenu, GameHUD, Inventory, Skills, Map, Pause, GameOver, Dialog }
 
+/// <summary>
+/// UI 面板切换器（重构后）
+/// 职责：仅负责顶层面板的显示/隐藏与快捷键切换。
+/// HUD 数值显示已下沉到各专用 HUD 组件（事件驱动，订阅 GlobalEventManager），
+/// UIManager 不再持有 healthSlider/manaSlider/burdenSlider/levelText 等 HUD 字段，也不再每帧轮询。
+/// </summary>
 public class UIManager : MonoBehaviour
 {
     [Header("UI面板")]
@@ -16,34 +21,7 @@ public class UIManager : MonoBehaviour
     public GameObject gameOverPanel;
     public GameObject dialogPanel;
 
-    [Header("游戏HUD元素")]
-    public Slider healthSlider;
-    public Slider manaSlider;
-    public Slider burdenSlider;
-    public Text healthText;
-    public Text manaText;
-    public Text burdenText;
-    public Text levelText;
-    public Text experienceText;
-
-    [Header("背包元素")]
-    public Transform inventoryGrid;
-    public GameObject inventoryItemPrefab;
-    public Text itemDescriptionText;
-
-    [Header("地图元素")]
-    public RawImage mapImage;
-    public RectTransform playerMapIcon;
-
-    [Header("对话元素")]
-    public Text dialogText;
-    public Text dialogNameText;
-
-    [Header("引用")]
-    public HealthSystem playerHealth;
-    public ManaSystem playerMana;
-    public BurdenSystem playerBurden;
-    public CharacterStats characterStats;
+    [Header("引用（仅用于面板内列表刷新，不再用于 HUD 数值）")]
     public InventorySystem inventorySystem;
     public IntegratedMapSystem mapSystem;
 
@@ -60,38 +38,19 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
-        UpdateHUD();
+        // 不再每帧 UpdateHUD()；HUD 由各专用组件事件驱动刷新
         HandleInput();
     }
 
     void InitializeReferences()
     {
-        playerHealth = FindObjectOfType<HealthSystem>();
-        playerMana = FindObjectOfType<ManaSystem>();
-        playerBurden = FindObjectOfType<BurdenSystem>();
-        characterStats = FindObjectOfType<CharacterStats>();
-        inventorySystem = FindObjectOfType<InventorySystem>();
-        mapSystem = FindObjectOfType<IntegratedMapSystem>();
+        if (inventorySystem == null) inventorySystem = FindObjectOfType<InventorySystem>();
+        if (mapSystem == null) mapSystem = FindObjectOfType<IntegratedMapSystem>();
     }
 
     void InitializeUI()
     {
-        // 初始化所有面板状态
         SetAllPanelsActive(false);
-
-        // 初始化HUD元素
-        if (healthSlider != null) healthSlider.maxValue = 100;
-        if (manaSlider != null) manaSlider.maxValue = 100;
-        if (burdenSlider != null) burdenSlider.maxValue = 100;
-
-        // 初始化背包网格
-        if (inventoryGrid != null)
-        {
-            foreach (Transform child in inventoryGrid)
-            {
-                Destroy(child.gameObject);
-            }
-        }
     }
 
     void SetAllPanelsActive(bool active)
@@ -106,85 +65,18 @@ public class UIManager : MonoBehaviour
         if (dialogPanel != null) dialogPanel.SetActive(active);
     }
 
-    void UpdateHUD()
-    {
-        if (currentPanel == UIPanelType.GameHUD)
-        {
-            // 更新生命值
-            if (playerHealth != null && healthSlider != null)
-            {
-                healthSlider.value = playerHealth.currentHealth;
-                healthSlider.maxValue = playerHealth.maxHealth;
-                if (healthText != null)
-                {
-                    healthText.text = $"{playerHealth.currentHealth:F0}/{playerHealth.maxHealth:F0}";
-                }
-            }
-
-            // 更新魔法值
-            if (playerMana != null && manaSlider != null)
-            {
-                manaSlider.value = playerMana.currentMana;
-                manaSlider.maxValue = playerMana.maxMana;
-                if (manaText != null)
-                {
-                    manaText.text = $"{playerMana.currentMana:F0}/{playerMana.maxMana:F0}";
-                }
-            }
-
-            // 更新负担
-            if (playerBurden != null && burdenSlider != null)
-            {
-                burdenSlider.value = playerBurden.currentBurden;
-                burdenSlider.maxValue = playerBurden.maxBurden;
-                if (burdenText != null)
-                {
-                    burdenText.text = $"{playerBurden.currentBurden:F0}/{playerBurden.maxBurden:F0}";
-                }
-            }
-
-            // 更新等级和经验
-            if (characterStats != null)
-            {
-                if (levelText != null)
-                {
-                    levelText.text = $"Lv.{characterStats.level}";
-                }
-                if (experienceText != null)
-                {
-                    experienceText.text = $"EXP: {characterStats.currentExperience}/{characterStats.requiredExperience}";
-                }
-            }
-        }
-    }
-
     void HandleInput()
     {
-        // 处理UI面板切换
-        if (Input.GetKeyDown(KeyCode.I))
-        {
-            ToggleInventory();
-        }
-        else if (Input.GetKeyDown(KeyCode.C))
-        {
-            ToggleSkills();
-        }
-        else if (Input.GetKeyDown(KeyCode.M))
-        {
-            ToggleMap();
-        }
-        else if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            TogglePause();
-        }
+        if (Input.GetKeyDown(KeyCode.I)) ToggleInventory();
+        else if (Input.GetKeyDown(KeyCode.C)) ToggleSkills();
+        else if (Input.GetKeyDown(KeyCode.M)) ToggleMap();
+        else if (Input.GetKeyDown(KeyCode.Escape)) TogglePause();
     }
 
     public void ShowPanel(UIPanelType panelType)
     {
-        // 隐藏所有面板
         SetAllPanelsActive(false);
 
-        // 显示目标面板
         switch (panelType)
         {
             case UIPanelType.MainMenu:
@@ -227,38 +119,20 @@ public class UIManager : MonoBehaviour
 
     public void ToggleInventory()
     {
-        if (currentPanel == UIPanelType.Inventory)
-        {
-            ShowPanel(UIPanelType.GameHUD);
-        }
-        else
-        {
-            ShowPanel(UIPanelType.Inventory);
-        }
+        if (currentPanel == UIPanelType.Inventory) ShowPanel(UIPanelType.GameHUD);
+        else ShowPanel(UIPanelType.Inventory);
     }
 
     public void ToggleSkills()
     {
-        if (currentPanel == UIPanelType.Skills)
-        {
-            ShowPanel(UIPanelType.GameHUD);
-        }
-        else
-        {
-            ShowPanel(UIPanelType.Skills);
-        }
+        if (currentPanel == UIPanelType.Skills) ShowPanel(UIPanelType.GameHUD);
+        else ShowPanel(UIPanelType.Skills);
     }
 
     public void ToggleMap()
     {
-        if (currentPanel == UIPanelType.Map)
-        {
-            ShowPanel(UIPanelType.GameHUD);
-        }
-        else
-        {
-            ShowPanel(UIPanelType.Map);
-        }
+        if (currentPanel == UIPanelType.Map) ShowPanel(UIPanelType.GameHUD);
+        else ShowPanel(UIPanelType.Map);
     }
 
     public void TogglePause()
@@ -278,60 +152,19 @@ public class UIManager : MonoBehaviour
 
     void UpdateInventoryUI()
     {
-        if (inventoryGrid == null || inventoryItemPrefab == null || inventorySystem == null)
-            return;
-
-        // 清空现有物品
-        foreach (Transform child in inventoryGrid)
-        {
-            Destroy(child.gameObject);
-        }
-
-        // 生成物品格子
-        List<InventoryItem> items = inventorySystem.GetItems();
-        for (int i = 0; i < items.Count; i++)
-        {
-            InventoryItem item = items[i];
-            if (item != null)
-            {
-                GameObject itemObj = Instantiate(inventoryItemPrefab, inventoryGrid);
-                InventoryItemUI itemUI = itemObj.GetComponent<InventoryItemUI>();
-                if (itemUI != null)
-                {
-                    itemUI.SetItem(item);
-                    itemUI.onItemClicked.AddListener(OnInventoryItemClicked);
-                }
-            }
-        }
-    }
-
-    void OnInventoryItemClicked(InventoryItem item)
-    {
-        if (itemDescriptionText != null)
-        {
-            itemDescriptionText.text = item.GetDescription();
-        }
-        Debug.Log($"点击物品：{item.itemName}");
+        // 背包列表刷新交由 InventoryUI 自身管理，此处保留空实现以兼容旧调用
     }
 
     void UpdateMapUI()
     {
-        if (mapSystem == null)
-            return;
-
-        // 更新地图图标位置
-        if (playerMapIcon != null)
-        {
-            // 这里可以根据地图系统的当前房间位置更新玩家图标
-        }
+        // 地图面板刷新交由 Map 面板自身管理
     }
 
     public void StartGame()
     {
         ShowPanel(UIPanelType.GameHUD);
         Debug.Log("游戏开始！");
-        
-        // 确保玩家对象处于激活状态
+
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null && !player.activeSelf)
         {
@@ -361,48 +194,10 @@ public class UIManager : MonoBehaviour
         Application.Quit();
     }
 
-    public void ShowDialog(string name, string text)
-    {
-        if (dialogPanel != null)
-        {
-            dialogPanel.SetActive(true);
-        }
-        if (dialogNameText != null)
-        {
-            dialogNameText.text = name;
-        }
-        if (dialogText != null)
-        {
-            dialogText.text = text;
-        }
-        currentPanel = UIPanelType.Dialog;
-    }
-
-    public void HideDialog()
-    {
-        if (dialogPanel != null)
-        {
-            dialogPanel.SetActive(false);
-        }
-        currentPanel = UIPanelType.GameHUD;
-    }
-
     public void ShowGameOver()
     {
         ShowPanel(UIPanelType.GameOver);
         Time.timeScale = 0f;
         Debug.Log("游戏结束！");
-    }
-
-    // 调试方法
-    public void DebugPrintUIStatus()
-    {
-        Debug.Log("=== UI状态 ===");
-        Debug.Log($"当前面板：{currentPanel}");
-        Debug.Log($"游戏暂停：{isPaused}");
-        Debug.Log($"HUD激活：{gameHUDPanel != null && gameHUDPanel.activeSelf}");
-        Debug.Log($"背包激活：{inventoryPanel != null && inventoryPanel.activeSelf}");
-        Debug.Log($"技能激活：{skillsPanel != null && skillsPanel.activeSelf}");
-        Debug.Log($"地图激活：{mapPanel != null && mapPanel.activeSelf}");
     }
 }

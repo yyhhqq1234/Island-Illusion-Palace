@@ -818,7 +818,7 @@ public class GameplayAudioManager : MonoBehaviour
         UpdateVolumes();
     }
 
-    void UpdateVolumes()
+    public void UpdateVolumes()
     {
         if (musicSource != null) musicSource.volume = musicVolume * masterVolume;
         if (sfxSource != null) sfxSource.volume = sfxVolume * masterVolume;

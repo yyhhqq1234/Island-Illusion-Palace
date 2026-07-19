@@ -151,7 +151,32 @@ public class IntegratedMapSystem : MonoBehaviour, IMapSystem
     {
         GameSystems.MapMusicType musicType = ConvertToMapMusicType(currentMapType);
         GlobalEventManager.Instance.TriggerMapTypeChanged(musicType);
+        // 同步广播区域名给 HUD
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerMapAreaChanged(GetMapDisplayName(currentMapType));
         Debug.Log($"[IntegratedMapSystem] Current Map Type: {currentMapType} -> Music Type: {musicType}");
+    }
+
+    /// <summary>根据地图类型返回中文显示名（供 AreaNameHUD 使用）</summary>
+    string GetMapDisplayName(MapType mapType)
+    {
+        return mapType switch
+        {
+            MapType.Forest          => "幽暗森林",
+            MapType.Wasteland       => "荒芜之地",
+            MapType.Desert          => "黄沙荒漠",
+            MapType.RockLand        => "嶙峋岩地",
+            MapType.Wetland         => "迷雾湿地",
+            MapType.IceField        => "极寒冰原",
+            MapType.Volcano         => "熔岩火山",
+            MapType.RuinCity        => "废墟之城",
+            MapType.ForgottenManor  => "遗忘庄园",
+            MapType.AncientTemple   => "古老神殿",
+            MapType.LabFragment     => "实验室碎片",
+            MapType.MemoryFragment  => "记忆碎片之地",
+            MapType.TruthCorridor   => "真理时之回廊",
+            _ => "未知区域"
+        };
     }
 
     GameSystems.MapMusicType ConvertToMapMusicType(MapType mapType)

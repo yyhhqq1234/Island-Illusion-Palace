@@ -221,7 +221,13 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
     void UpdateTimers()
     {
         if (dashTimer > 0 && (dashTimer -= Time.deltaTime) <= 0) isDashing = false;
-        if (dashCooldownTimer > 0) dashCooldownTimer -= Time.deltaTime;
+        if (dashCooldownTimer > 0)
+        {
+            dashCooldownTimer -= Time.deltaTime;
+            // 实时广播冷却剩余进度给 HUD（每帧）
+            if (GlobalEventManager.Instance != null)
+                GlobalEventManager.Instance.TriggerDashCooldownChanged(Mathf.Max(0f, dashCooldownTimer), dashCooldown);
+        }
     }
 
     void HandleMouseInput()
@@ -470,6 +476,9 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
         dashCooldownTimer = dashCooldown;
         if (anim != null) SetAnimatorTrigger("Dodge");
         Debug.Log("玩家冲刺！");
+        // 广播闪避冷却开始给 HUD
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerDashCooldownChanged(dashCooldown, dashCooldown);
         // 冲刺消耗负担
         if (burdenSystem != null)
         {

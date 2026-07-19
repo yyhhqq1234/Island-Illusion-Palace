@@ -36,6 +36,7 @@ public class HealthSystem : MonoBehaviour, IHealthProvider
         spriteRenderer = GetComponent<SpriteRenderer>();
         if (spriteRenderer != null) originalMaterial = spriteRenderer.material;
         UpdateUI();
+        BroadcastHealth();
     }
 
     void Update()
@@ -54,6 +55,7 @@ public class HealthSystem : MonoBehaviour, IHealthProvider
         float finalDamage = damage * defenseMultiplier;
         currentHealth = Mathf.Max(0, currentHealth - finalDamage);
         UpdateUI();
+        BroadcastHealth();
         ApplyHitEffect();
 
         if (currentHealth <= 0 && !IsDead()) Die();
@@ -86,9 +88,18 @@ public class HealthSystem : MonoBehaviour, IHealthProvider
     {
         // 确保治疗量不为负数
         if (amount <= 0) return;
-        
+
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
         UpdateUI();
+        BroadcastHealth();
+    }
+
+    /// <summary>广播生命值变化（仅玩家广播给 HUD）</summary>
+    void BroadcastHealth()
+    {
+        if (!CompareTag("Player")) return;
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerPlayerHealthChanged(currentHealth, maxHealth);
     }
 
 

@@ -41,6 +41,15 @@ public class CharacterStats : MonoBehaviour, IStatProvider
         InitializeReferences();
         RecalculateDerivedStats();
         ApplyStatEffects();
+        BroadcastLevel();
+    }
+
+    /// <summary>广播等级/经验变化（仅玩家广播给 HUD）</summary>
+    void BroadcastLevel()
+    {
+        if (!CompareTag("Player")) return;
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerPlayerLevelChanged(level, experience, experienceToNextLevel);
     }
 
     void InitializeReferences()
@@ -67,6 +76,7 @@ public class CharacterStats : MonoBehaviour, IStatProvider
         
         experience = Mathf.Min(experience + amount, maxExperience);
         CheckLevelUp();
+        BroadcastLevel(); // 经验变化后广播给 HUD
     }
 
     void CheckLevelUp()
@@ -102,6 +112,7 @@ public class CharacterStats : MonoBehaviour, IStatProvider
         Debug.Log($"角色升级到 {level} 级！获得 2 点自由属性点。");
         RecalculateDerivedStats();
         ApplyStatEffects();
+        BroadcastLevel(); // 升级后广播给 HUD
     }
 
     int CalculateExperienceNeeded()

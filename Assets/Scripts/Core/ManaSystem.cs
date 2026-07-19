@@ -19,6 +19,7 @@ public class ManaSystem : MonoBehaviour
     {
         InitializeReferences();
         ResetMana();
+        BroadcastMana();
     }
 
     void Update()
@@ -55,7 +56,7 @@ public class ManaSystem : MonoBehaviour
     void RegenerateMana()
     {
         if (maxMana <= 0) return;
-        
+
         float regenAmount = manaRegenRate * Time.deltaTime;
         // 根据智慧属性增加回蓝速度
         if (characterStats != null)
@@ -63,6 +64,15 @@ public class ManaSystem : MonoBehaviour
             regenAmount *= (1f + characterStats.intelligence * 0.01f);
         }
         currentMana = Mathf.Min(currentMana + regenAmount, maxMana);
+        BroadcastMana();
+    }
+
+    /// <summary>广播魔法值变化（仅玩家广播给 HUD）</summary>
+    void BroadcastMana()
+    {
+        if (!CompareTag("Player")) return;
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerPlayerManaChanged(currentMana, maxMana);
     }
 
     void UpdateMaxMana()
@@ -78,11 +88,12 @@ public class ManaSystem : MonoBehaviour
     public bool UseMana(float amount)
     {
         if (amount <= 0 || maxMana <= 0) return false;
-        
+
         if (currentMana >= amount)
         {
             currentMana -= amount;
             ResetRegenTimer();
+            BroadcastMana();
             return true;
         }
         return false;
@@ -91,30 +102,35 @@ public class ManaSystem : MonoBehaviour
     public void AddMana(float amount)
     {
         if (amount <= 0 || maxMana <= 0) return;
-        
+
         currentMana = Mathf.Min(currentMana + amount, maxMana);
+        BroadcastMana();
     }
 
     public void ResetMana()
     {
         currentMana = maxMana;
+        BroadcastMana();
     }
 
     public void RestoreMana(float amount)
     {
         if (amount <= 0) return;
         currentMana = Mathf.Min(maxMana, currentMana + amount);
+        BroadcastMana();
     }
 
     public void SetMana(float amount)
     {
         currentMana = Mathf.Clamp(amount, 0f, maxMana);
+        BroadcastMana();
     }
 
     public void SetMaxMana(float amount)
     {
         maxMana = Mathf.Max(1f, amount);
         currentMana = Mathf.Min(currentMana, maxMana);
+        BroadcastMana();
     }
 
     public void ResetRegenTimer()

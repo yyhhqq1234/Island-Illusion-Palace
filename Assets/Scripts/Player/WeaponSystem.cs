@@ -156,6 +156,7 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         cachedInventoryUI = FindObjectOfType<InventoryUI>();
         cachedAlchemyUI = FindObjectOfType<AlchemyUI>();
         cachedSummonSystem = FindObjectOfType<SummonSystem>();
+        BroadcastWeaponChanged(); // 启动时广播初始武器状态给 HUD
     }
 
     void Update()
@@ -1011,6 +1012,15 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         currentWeaponType = newWeaponType;
         UpdateWeaponStats();
         UpdateWeaponSprite();
+        BroadcastWeaponChanged();
+    }
+
+    /// <summary>广播武器变化（仅玩家广播给 HUD）</summary>
+    void BroadcastWeaponChanged()
+    {
+        if (!CompareTag("Player")) return;
+        if (GlobalEventManager.Instance != null)
+            GlobalEventManager.Instance.TriggerWeaponChanged(currentWeaponType, enhancementLevel);
     }
 
     void UpdateWeaponStats()
@@ -1096,6 +1106,7 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         }
 
         Debug.Log($"武器强化至+{enhancementLevel}，伤害+{enhancementDamageBonus[enhancementLevel] * 100}%");
+        BroadcastWeaponChanged();
         return true;
     }
 

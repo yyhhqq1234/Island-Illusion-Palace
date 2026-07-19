@@ -61,8 +61,10 @@ public class PauseMenu : MonoBehaviour
     [Header("设置面板（可选）")]
     [Tooltip("设置面板Prefab或引用")]
     public GameObject settingsPanelPrefab;
-    
+
     private GameObject settingsPanelInstance;
+    private SettingsPanelController settingsPanelController;
+    private bool settingsPanelOpen = false;
 
     private bool isPaused = false;
     private CanvasGroup pausePanelCanvasGroup;
@@ -156,11 +158,18 @@ public class PauseMenu : MonoBehaviour
         // 检测ESC键按下
         if (useESCKey && Input.GetKeyDown(KeyCode.Escape))
         {
-            // 如果确认对话框打开，ESC关闭对话框
+            // 优先级1：如果确认对话框打开，ESC关闭对话框
             if (confirmDialogPanel != null && confirmDialogPanel.activeSelf)
             {
                 HideConfirmDialog();
             }
+            // 优先级2：如果设置面板打开，ESC关闭设置面板（返回暂停菜单）
+            else if (settingsPanelOpen)
+            {
+                CloseSettingsPanel();
+                Debug.Log("[PauseMenu] ESC关闭设置面板，返回暂停菜单");
+            }
+            // 优先级3：否则切换暂停状态
             else
             {
                 TogglePause();
@@ -181,6 +190,68 @@ public class PauseMenu : MonoBehaviour
             {
                 pausePanelCanvasGroup = pausePanel.AddComponent<CanvasGroup>();
             }
+            
+            // 确保暂停面板布局符合规范：450×550 紧凑居中
+            RectTransform panelRect = pausePanel.GetComponent<RectTransform>();
+            if (panelRect != null)
+            {
+                // 设置锚点为屏幕中心
+                panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+                panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+                panelRect.pivot = new Vector2(0.5f, 0.5f);
+                
+                // 设置固定尺寸 450×550
+                panelRect.sizeDelta = new Vector2(450f, 550f);
+                panelRect.anchoredPosition = Vector2.zero;
+            }
+            
+            // 确保 Content 使用 VerticalLayoutGroup
+            Transform contentTransform = pausePanel.transform.Find("Content");
+            if (contentTransform != null)
+            {
+                VerticalLayoutGroup vlg = contentTransform.GetComponent<VerticalLayoutGroup>();
+                if (vlg == null)
+                {
+                    vlg = contentTransform.gameObject.AddComponent<VerticalLayoutGroup>();
+                }
+                vlg.spacing = 20f;
+                vlg.childAlignment = TextAnchor.UpperCenter;
+                vlg.padding = new RectOffset(20, 20, 20, 20);
+                
+                // 添加 ContentSizeFitter
+                ContentSizeFitter csf = contentTransform.GetComponent<ContentSizeFitter>();
+                if (csf == null)
+                {
+                    csf = contentTransform.gameObject.AddComponent<ContentSizeFitter>();
+                }
+                csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            }
+            
+            // 确保按钮具有正确的 LayoutElement
+            Button[] buttons = pausePanel.GetComponentsInChildren<Button>(true);
+            foreach (Button btn in buttons)
+            {
+                LayoutElement le = btn.GetComponent<LayoutElement>();
+                if (le == null)
+                {
+                    le = btn.gameObject.AddComponent<LayoutElement>();
+                }
+                le.minHeight = 44f;
+                le.preferredHeight = 50f;
+            }
+            
+            // 确保标题具有正确的 LayoutElement
+            Transform titleTransform = pausePanel.transform.Find("Title");
+            if (titleTransform != null)
+            {
+                LayoutElement titleLE = titleTransform.GetComponent<LayoutElement>();
+                if (titleLE == null)
+                {
+                    titleLE = titleTransform.gameObject.AddComponent<LayoutElement>();
+                }
+                titleLE.minHeight = 40f;
+                titleLE.preferredHeight = 48f;
+            }
         }
         
         // 初始化屏幕调暗遮罩CanvasGroup
@@ -192,6 +263,16 @@ public class PauseMenu : MonoBehaviour
                 dimMaskCanvasGroup = dimMask.gameObject.AddComponent<CanvasGroup>();
             }
             dimMask.color = new Color(0f, 0f, 0f, dimOpacity);
+            
+            // 确保遮罩覆盖全屏
+            RectTransform maskRect = dimMask.GetComponent<RectTransform>();
+            if (maskRect != null)
+            {
+                maskRect.anchorMin = Vector2.zero;
+                maskRect.anchorMax = Vector2.one;
+                maskRect.offsetMin = Vector2.zero;
+                maskRect.offsetMax = Vector2.zero;
+            }
         }
         
         // 初始化确认对话框CanvasGroup
@@ -505,26 +586,89 @@ public class PauseMenu : MonoBehaviour
     }
 
     /// <summary>
-    /// 设置按钮点击处理
+    /// 设置按钮点击处理 — 隐藏暂停菜单，显示设置面板
     /// </summary>
     void OnSettingsButtonClicked()
     {
-        // 检查是否已有设置面板Prefab
+        // 隐藏暂停面板和dimMask
+        if (pausePanel != null) pausePanel.SetActive(false);
+        if (dimMask != null) dimMask.gameObject.SetActive(false);
+
+        // 获取或创建设置面板
+        if (settingsPanelInstance == null)
+        {
+            CreateSettingsPanel();
+        }
+
+        settingsPanelInstance.SetActive(true);
+        settingsPanelInstance.transform.SetAsLastSibling();
+        settingsPanelOpen = true;
+
+        Debug.Log("[PauseMenu] 打开设置面板");
+    }
+
+    /// <summary>
+    /// 关闭设置面板，返回暂停菜单
+    /// </summary>
+    void CloseSettingsPanel()
+    {
+        if (settingsPanelInstance != null)
+        {
+            settingsPanelInstance.SetActive(false);
+        }
+        settingsPanelOpen = false;
+
+        // 恢复暂停面板和dimMask
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(true);
+            pausePanel.transform.SetAsLastSibling();
+        }
+        if (dimScreen && dimMask != null)
+        {
+            dimMask.gameObject.SetActive(true);
+            dimMask.transform.SetAsLastSibling();
+            // dimMask 应该在 pausePanel 下面，pausePanel 在最上层
+            if (pausePanel != null)
+                pausePanel.transform.SetAsLastSibling();
+        }
+
+        Debug.Log("[PauseMenu] 关闭设置面板，返回暂停菜单");
+    }
+
+    /// <summary>
+    /// 创建或获取设置面板实例
+    /// </summary>
+    void CreateSettingsPanel()
+    {
+        // 优先级1：使用Prefab
         if (settingsPanelPrefab != null)
         {
-            // 如果还没有实例化，则实例化
-            if (settingsPanelInstance == null)
-            {
-                settingsPanelInstance = Instantiate(settingsPanelPrefab, pausePanel.transform.parent);
-                settingsPanelInstance.transform.SetAsLastSibling(); // 确保显示在暂停面板之上
-            }
-            
-            // 显示设置面板
-            settingsPanelInstance.SetActive(true);
+            settingsPanelInstance = Instantiate(settingsPanelPrefab, pausePanel.transform.parent);
+            settingsPanelController = settingsPanelInstance.GetComponent<SettingsPanelController>();
+            Debug.Log("[PauseMenu] 从Prefab创建设置面板");
         }
         else
         {
-            Debug.LogWarning("[PauseMenu] settingsPanelPrefab未设置，无法打开设置面板");
+            // 优先级2：动态创建
+            settingsPanelInstance = new GameObject("SettingsPanel");
+            settingsPanelInstance.transform.SetParent(pausePanel.transform.parent, false);
+
+            RectTransform panelRect = settingsPanelInstance.AddComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(520f, 480f);
+            panelRect.anchoredPosition = Vector2.zero;
+
+            settingsPanelController = settingsPanelInstance.AddComponent<SettingsPanelController>();
+            Debug.Log("[PauseMenu] 动态创建设置面板");
+        }
+
+        // 绑定返回回调
+        if (settingsPanelController != null)
+        {
+            settingsPanelController.onBackToPauseMenu.AddListener(() => CloseSettingsPanel());
         }
     }
 
@@ -541,10 +685,10 @@ public class PauseMenu : MonoBehaviour
             switch (action)
             {
                 case ConfirmAction.MainMenu:
-                    dialogText.text = "确定返回主菜单吗？当前进度将会丢失。";
+                    dialogText.text = "返回主菜单将丢失当前未保存的进度，确定继续吗？";
                     break;
                 case ConfirmAction.QuitGame:
-                    dialogText.text = "确定退出游戏吗？";
+                    dialogText.text = "确定要退出游戏吗？";
                     break;
             }
         }
@@ -689,16 +833,5 @@ public class PauseMenu : MonoBehaviour
     public bool IsPaused()
     {
         return isPaused;
-    }
-    
-    /// <summary>
-    /// 外部调用 - 关闭设置面板（如果有）
-    /// </summary>
-    public void CloseSettingsPanel()
-    {
-        if (settingsPanelInstance != null)
-        {
-            settingsPanelInstance.SetActive(false);
-        }
     }
 }

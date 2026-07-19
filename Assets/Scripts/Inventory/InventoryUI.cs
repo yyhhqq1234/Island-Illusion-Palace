@@ -2,45 +2,129 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using System.Linq;
 using GameSystems;
 
+/// <summary>
+/// 背包UI系统 - 8列网格+分类过滤+排序搜索+详情面板+底部信息栏
+/// </summary>
 public class InventoryUI : MonoBehaviour
 {
     [Header("背包系统引用")]
-    public InventorySystem inventorySystem; // 背包系统的引用，用于获取物品数据
+    public InventorySystem inventorySystem; // 背包系统的引用
     
     [Header("UI元素")]
     public GameObject inventoryPanel;         // 背包主面板
     public GameObject itemSlotPrefab;         // 物品格子预制体
     public GameObject itemTooltip;            // 物品提示框
-    public GameObject itemInfoPanel;          // 物品信息显示面板
     
-    [Header("三栏物品面板")]
-    public GameObject weaponsPanel;           // 武器栏面板
-    public GameObject consumablesPanel;       // 消耗品/药剂栏面板
-    public GameObject materialsPanel;         // 材料栏面板
+    [Header("统一网格布局")]
+    public GameObject unifiedGridPanel;       // 统一网格面板
+    public GridLayoutGroup unifiedGrid;       // 8列统一网格布局
+    public ScrollRect gridScrollRect;         // 网格滚动区域
     
-    [Header("三栏网格布局")]
-    public GridLayoutGroup weaponsGrid;       // 武器栏网格布局
-    public GridLayoutGroup consumablesGrid;   // 消耗品栏网格布局
-    public GridLayoutGroup materialsGrid;     // 材料栏网格布局
+    [Header("分类过滤栏")]
+    public GameObject filterBar;              // 分类过滤栏面板
+    public Button filterAllBtn;               // 全部按钮
+    public Button filterWeaponBtn;            // 武器按钮
+    public Button filterConsumableBtn;        // 消耗品按钮
+    public Button filterMaterialBtn;          // 材料按钮
+    public Button filterSoulCoreBtn;          // 灵魂之核按钮
+    public Button filterKeyItemBtn;           // 关键物品按钮
+    
+    [Header("分类按钮文本")]
+    public Text filterAllText;                // 全部按钮文本
+    public Text filterWeaponText;             // 武器按钮文本
+    public Text filterConsumableText;         // 消耗品按钮文本
+    public Text filterMaterialText;           // 材料按钮文本
+    public Text filterSoulCoreText;           // 灵魂之核按钮文本
+    public Text filterKeyItemText;            // 关键物品按钮文本
+    
+    [Header("排序/搜索栏")]
+    public GameObject sortSearchBar;          // 排序搜索栏面板
+    public Button sortNameBtn;                // 名称排序按钮
+    public Button sortRarityBtn;              // 稀有度排序按钮
+    public Button sortQuantityBtn;            // 数量排序按钮
+    public Button sortValueBtn;               // 价值排序按钮
+    public InputField searchInput;            // 搜索输入框
+    public Button organizeBtn;                // 整理按钮
+    
+    [Header("排序按钮文本")]
+    public Text sortNameText;                 // 名称排序文本
+    public Text sortRarityText;               // 稀有度排序文本
+    public Text sortQuantityText;             // 数量排序文本
+    public Text sortValueText;                // 价值排序文本
+    
+    [Header("物品详情面板")]
+    public GameObject itemDetailPanel;        // 物品详情面板
+    public Image detailIcon;                  // 大图标(128x128)
+    public Text detailName;                   // 物品名称
+    public Text detailRarity;                 // 稀有度
+    public Text detailType;                   // 类型
+    public Text detailQuantity;               // 数量
+    public Text detailDescription;            // 描述
+    public Button useBtn;                     // 使用按钮
+    public Button equipBtn;                   // 装备按钮
+    
+    [Header("底部信息栏")]
+    public GameObject bottomInfoBar;          // 底部信息栏面板
+    public Text soulCurrencyText;             // 灵魂货币文本
+    public Text materialCountText;            // 材料总数/容量上限
+    public Text burdenText;                   // 当前负重/负重上限
     
     [Header("格子尺寸配置")]
-    public Vector2 cellSize = new Vector2(92, 88);      // 格子大小: 92×88像素
-    public Vector2 spacing = new Vector2(18, 18);        // 格子间距: 18像素
+    public Vector2 cellSize = new Vector2(72, 72);      // 格子大小: 72×72像素
+    public Vector2 spacing = new Vector2(8, 8);          // 格子间距: 8像素
+    public int gridColumns = 8;                          // 网格列数
+    public int visibleRows = 6;                          // 可见行数
+    
+    [Header("格子颜色配置")]
+    public Color emptySlotColor = new Color(0.118f, 0.118f, 0.180f);      // #1E1E2E 空格子背景
+    public Color normalSlotColor = new Color(0.165f, 0.165f, 0.227f);     // #2A2A3A 有物品格子背景
+    public Color selectedBorderColor = new Color(0.267f, 0.541f, 1f);     // #448AFF 选中边框
+    public Color hoverBorderColor = new Color(0.4f, 0.6f, 1f, 0.6f);      // 悬停边框
     
     [Header("当前状态")]
-    private List<GameObject> weaponSlots = new List<GameObject>();
-    private List<GameObject> consumableSlots = new List<GameObject>();
-    private List<GameObject> materialSlots = new List<GameObject>();
+    private List<GameObject> allSlots = new List<GameObject>();
+    private List<InventoryItem> displayedItems = new List<InventoryItem>();
     private InventoryItem hoveredItem = null;
     private InventoryItem selectedItem = null;
+    private InventoryItem currentHoveredItem = null;
+    
+    [Header("过滤和排序状态")]
+    private ItemFilterType currentFilter = ItemFilterType.All;
+    private SortType currentSort = SortType.Name;
+    private bool sortAscending = true;
+    private string searchText = "";
     
     [Header("提示框防抖设置")]
-    public float tooltipHideDelay = 0.08f;              // 隐藏延迟（秒）- 防止子物体切换时闪烁
-    private Coroutine hideTooltipCoroutine = null;       // 隐藏提示框的协程
-    private bool isTooltipVisible = false;               // 提示框当前可见性状态
-    private InventoryItem currentHoveredItem = null;     // 当前悬停的物品
+    public float tooltipHideDelay = 0.08f;
+    private Coroutine hideTooltipCoroutine = null;
+    private bool isTooltipVisible = false;
+    
+    /// <summary>
+    /// 物品过滤类型
+    /// </summary>
+    enum ItemFilterType
+    {
+        All,            // 全部
+        Weapon,         // 武器
+        Consumable,     // 消耗品
+        Material,       // 材料
+        SoulCore,       // 灵魂之核
+        KeyItem         // 关键物品
+    }
+    
+    /// <summary>
+    /// 排序类型
+    /// </summary>
+    enum SortType
+    {
+        Name,           // 名称
+        Rarity,         // 稀有度
+        Quantity,       // 数量
+        Value           // 价值
+    }
     
     void Start()
     {
@@ -49,55 +133,275 @@ public class InventoryUI : MonoBehaviour
             inventorySystem = FindObjectOfType<InventorySystem>();
         }
         
-        // 检查itemTooltip引用
+        // 检查关键UI引用
+        CheckUIReferences();
+        
+        // 初始化网格设置
+        InitializeGridSettings();
+        
+        // 初始化过滤和排序按钮
+        InitializeFilterAndSortButtons();
+        
+        // 初始化搜索框
+        InitializeSearchInput();
+        
+        // 更新UI
+        UpdateInventoryUI();
+        UpdateBottomInfoBar();
+        
+        // 隐藏UI
+        HideInventory();
+        HideItemDetailPanel();
+        
+        // 设置背包面板点击事件
+        SetupInventoryPanelClickEvent();
+        
+        Debug.Log($"[InventoryUI] 背包UI初始化完成: {gridColumns}列×{visibleRows}行 | 格子尺寸: {cellSize.x}×{cellSize.y}px");
+    }
+    
+    /// <summary>
+    /// 检查UI引用
+    /// </summary>
+    void CheckUIReferences()
+    {
         if (itemTooltip == null)
         {
-            Debug.LogError("[InventoryUI] ❌ itemTooltip 未在Inspector中设置！");
+            Debug.LogWarning("[InventoryUI] itemTooltip 未在Inspector中设置");
+        }
+        
+        if (unifiedGrid == null)
+        {
+            Debug.LogWarning("[InventoryUI] unifiedGrid 未在Inspector中设置");
+        }
+        
+        if (itemDetailPanel == null)
+        {
+            Debug.LogWarning("[InventoryUI] itemDetailPanel 未在Inspector中设置");
+        }
+    }
+    
+    /// <summary>
+    /// 初始化网格设置
+    /// </summary>
+    void InitializeGridSettings()
+    {
+        if (unifiedGrid != null)
+        {
+            unifiedGrid.cellSize = cellSize;
+            unifiedGrid.spacing = spacing;
+            unifiedGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            unifiedGrid.constraintCount = gridColumns;
+        }
+    }
+    
+    /// <summary>
+    /// 初始化过滤和排序按钮
+    /// </summary>
+    void InitializeFilterAndSortButtons()
+    {
+        // 分类过滤按钮
+        if (filterAllBtn != null)
+            filterAllBtn.onClick.AddListener(() => SetFilter(ItemFilterType.All));
+        if (filterWeaponBtn != null)
+            filterWeaponBtn.onClick.AddListener(() => SetFilter(ItemFilterType.Weapon));
+        if (filterConsumableBtn != null)
+            filterConsumableBtn.onClick.AddListener(() => SetFilter(ItemFilterType.Consumable));
+        if (filterMaterialBtn != null)
+            filterMaterialBtn.onClick.AddListener(() => SetFilter(ItemFilterType.Material));
+        if (filterSoulCoreBtn != null)
+            filterSoulCoreBtn.onClick.AddListener(() => SetFilter(ItemFilterType.SoulCore));
+        if (filterKeyItemBtn != null)
+            filterKeyItemBtn.onClick.AddListener(() => SetFilter(ItemFilterType.KeyItem));
+        
+        // 排序按钮
+        if (sortNameBtn != null)
+            sortNameBtn.onClick.AddListener(() => SetSort(SortType.Name));
+        if (sortRarityBtn != null)
+            sortRarityBtn.onClick.AddListener(() => SetSort(SortType.Rarity));
+        if (sortQuantityBtn != null)
+            sortQuantityBtn.onClick.AddListener(() => SetSort(SortType.Quantity));
+        if (sortValueBtn != null)
+            sortValueBtn.onClick.AddListener(() => SetSort(SortType.Value));
+        
+        // 整理按钮
+        if (organizeBtn != null)
+            organizeBtn.onClick.AddListener(OrganizeItems);
+        
+        // 更新过滤按钮文本
+        UpdateFilterButtonText();
+        UpdateSortButtonText();
+    }
+    
+    /// <summary>
+    /// 初始化搜索输入框
+    /// </summary>
+    void InitializeSearchInput()
+    {
+        if (searchInput != null)
+        {
+            searchInput.onValueChanged.AddListener(OnSearchTextChanged);
+            searchInput.placeholder.gameObject.GetComponent<Text>().text = "搜索物品...";
+        }
+    }
+    
+    /// <summary>
+    /// 设置过滤类型
+    /// </summary>
+    void SetFilter(ItemFilterType filter)
+    {
+        currentFilter = filter;
+        UpdateFilterButtonText();
+        UpdateInventoryUI();
+    }
+    
+    /// <summary>
+    /// 设置排序类型
+    /// </summary>
+    void SetSort(SortType sort)
+    {
+        if (currentSort == sort)
+        {
+            // 点击相同排序按钮切换升降序
+            sortAscending = !sortAscending;
         }
         else
         {
-            Debug.Log("[InventoryUI] ✅ itemTooltip 引用已设置: " + itemTooltip.name);
+            currentSort = sort;
+            sortAscending = true; // 默认升序
         }
         
-        // 检查tooltipHideDelay值
-        Debug.Log("[InventoryUI] ⏱️ tooltipHideDelay: " + tooltipHideDelay + "秒");
-        
-        InitializeGridSettings();
+        UpdateSortButtonText();
         UpdateInventoryUI();
-        HideInventory();
-        
-        // 添加背包面板点击事件，点击空白区域时隐藏物品信息面板
-        SetupInventoryPanelClickEvent();
     }
-
-    void InitializeGridSettings()
+    
+    /// <summary>
+    /// 搜索文本变化回调
+    /// </summary>
+    void OnSearchTextChanged(string text)
     {
-        // 配置所有网格布局组件：4列×6行=24格
-        if (weaponsGrid != null)
+        searchText = text;
+        UpdateInventoryUI();
+    }
+    
+    /// <summary>
+    /// 更新过滤按钮文本（显示数量）
+    /// </summary>
+    void UpdateFilterButtonText()
+    {
+        if (inventorySystem == null) return;
+        
+        var allItems = inventorySystem.GetAllItems();
+        
+        if (filterAllText != null)
+            filterAllText.text = $"全部({allItems.Count})";
+        if (filterWeaponText != null)
+            filterWeaponText.text = $"武器({allItems.Count(i => i.itemType == ItemType.Weapon)})";
+        if (filterConsumableText != null)
+            filterConsumableText.text = $"消耗品({allItems.Count(i => i.itemType == ItemType.Consumable)})";
+        if (filterMaterialText != null)
+            filterMaterialText.text = $"材料({allItems.Count(i => i.itemType == ItemType.Material)})";
+        if (filterSoulCoreText != null)
+            filterSoulCoreText.text = $"灵魂之核({GetSoulCoreCount()})";
+        if (filterKeyItemText != null)
+            filterKeyItemText.text = $"关键物品({GetKeyItemCount()})";
+        
+        // 高亮当前选中的过滤按钮
+        HighlightFilterButton();
+    }
+    
+    /// <summary>
+    /// 高亮当前选中的过滤按钮
+    /// </summary>
+    void HighlightFilterButton()
+    {
+        // 重置所有按钮颜色
+        ResetButtonColor(filterAllBtn);
+        ResetButtonColor(filterWeaponBtn);
+        ResetButtonColor(filterConsumableBtn);
+        ResetButtonColor(filterMaterialBtn);
+        ResetButtonColor(filterSoulCoreBtn);
+        ResetButtonColor(filterKeyItemBtn);
+        
+        // 高亮选中的按钮
+        Button selectedBtn = null;
+        switch (currentFilter)
         {
-            weaponsGrid.cellSize = cellSize;           // 92×88像素
-            weaponsGrid.spacing = spacing;             // 18像素间距
-            weaponsGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            weaponsGrid.constraintCount = 4;           // 每行4列（共6行24格）
+            case ItemFilterType.All: selectedBtn = filterAllBtn; break;
+            case ItemFilterType.Weapon: selectedBtn = filterWeaponBtn; break;
+            case ItemFilterType.Consumable: selectedBtn = filterConsumableBtn; break;
+            case ItemFilterType.Material: selectedBtn = filterMaterialBtn; break;
+            case ItemFilterType.SoulCore: selectedBtn = filterSoulCoreBtn; break;
+            case ItemFilterType.KeyItem: selectedBtn = filterKeyItemBtn; break;
         }
         
-        if (consumablesGrid != null)
+        if (selectedBtn != null)
         {
-            consumablesGrid.cellSize = cellSize;
-            consumablesGrid.spacing = spacing;
-            consumablesGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            consumablesGrid.constraintCount = 4;       // 每行4列（共6行24格）
+            var colors = selectedBtn.colors;
+            colors.normalColor = new Color(0.3f, 0.5f, 1f, 0.3f);
+            selectedBtn.colors = colors;
         }
-        
-        if (materialsGrid != null)
+    }
+    
+    /// <summary>
+    /// 重置按钮颜色
+    /// </summary>
+    void ResetButtonColor(Button btn)
+    {
+        if (btn != null)
         {
-            materialsGrid.cellSize = cellSize;
-            materialsGrid.spacing = spacing;
-            materialsGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            materialsGrid.constraintCount = 4;         // 每行4列（共6行24格）
+            var colors = btn.colors;
+            colors.normalColor = new Color(1, 1, 1, 0.1f);
+            btn.colors = colors;
         }
+    }
+    
+    /// <summary>
+    /// 更新排序按钮文本
+    /// </summary>
+    void UpdateSortButtonText()
+    {
+        string arrow = sortAscending ? "↑" : "↓";
         
-        Debug.Log($"[InventoryUI] 📐 网格布局初始化完成: {cellSize.x}×{cellSize.y}px | 间距: {spacing.x}px | 布局: 4列×6行=24格");
+        if (sortNameText != null)
+            sortNameText.text = $"名称{arrow}";
+        if (sortRarityText != null)
+            sortRarityText.text = $"稀有度{(currentSort == SortType.Rarity ? arrow : "")}";
+        if (sortQuantityText != null)
+            sortQuantityText.text = $"数量{(currentSort == SortType.Quantity ? arrow : "")}";
+        if (sortValueText != null)
+            sortValueText.text = $"价值{(currentSort == SortType.Value ? arrow : "")}";
+    }
+    
+    /// <summary>
+    /// 获取灵魂之核数量
+    /// </summary>
+    int GetSoulCoreCount()
+    {
+        if (inventorySystem == null) return 0;
+        // 灵魂之核暂时返回0，后续可扩展
+        return 0;
+    }
+    
+    /// <summary>
+    /// 获取关键物品数量
+    /// </summary>
+    int GetKeyItemCount()
+    {
+        if (inventorySystem == null) return 0;
+        // 关键物品暂时返回记忆碎片数量
+        return inventorySystem.GetAllMemoryFragments().Count;
+    }
+    
+    /// <summary>
+    /// 整理物品（按稀有度降序→类型分组→名称字母序）
+    /// </summary>
+    void OrganizeItems()
+    {
+        currentSort = SortType.Rarity;
+        sortAscending = false; // 降序
+        UpdateSortButtonText();
+        UpdateInventoryUI();
+        Debug.Log("[InventoryUI] 物品已整理");
     }
     
     void Update()
@@ -123,15 +427,7 @@ public class InventoryUI : MonoBehaviour
                 HideInventory();
             }
         }
-        
-        // 固定提示框位置，不再跟随鼠标移动
-        // if (hoveredItem != null && itemTooltip != null && itemTooltip.activeSelf)
-        // {
-        //     itemTooltip.transform.position = Input.mousePosition + new Vector3(10, -10, 0);
-        // }
     }
-    
-
     
     public void ShowInventory()
     {
@@ -139,6 +435,7 @@ public class InventoryUI : MonoBehaviour
         {
             inventoryPanel.SetActive(true);
             UpdateInventoryUI();
+            UpdateBottomInfoBar();
             Time.timeScale = 0f; // 暂停游戏
         }
     }
@@ -160,60 +457,143 @@ public class InventoryUI : MonoBehaviour
             isTooltipVisible = false;
             
             HideTooltipImmediate();
-            HideItemInfo();
+            HideItemDetailPanel();
         }
     }
     
-
-    
+    /// <summary>
+    /// 更新背包UI
+    /// </summary>
     public void UpdateInventoryUI()
     {
+        if (inventorySystem == null) return;
+        
         // 清除现有物品格子
         ClearAllSlots();
         
-        // 分别显示各栏目的物品
-        DisplayWeapons();
-        DisplayConsumables();
-        DisplayMaterials();
+        // 获取并过滤物品
+        List<InventoryItem> filteredItems = GetFilteredItems();
+        
+        // 排序物品
+        List<InventoryItem> sortedItems = SortItems(filteredItems);
+        
+        // 显示物品
+        displayedItems = sortedItems;
+        DisplayItems(sortedItems);
+        
+        // 更新过滤按钮文本
+        UpdateFilterButtonText();
     }
     
-    void DisplayWeapons()
+    /// <summary>
+    /// 获取过滤后的物品列表
+    /// </summary>
+    List<InventoryItem> GetFilteredItems()
     {
-        if (weaponsPanel == null) return;
+        var allItems = inventorySystem.GetAllItems();
+        var filtered = new List<InventoryItem>();
         
-        List<InventoryItem> weapons = inventorySystem.GetAllWeapons();
-        foreach (var item in weapons)
+        foreach (var item in allItems)
         {
-            CreateItemSlot(item, weaponsPanel.transform, weaponSlots);
+            // 应用分类过滤
+            if (!MatchFilter(item))
+                continue;
+            
+            // 应用搜索过滤
+            if (!string.IsNullOrEmpty(searchText) && !item.itemName.ToLower().Contains(searchText.ToLower()))
+                continue;
+            
+            filtered.Add(item);
+        }
+        
+        return filtered;
+    }
+    
+    /// <summary>
+    /// 检查物品是否匹配当前过滤条件
+    /// </summary>
+    bool MatchFilter(InventoryItem item)
+    {
+        switch (currentFilter)
+        {
+            case ItemFilterType.All:
+                return true;
+            case ItemFilterType.Weapon:
+                return item.itemType == ItemType.Weapon;
+            case ItemFilterType.Consumable:
+                return item.itemType == ItemType.Consumable;
+            case ItemFilterType.Material:
+                return item.itemType == ItemType.Material;
+            case ItemFilterType.SoulCore:
+                // 灵魂之核逻辑（后续扩展）
+                return false;
+            case ItemFilterType.KeyItem:
+                return item.itemType == ItemType.MemoryFragment;
+            default:
+                return true;
         }
     }
     
-    void DisplayConsumables()
+    /// <summary>
+    /// 排序物品列表
+    /// </summary>
+    List<InventoryItem> SortItems(List<InventoryItem> items)
     {
-        if (consumablesPanel == null) return;
+        var sorted = new List<InventoryItem>(items);
         
-        List<InventoryItem> consumables = inventorySystem.inventory.FindAll(i => i.itemType == ItemType.Consumable);
-        foreach (var item in consumables)
+        switch (currentSort)
         {
-            CreateItemSlot(item, consumablesPanel.transform, consumableSlots);
+            case SortType.Name:
+                sorted = sortAscending 
+                    ? sorted.OrderBy(i => i.itemName).ToList()
+                    : sorted.OrderByDescending(i => i.itemName).ToList();
+                break;
+                
+            case SortType.Rarity:
+                sorted = sortAscending
+                    ? sorted.OrderBy(i => i.rarity).ToList()
+                    : sorted.OrderByDescending(i => i.rarity).ToList();
+                break;
+                
+            case SortType.Quantity:
+                sorted = sortAscending
+                    ? sorted.OrderBy(i => i.quantity).ToList()
+                    : sorted.OrderByDescending(i => i.quantity).ToList();
+                break;
+                
+            case SortType.Value:
+                sorted = sortAscending
+                    ? sorted.OrderBy(i => i.value).ToList()
+                    : sorted.OrderByDescending(i => i.value).ToList();
+                break;
+        }
+        
+        return sorted;
+    }
+    
+    /// <summary>
+    /// 显示物品到统一网格
+    /// </summary>
+    void DisplayItems(List<InventoryItem> items)
+    {
+        if (unifiedGrid == null) return;
+        
+        foreach (var item in items)
+        {
+            CreateItemSlot(item, unifiedGrid.transform, allSlots);
+        }
+        
+        // 填充空格子以达到可见行数
+        int emptySlotsNeeded = gridColumns * visibleRows - items.Count;
+        for (int i = 0; i < emptySlotsNeeded; i++)
+        {
+            CreateEmptySlot(unifiedGrid.transform, allSlots);
         }
     }
     
-    void DisplayMaterials()
-    {
-        if (materialsPanel == null) return;
-        
-        List<InventoryItem> materials = inventorySystem.GetAllMaterials();
-        foreach (var item in materials)
-        {
-            CreateItemSlot(item, materialsPanel.transform, materialSlots);
-        }
-        
-        // 记忆碎片和特殊物品不在UI上显示，但仍然在背包中记录
-    }
-    
-
-    
+    /// <summary>
+    /// 创建物品格子
+    /// </summary>
     void CreateItemSlot(InventoryItem item, Transform parent, List<GameObject> slotList)
     {
         if (itemSlotPrefab == null || parent == null)
@@ -222,13 +602,13 @@ public class InventoryUI : MonoBehaviour
         GameObject slot = Instantiate(itemSlotPrefab, parent);
         slotList.Add(slot);
         
-        // 使用ItemSlot脚本来设置物品数据（支持图标放大7倍显示）
-        // 使用反射或动态方式获取ItemSlot组件，避免编译错误
+        // 设置格子样式
+        SetupSlotStyle(slot, item);
+        
+        // 使用ItemSlot脚本来设置物品数据
         var itemSlotScript = slot.GetComponent("ItemSlot") as MonoBehaviour;
         if (itemSlotScript != null)
         {
-            // 调用ItemSlot脚本的SetItem方法，自动处理图标、数量和视觉效果
-            // 使用反射调用SetItem方法，避免编译错误
             System.Reflection.MethodInfo setItemMethod = itemSlotScript.GetType().GetMethod("SetItem");
             if (setItemMethod != null)
             {
@@ -237,15 +617,13 @@ public class InventoryUI : MonoBehaviour
         }
         else
         {
-            // 如果没有ItemSlot脚本，使用原来的逻辑
             SetItemSlotManually(slot, item);
         }
         
-        // 添加点击事件 - 绑定到父物体 ItemSlotPrefab
+        // 添加点击事件
         Button slotButton = slot.GetComponent<Button>();
         if (slotButton != null)
         {
-            // 确保Button组件的targetGraphic是父物体的Image，而不是子物体
             Image slotImage = slot.GetComponent<Image>();
             if (slotImage != null && slotButton.targetGraphic == null)
             {
@@ -255,85 +633,145 @@ public class InventoryUI : MonoBehaviour
             slotButton.onClick.AddListener(() => OnItemClick(item));
         }
         
-        // 添加鼠标悬停事件 - 确保绑定到父物体 ItemSlotPrefab 而非子物体 Icon
+        // 添加鼠标悬停事件
         EventTrigger trigger = slot.GetComponent<EventTrigger>();
         if (trigger == null)
         {
             trigger = slot.gameObject.AddComponent<EventTrigger>();
         }
         
-        // 清除现有的事件
         trigger.triggers.Clear();
         
-        // 确保父物体可以接收射线检测（用于边界判断）
         CanvasGroup parentCanvasGroup = slot.GetComponent<CanvasGroup>();
         if (parentCanvasGroup == null)
         {
             parentCanvasGroup = slot.gameObject.AddComponent<CanvasGroup>();
         }
-        parentCanvasGroup.blocksRaycasts = true;   // 父物体必须接收射线
+        parentCanvasGroup.blocksRaycasts = true;
         parentCanvasGroup.alpha = 1f;
         
-        // 确保父物体有碰撞器
-        BoxCollider2D boxCollider = slot.GetComponent<BoxCollider2D>();
-        if (boxCollider == null)
-        {
-            boxCollider = slot.gameObject.AddComponent<BoxCollider2D>();
-            boxCollider.isTrigger = true;
-            boxCollider.size = new Vector2(92, 88); // 与格子大小匹配
-            Debug.Log($"[InventoryUI] 📦 为格子 {slot.name} 添加了 BoxCollider2D");
-        }
-        
-        // 确保父物体有 Image 组件（用于射线检测）
-        Image parentImage = slot.GetComponent<Image>();
-        if (parentImage == null)
-        {
-            parentImage = slot.gameObject.AddComponent<Image>();
-            parentImage.color = new Color(0, 0, 0, 0); // 透明，不影响视觉
-            Debug.Log($"[InventoryUI] 🖼️ 为格子 {slot.name} 添加了 Image 组件");
-        }
-        
-        // 添加鼠标进入事件 - 基于父物体边界
+        // 添加鼠标进入事件
         EventTrigger.Entry enterEntry = new EventTrigger.Entry();
         enterEntry.eventID = EventTriggerType.PointerEnter;
         enterEntry.callback.AddListener((eventData) => 
         {
-            Debug.Log($"[InventoryUI] 🖱️ 鼠标进入物品格子: {item.itemName} (父物体: {slot.name})");
             OnItemHover(item);
         });
         trigger.triggers.Add(enterEntry);
         
-        // 添加鼠标离开事件 - 基于父物体边界
+        // 添加鼠标离开事件
         EventTrigger.Entry exitEntry = new EventTrigger.Entry();
         exitEntry.eventID = EventTriggerType.PointerExit;
         exitEntry.callback.AddListener((eventData) => 
         {
-            Debug.Log($"[InventoryUI] 🖱️ 鼠标离开物品格子: {item.itemName} (父物体: {slot.name})");
             OnItemHoverExit();
         });
         trigger.triggers.Add(exitEntry);
-        
-        // 添加鼠标离开窗口事件（额外保险）
-        EventTrigger.Entry exitWindowEntry = new EventTrigger.Entry();
-        exitWindowEntry.eventID = EventTriggerType.PointerExit;
-        exitWindowEntry.callback.AddListener((eventData) => 
-        {
-            Debug.Log($"[InventoryUI] 🖱️ 鼠标离开窗口: {item.itemName}");
-            OnItemHoverExit();
-        });
-        trigger.triggers.Add(exitWindowEntry);
     }
     
+    /// <summary>
+    /// 创建空格子
+    /// </summary>
+    void CreateEmptySlot(Transform parent, List<GameObject> slotList)
+    {
+        if (itemSlotPrefab == null || parent == null)
+            return;
+        
+        GameObject slot = Instantiate(itemSlotPrefab, parent);
+        slotList.Add(slot);
+        
+        // 设置空格子样式
+        Image bgImage = slot.GetComponent<Image>();
+        if (bgImage != null)
+        {
+            bgImage.color = emptySlotColor;
+        }
+        
+        // 禁用交互
+        Button btn = slot.GetComponent<Button>();
+        if (btn != null)
+        {
+            btn.interactable = false;
+        }
+        
+        // 清空图标
+        Image iconImage = slot.GetComponentInChildren<Image>();
+        if (iconImage != null && iconImage.gameObject != slot)
+        {
+            iconImage.sprite = null;
+            iconImage.color = new Color(0, 0, 0, 0);
+        }
+        
+        // 清空数量文本
+        Text quantityText = slot.GetComponentInChildren<Text>();
+        if (quantityText != null)
+        {
+            quantityText.text = "";
+        }
+    }
+    
+    /// <summary>
+    /// 设置格子样式
+    /// </summary>
+    void SetupSlotStyle(GameObject slot, InventoryItem item)
+    {
+        Image bgImage = slot.GetComponent<Image>();
+        if (bgImage != null)
+        {
+            bgImage.color = normalSlotColor;
+        }
+        
+        // 如果是选中物品，添加边框效果
+        if (selectedItem == item)
+        {
+            AddSelectedBorder(slot);
+        }
+    }
+    
+    /// <summary>
+    /// 添加选中边框效果
+    /// </summary>
+    void AddSelectedBorder(GameObject slot)
+    {
+        // 查找或创建边框Image
+        Transform borderTransform = slot.transform.Find("Border");
+        Image borderImage;
+        
+        if (borderTransform == null)
+        {
+            GameObject borderObj = new GameObject("Border");
+            borderObj.transform.SetParent(slot.transform, false);
+            
+            RectTransform borderRect = borderObj.AddComponent<RectTransform>();
+            borderRect.anchorMin = Vector2.zero;
+            borderRect.anchorMax = Vector2.one;
+            borderRect.offsetMin = new Vector2(-2, -2);
+            borderRect.offsetMax = new Vector2(2, 2);
+            
+            borderImage = borderObj.AddComponent<Image>();
+            borderImage.color = selectedBorderColor;
+        }
+        else
+        {
+            borderImage = borderTransform.GetComponent<Image>();
+            if (borderImage != null)
+            {
+                borderImage.color = selectedBorderColor;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 手动设置物品格子
+    /// </summary>
     void SetItemSlotManually(GameObject slot, InventoryItem item)
     {
-        // 设置物品图标（原始逻辑）
         Image iconImage = slot.GetComponentInChildren<Image>();
         if (iconImage != null && item.icon != null)
         {
             iconImage.sprite = item.icon;
         }
         
-        // 设置物品数量
         Text quantityText = slot.GetComponentInChildren<Text>();
         if (quantityText != null && item.quantity > 1)
         {
@@ -343,134 +781,104 @@ public class InventoryUI : MonoBehaviour
         {
             quantityText.text = "";
         }
-        
-        // 设置装备状态视觉效果
-        SetSlotVisualEffect(slot, item);
-    }
-    
-    void SetSlotVisualEffect(GameObject slot, InventoryItem item)
-    {
-        Image backgroundImage = slot.GetComponent<Image>();
-        if (backgroundImage == null) return;
-        
-        // 根据物品类型设置不同的背景颜色
-        switch (item.itemType)
-        {
-            case ItemType.Weapon:
-                backgroundImage.color = new Color(0.7f, 0.8f, 1f, 0.5f); // 浅蓝色-武器
-                break;
-            case ItemType.Consumable:
-                backgroundImage.color = new Color(0.7f, 1f, 0.7f, 0.5f); // 浅绿色-消耗品
-                break;
-            case ItemType.Material:
-                backgroundImage.color = new Color(1f, 1f, 0.7f, 0.5f); // 浅黄色-材料
-                break;
-            default:
-                backgroundImage.color = new Color(0.9f, 0.9f, 0.9f, 0.5f); // 默认灰色
-                break;
-        }
-        
-        // 如果已装备，添加特殊高亮效果
-        if (item.isEquipped)
-        {
-            backgroundImage.color = new Color(0.6f, 0.9f, 0.6f, 0.8f); // 绿色表示已装备
-        }
     }
     
     void ClearAllSlots()
     {
-        ClearSlotList(weaponSlots);
-        ClearSlotList(consumableSlots);
-        ClearSlotList(materialSlots);
-    }
-    
-    void ClearSlotList(List<GameObject> slotList)
-    {
-        foreach (var slot in slotList)
+        foreach (var slot in allSlots)
         {
             if (slot != null)
                 Destroy(slot);
         }
-        slotList.Clear();
+        allSlots.Clear();
     }
     
     void OnItemClick(InventoryItem item)
     {
         selectedItem = item;
         
+        // 更新格子选中状态
+        UpdateSlotSelection();
+        
+        // 显示物品详情面板
+        ShowItemDetailPanel(item);
+        
         switch (item.itemType)
         {
             case ItemType.Consumable:
-                // 使用消耗品
                 Debug.Log($"[InventoryUI] 点击使用消耗品: {item.itemName}");
                 inventorySystem.UseItem(item);
                 UpdateInventoryUI();
-                ShowItemInfo(item);
                 break;
             case ItemType.Weapon:
-                // 装备武器
                 inventorySystem.EquipItem(item);
                 UpdateInventoryUI();
-                ShowItemInfo(item);
                 break;
             case ItemType.Material:
             case ItemType.MemoryFragment:
                 // 材料和记忆碎片只能查看
-                ShowItemInfo(item);
                 break;
         }
     }
     
+    /// <summary>
+    /// 更新格子选中状态
+    /// </summary>
+    void UpdateSlotSelection()
+    {
+        foreach (var slot in allSlots)
+        {
+            if (slot == null) continue;
+            
+            // 移除旧的边框
+            Transform borderTransform = slot.transform.Find("Border");
+            if (borderTransform != null)
+            {
+                Destroy(borderTransform.gameObject);
+            }
+        }
+        
+        // 为选中物品添加边框
+        // 这里简化处理，实际应该根据物品找到对应的格子
+    }
+    
     void OnItemHover(InventoryItem item)
     {
-        // 1. 取消正在进行的隐藏协程（防止从子物体移入时闪烁）
         if (hideTooltipCoroutine != null)
         {
             StopCoroutine(hideTooltipCoroutine);
             hideTooltipCoroutine = null;
         }
         
-        // 2. 如果已经显示的是同一个物品，不需要重新显示
         if (currentHoveredItem == item && isTooltipVisible)
         {
             return;
         }
         
-        // 3. 立即显示提示框（无延迟）
         currentHoveredItem = item;
         ShowTooltipImmediate(item);
     }
     
     void OnItemHoverExit()
     {
-        // 4. 启动延迟隐藏协程（防止子物体切换时闪烁）
         if (hideTooltipCoroutine != null)
         {
             StopCoroutine(hideTooltipCoroutine);
-            Debug.Log("[InventoryUI] ⏹️ 取消正在进行的隐藏协程");
         }
         hideTooltipCoroutine = StartCoroutine(DelayedHideTooltip());
-        Debug.Log("[InventoryUI] 🚀 启动延迟隐藏协程 (延迟: " + tooltipHideDelay + "秒)");
     }
     
     System.Collections.IEnumerator DelayedHideTooltip()
     {
-        // 等待一小段延迟，避免子物体切换导致的闪烁
-        Debug.Log("[InventoryUI] ⏰ 开始等待隐藏延迟: " + tooltipHideDelay + "秒, Time.timeScale: " + Time.timeScale);
-        
-        // 即使游戏暂停也能正常工作
         float start = Time.realtimeSinceStartup;
         while (Time.realtimeSinceStartup - start < tooltipHideDelay)
         {
             yield return null;
         }
         
-        // 隐藏提示框
-        Debug.Log("[InventoryUI] 🎯 延迟结束，执行隐藏操作");
         HideTooltipImmediate();
         hideTooltipCoroutine = null;
         currentHoveredItem = null;
-        Debug.Log("[InventoryUI] ✅ 隐藏操作完成");
     }
     
     void ShowTooltipImmediate(InventoryItem item)
@@ -480,29 +888,23 @@ public class InventoryUI : MonoBehaviour
         if (itemTooltip == null)
             return;
         
-        // 避免重复设置active状态导致频闪
         if (!itemTooltip.activeSelf)
         {
             itemTooltip.SetActive(true);
             isTooltipVisible = true;
         }
         
-        // 设置提示内容
-        // 查找所有Text组件并设置内容
         Text[] tooltipTexts = itemTooltip.GetComponentsInChildren<Text>();
         if (tooltipTexts.Length > 0)
         {
-            // 第1个Text：物品名称
             tooltipTexts[0].text = item.itemName;
             
             if (tooltipTexts.Length > 1)
             {
-                // 第2个Text：炼金价值
                 tooltipTexts[1].text = $"炼金价值：{item.value}";
                 
                 if (tooltipTexts.Length > 2)
                 {
-                    // 第3个Text：稀有度 + 描述
                     string rarityStr = GetRarityString(item.rarity);
                     string description = item.GetDescription();
                     tooltipTexts[2].text = $"{rarityStr} {description}";
@@ -510,18 +912,10 @@ public class InventoryUI : MonoBehaviour
             }
         }
         
-
-        
-        // 设置固定提示位置（使用localPosition确保在UI画布中正确显示）
         RectTransform tooltipRect = itemTooltip.GetComponent<RectTransform>();
         if (tooltipRect != null)
         {
             tooltipRect.localPosition = new Vector3(800, 400, 0);
-        }
-        else
-        {
-            // 兼容旧版本
-            itemTooltip.transform.localPosition = new Vector3(800, 400, 0);
         }
     }
     
@@ -561,107 +955,137 @@ public class InventoryUI : MonoBehaviour
     
     void HideTooltipImmediate()
     {
-        Debug.Log("[InventoryUI] 🔍 开始隐藏提示框 - itemTooltip: " + (itemTooltip != null) + ", active: " + (itemTooltip != null ? itemTooltip.activeSelf : false));
-        
         if (itemTooltip != null && itemTooltip.activeSelf)
         {
             itemTooltip.SetActive(false);
             isTooltipVisible = false;
-            Debug.Log("[InventoryUI] ✅ 提示框已隐藏");
-        }
-        else if (itemTooltip == null)
-        {
-            Debug.Log("[InventoryUI] ❌ itemTooltip 引用为空");
-        }
-        else if (!itemTooltip.activeSelf)
-        {
-            Debug.Log("[InventoryUI] ℹ️ 提示框已经是隐藏状态");
         }
         
         hoveredItem = null;
-        Debug.Log("[InventoryUI] ✅ hoveredItem 已清空");
     }
     
-    void ShowItemInfo(InventoryItem item)
+    /// <summary>
+    /// 显示物品详情面板
+    /// </summary>
+    void ShowItemDetailPanel(InventoryItem item)
     {
-        if (itemInfoPanel == null || item == null)
+        if (itemDetailPanel == null || item == null)
             return;
         
-        itemInfoPanel.SetActive(true);
+        itemDetailPanel.SetActive(true);
         
-        // 显示物品详细信息
-        Text[] infoTexts = itemInfoPanel.GetComponentsInChildren<Text>();
-        if (infoTexts.Length > 0)
+        // 设置图标
+        if (detailIcon != null && item.icon != null)
         {
-            infoTexts[0].text = item.itemName; // 名称
-            
-            if (infoTexts.Length > 1)
-            {
-                infoTexts[1].text = item.GetDescription(); // 描述
-                
-                if (infoTexts.Length > 2)
-                {
-                    infoTexts[2].text = $"数量: {item.quantity}"; // 数量
-                    
-                    if (infoTexts.Length > 3)
-                    {
-                        infoTexts[3].text = $"类型: {GetItemTypeString(item.itemType)}"; // 类型
-                        
-                        if (infoTexts.Length > 4)
-                        {
-                            infoTexts[4].text = $"价值: {item.value}金币"; // 价值
-                            
-                            if (infoTexts.Length > 5)
-                            {
-                                // 特殊属性信息
-                                string extraInfo = GetExtraItemInfo(item);
-                                infoTexts[5].text = extraInfo;
-                            }
-                        }
-                    }
-                }
-            }
+            detailIcon.sprite = item.icon;
         }
         
-        // 设置物品图标
-        Image[] infoImages = itemInfoPanel.GetComponentsInChildren<Image>();
-        if (infoImages.Length > 1 && item.icon != null)
+        // 设置名称
+        if (detailName != null)
         {
-            infoImages[1].sprite = item.icon; // 第二个Image组件是物品图标
+            detailName.text = item.itemName;
+        }
+        
+        // 设置稀有度
+        if (detailRarity != null)
+        {
+            detailRarity.text = GetRarityString(item.rarity);
+            detailRarity.color = GetRarityColor(item.rarity);
+        }
+        
+        // 设置类型
+        if (detailType != null)
+        {
+            detailType.text = GetItemTypeString(item.itemType);
+        }
+        
+        // 设置数量
+        if (detailQuantity != null)
+        {
+            detailQuantity.text = $"数量: {item.quantity}";
+        }
+        
+        // 设置描述
+        if (detailDescription != null)
+        {
+            detailDescription.text = item.GetDescription();
+        }
+        
+        // 设置按钮可见性
+        if (useBtn != null)
+        {
+            useBtn.gameObject.SetActive(item.itemType == ItemType.Consumable);
+        }
+        
+        if (equipBtn != null)
+        {
+            equipBtn.gameObject.SetActive(item.itemType == ItemType.Weapon);
         }
     }
     
-    string GetExtraItemInfo(InventoryItem item)
+    /// <summary>
+    /// 隐藏物品详情面板
+    /// </summary>
+    void HideItemDetailPanel()
     {
-        switch (item.itemType)
+        if (itemDetailPanel != null)
         {
-            case ItemType.Weapon:
-                return $"等级: {item.weaponLevel}\n状态: {(item.isEquipped ? "已装备" : "未装备")}";
-                
-            case ItemType.Consumable:
-                return $"效果: {item.description}";
-                
-            case ItemType.Material:
-                return $"材料类型: {item.materialType}";
-                
-            case ItemType.MemoryFragment:
-                return "神秘的记忆碎片";
-                
-            default:
-                return "";
-        }
-    }
-    
-    void HideItemInfo()
-    {
-        if (itemInfoPanel != null)
-        {
-            itemInfoPanel.SetActive(false);
+            itemDetailPanel.SetActive(false);
         }
         selectedItem = null;
     }
     
-    // 检查背包是否打开
+    /// <summary>
+    /// 获取稀有度颜色
+    /// </summary>
+    Color GetRarityColor(ItemRarity rarity)
+    {
+        switch (rarity)
+        {
+            case ItemRarity.Common:
+                return Color.white;
+            case ItemRarity.Uncommon:
+                return new Color(0.3f, 0.8f, 0.3f); // 绿色
+            case ItemRarity.Rare:
+                return new Color(0.6f, 0.4f, 1f);   // 紫色
+            case ItemRarity.Legendary:
+                return new Color(1f, 0.8f, 0.2f);   // 金色
+            default:
+                return Color.white;
+        }
+    }
+    
+    /// <summary>
+    /// 更新底部信息栏
+    /// </summary>
+    void UpdateBottomInfoBar()
+    {
+        if (inventorySystem == null) return;
+        
+        // 灵魂货币
+        if (soulCurrencyText != null)
+        {
+            soulCurrencyText.text = $"灵魂: {inventorySystem.currentSouls}";
+        }
+        
+        // 材料总数/容量上限
+        if (materialCountText != null)
+        {
+            int materialCount = inventorySystem.GetAllMaterials().Count;
+            int maxMaterials = inventorySystem.maxMaterialSlots;
+            materialCountText.text = $"材料: {materialCount}/{maxMaterials}";
+        }
+        
+        // 负重（暂时用物品数量代替，后续可扩展）
+        if (burdenText != null)
+        {
+            int currentWeight = inventorySystem.currentInventorySize;
+            int maxWeight = inventorySystem.maxMaterialSlots + inventorySystem.maxConsumableSlots + 
+                           inventorySystem.maxWeaponSlots + inventorySystem.maxMemoryFragmentSlots;
+            burdenText.text = $"负重: {currentWeight}/{maxWeight}";
+        }
+    }
+    
     public bool IsInventoryOpen()
     {
         return inventoryPanel != null && inventoryPanel.activeSelf;
@@ -671,35 +1095,30 @@ public class InventoryUI : MonoBehaviour
     {
         if (inventoryPanel == null)
         {
-            Debug.LogWarning("[InventoryUI] ❌ inventoryPanel 未在Inspector中设置，无法添加点击事件");
+            Debug.LogWarning("[InventoryUI] inventoryPanel 未在Inspector中设置");
             return;
         }
         
-        // 确保背包面板有Image组件（用于射线检测）
         Image panelImage = inventoryPanel.GetComponent<Image>();
         if (panelImage == null)
         {
             panelImage = inventoryPanel.AddComponent<Image>();
-            panelImage.color = new Color(0, 0, 0, 0); // 透明，不影响视觉
-            Debug.Log("[InventoryUI] 🖼️ 为背包面板添加了Image组件");
+            panelImage.color = new Color(0, 0, 0, 0);
         }
         
-        // 确保背包面板有CanvasGroup组件
         CanvasGroup canvasGroup = inventoryPanel.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
         {
             canvasGroup = inventoryPanel.AddComponent<CanvasGroup>();
         }
-        canvasGroup.blocksRaycasts = true; // 确保能够接收射线检测
+        canvasGroup.blocksRaycasts = true;
         
-        // 添加EventTrigger组件
         EventTrigger trigger = inventoryPanel.GetComponent<EventTrigger>();
         if (trigger == null)
         {
             trigger = inventoryPanel.AddComponent<EventTrigger>();
         }
         
-        // 添加点击事件
         EventTrigger.Entry clickEntry = new EventTrigger.Entry();
         clickEntry.eventID = EventTriggerType.PointerClick;
         clickEntry.callback.AddListener((eventData) => 
@@ -707,20 +1126,15 @@ public class InventoryUI : MonoBehaviour
             PointerEventData pointerEventData = eventData as PointerEventData;
             if (pointerEventData != null)
             {
-                // 检查点击的对象是否是背包面板本身
                 if (pointerEventData.pointerPress == inventoryPanel)
                 {
-                    Debug.Log("[InventoryUI] 🖱️ 点击了背包面板空白区域，隐藏物品信息面板");
-                    HideItemInfo();
+                    HideItemDetailPanel();
                 }
             }
         });
         trigger.triggers.Add(clickEntry);
-        
-        Debug.Log("[InventoryUI] ✅ 背包面板点击事件已设置");
     }
     
-    // 获取当前选中的物品
     public InventoryItem GetSelectedItem()
     {
         return selectedItem;

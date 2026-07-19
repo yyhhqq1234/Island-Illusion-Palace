@@ -135,12 +135,54 @@ public class GlobalEventManager : MonoBehaviour
     // 地图类型广播
     // ═══════════════════════════════════════════
     public event Action<GameSystems.MapMusicType> OnMapTypeChanged;
-    
-    public void TriggerMapTypeChanged(GameSystems.MapMusicType mapType) 
+
+    public void TriggerMapTypeChanged(GameSystems.MapMusicType mapType)
     {
         OnMapTypeChanged?.Invoke(mapType);
         Debug.Log($"[GlobalEventManager] 地图类型广播: {mapType}");
     }
+
+    // ═══════════════════════════════════════════
+    // HUD 数据事件（事件驱动 HUD — 替代轮询）
+    // ═══════════════════════════════════════════
+
+    // 生命值：(current, max)
+    public event Action<float, float> OnPlayerHealthChanged;
+    public void TriggerPlayerHealthChanged(float current, float max) => OnPlayerHealthChanged?.Invoke(current, max);
+
+    // 魔法值：(current, max)
+    public event Action<float, float> OnPlayerManaChanged;
+    public void TriggerPlayerManaChanged(float current, float max) => OnPlayerManaChanged?.Invoke(current, max);
+
+    // 等级/经验：(level, currentExp, expToNext)
+    public event Action<int, int, int> OnPlayerLevelChanged;
+    public void TriggerPlayerLevelChanged(int level, int currentExp, int expToNext) => OnPlayerLevelChanged?.Invoke(level, currentExp, expToNext);
+
+    // 武器变化：(weaponType, enhancementLevel)
+    public event Action<WeaponType, int> OnWeaponChanged;
+    public void TriggerWeaponChanged(WeaponType weaponType, int enhancementLevel) => OnWeaponChanged?.Invoke(weaponType, enhancementLevel);
+
+    // 背包/灵魂变化：(souls, soulEssence)
+    public event Action<int, int> OnInventoryChanged;
+    public void TriggerInventoryChanged(int souls, int soulEssence) => OnInventoryChanged?.Invoke(souls, soulEssence);
+
+    // 快捷物品槽：(slotIndex, itemName, quantity, icon) — quantity<0 或 itemName 空 = 空槽
+    public event Action<int, string, int, Sprite> OnQuickSlotChanged;
+    public void TriggerQuickSlotChanged(int slotIndex, string itemName, int quantity, Sprite icon)
+        => OnQuickSlotChanged?.Invoke(slotIndex, itemName, quantity, icon);
+
+    // 闪避冷却：(remainingTime, totalTime) — total<=0 表示冷却结束
+    public event Action<float, float> OnDashCooldownChanged;
+    public void TriggerDashCooldownChanged(float remaining, float total) => OnDashCooldownChanged?.Invoke(remaining, total);
+
+    // 召唤状态：(activeCount, maxActive, cooldownRemaining)
+    public event Action<int, int, float> OnSummonStatusChanged;
+    public void TriggerSummonStatusChanged(int activeCount, int maxActive, float cooldownRemaining)
+        => OnSummonStatusChanged?.Invoke(activeCount, maxActive, cooldownRemaining);
+
+    // 地图区域名变化：(areaName) — 玩家进入新区域时
+    public event Action<string> OnMapAreaChanged;
+    public void TriggerMapAreaChanged(string areaName) => OnMapAreaChanged?.Invoke(areaName);
 
     // ═══════════════════════════════════════════
     // 音乐 / 音效
