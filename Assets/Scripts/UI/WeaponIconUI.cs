@@ -203,7 +203,7 @@ public class WeaponIconUI : MonoBehaviour
         GameObject nameObj = new GameObject("WeaponName");
         nameObj.transform.SetParent(weaponObj.transform, false);
         weaponNameText = nameObj.AddComponent<Text>();
-        weaponNameText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        weaponNameText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         weaponNameText.fontSize = 12;
         weaponNameText.alignment = TextAnchor.MiddleCenter;
         weaponNameText.color = Color.white;
@@ -217,7 +217,7 @@ public class WeaponIconUI : MonoBehaviour
         GameObject typeObj = new GameObject("WeaponType");
         typeObj.transform.SetParent(weaponObj.transform, false);
         weaponTypeText = typeObj.AddComponent<Text>();
-        weaponTypeText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        weaponTypeText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         weaponTypeText.fontSize = 10;
         weaponTypeText.alignment = TextAnchor.MiddleCenter;
         weaponTypeText.color = new Color(0.8f, 0.8f, 0.8f, 1f);

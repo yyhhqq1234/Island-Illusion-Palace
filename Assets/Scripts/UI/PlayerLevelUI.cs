@@ -31,21 +31,37 @@ public class PlayerLevelUI : MonoBehaviour
     public Color levelTextColor = Color.white;
 
     private CharacterStats characterStats;
+    private bool statsRefreshed = false;
 
     void Start()
     {
         EnsureContainerLayout();
+        InitializeUI(); // 无论 characterStats 是否存在都构建默认 UI
+
         characterStats = FindObjectOfType<CharacterStats>();
-
-        if (characterStats == null)
+        if (characterStats != null)
         {
-            Debug.LogWarning("[PlayerLevelUI] 未找到CharacterStats组件");
-            return;
+            Refresh(characterStats.level, characterStats.currentExperience, characterStats.requiredExperience);
+            statsRefreshed = true;
         }
+        else
+        {
+            Debug.LogWarning("[PlayerLevelUI] Start 时未找到CharacterStats，将在Update中延迟补拉");
+        }
+    }
 
-        InitializeUI();
-        // 主动拉一次初值（系统广播在 Start 之后才发生的情况）
-        Refresh(characterStats.level, characterStats.currentExperience, characterStats.requiredExperience);
+    void Update()
+    {
+        // 玩家预制体由 PlayerSpawnManager 生成，可能晚于 HUD Start。延迟补拉一次初值。
+        if (!statsRefreshed && characterStats == null)
+        {
+            characterStats = FindObjectOfType<CharacterStats>();
+            if (characterStats != null)
+            {
+                Refresh(characterStats.level, characterStats.currentExperience, characterStats.requiredExperience);
+                statsRefreshed = true;
+            }
+        }
     }
 
     void OnEnable()
@@ -89,7 +105,7 @@ public class PlayerLevelUI : MonoBehaviour
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
-        rt.anchoredPosition = new Vector2(20, -20);
+        rt.anchoredPosition = new Vector2(20, -80);
         rt.sizeDelta = new Vector2(200, 60);
     }
 
@@ -111,7 +127,7 @@ public class PlayerLevelUI : MonoBehaviour
         containerRect.anchorMin = new Vector2(0, 1);
         containerRect.anchorMax = new Vector2(0, 1);
         containerRect.pivot = new Vector2(0, 1);
-        containerRect.anchoredPosition = new Vector2(20, -20);
+        containerRect.anchoredPosition = new Vector2(20, -80);
         containerRect.sizeDelta = new Vector2(200, 60);
 
         GameObject iconObj = new GameObject("LevelIcon");

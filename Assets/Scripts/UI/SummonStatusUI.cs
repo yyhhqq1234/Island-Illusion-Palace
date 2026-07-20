@@ -224,7 +224,7 @@ public class SummonStatusUI : MonoBehaviour
         GameObject textObj = new GameObject("Text");
         textObj.transform.SetParent(barObj.transform, false);
         Text text = textObj.AddComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         text.fontSize = 14;
         text.alignment = TextAnchor.MiddleCenter;
         text.color = textColor;

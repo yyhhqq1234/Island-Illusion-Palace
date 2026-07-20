@@ -257,7 +257,7 @@ public class QuickSlotUI : MonoBehaviour
         GameObject keyTextObj = new GameObject("KeyText");
         keyTextObj.transform.SetParent(slotObj.transform, false);
         Text keyText = keyTextObj.AddComponent<Text>();
-        keyText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        keyText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         keyText.fontSize = 12;
         keyText.alignment = TextAnchor.UpperLeft;
         keyText.color = Color.white;
@@ -271,7 +271,7 @@ public class QuickSlotUI : MonoBehaviour
         GameObject countTextObj = new GameObject("CountText");
         countTextObj.transform.SetParent(slotObj.transform, false);
         Text countText = countTextObj.AddComponent<Text>();
-        countText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        countText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         countText.fontSize = 14;
         countText.alignment = TextAnchor.LowerRight;
         countText.color = Color.white;
@@ -299,7 +299,7 @@ public class QuickSlotUI : MonoBehaviour
         GameObject cooldownTextObj = new GameObject("CooldownText");
         cooldownTextObj.transform.SetParent(slotObj.transform, false);
         Text cooldownText = cooldownTextObj.AddComponent<Text>();
-        cooldownText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        cooldownText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         cooldownText.fontSize = 20;
         cooldownText.alignment = TextAnchor.MiddleCenter;
         cooldownText.color = Color.white;

@@ -113,6 +113,12 @@ public class BurdenWarningUI : MonoBehaviour
 
     void InitializeUI()
     {
+        // 字段全为空时构建默认 UI（参考其他 HUD 的 CreateDefaultUI 模式）
+        if (burdenSlider == null)
+        {
+            CreateDefaultUI();
+        }
+
         // 初始化晕影遮罩
         if (vignetteMask != null)
         {
@@ -149,6 +155,102 @@ public class BurdenWarningUI : MonoBehaviour
         {
             burdenFill.color = normalColor;
         }
+    }
+
+    /// <summary>构建默认负担条 UI（场景未指定引用时动态生成）</summary>
+    void CreateDefaultUI()
+    {
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        // 负担条容器：左上角，等级UI下方
+        GameObject container = new GameObject("BurdenBarContainer");
+        container.transform.SetParent(transform, false);
+        RectTransform containerRect = container.AddComponent<RectTransform>();
+        containerRect.anchorMin = new Vector2(0, 1);
+        containerRect.anchorMax = new Vector2(0, 1);
+        containerRect.pivot = new Vector2(0, 1);
+        containerRect.anchoredPosition = new Vector2(20, -140);
+        containerRect.sizeDelta = new Vector2(200, 24);
+
+        // 背景图标
+        GameObject iconObj = new GameObject("BurdenIcon");
+        iconObj.transform.SetParent(container.transform, false);
+        burdenIcon = iconObj.AddComponent<Image>();
+        burdenIcon.color = new Color(0.6f, 0.4f, 0.9f, 1f);
+        RectTransform iconRect = iconObj.GetComponent<RectTransform>();
+        iconRect.anchorMin = new Vector2(0, 0.5f);
+        iconRect.anchorMax = new Vector2(0, 0.5f);
+        iconRect.pivot = new Vector2(0, 0.5f);
+        iconRect.anchoredPosition = new Vector2(0, 0);
+        iconRect.sizeDelta = new Vector2(20, 20);
+
+        // Slider
+        GameObject sliderObj = new GameObject("BurdenSlider");
+        sliderObj.transform.SetParent(container.transform, false);
+        RectTransform sliderRect = sliderObj.AddComponent<RectTransform>();
+        sliderRect.anchorMin = new Vector2(0, 0.5f);
+        sliderRect.anchorMax = new Vector2(1, 0.5f);
+        sliderRect.pivot = new Vector2(0, 0.5f);
+        sliderRect.offsetMin = new Vector2(26, 0);
+        sliderRect.offsetMax = new Vector2(-60, 0);
+        sliderRect.anchoredPosition = new Vector2(26, 0);
+        sliderRect.sizeDelta = new Vector2(0, 20);
+
+        burdenSlider = sliderObj.AddComponent<Slider>();
+        burdenSlider.minValue = 0f;
+        burdenSlider.maxValue = 100f;
+        burdenSlider.value = 0f;
+        burdenSlider.interactable = false;
+
+        // Slider 子结构: Background / Fill Area / Fill
+        GameObject bgObj = new GameObject("Background");
+        bgObj.transform.SetParent(sliderObj.transform, false);
+        Image bgImg = bgObj.AddComponent<Image>();
+        bgImg.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+        RectTransform bgRect = bgObj.GetComponent<RectTransform>();
+        bgRect.anchorMin = Vector2.zero;
+        bgRect.anchorMax = Vector2.one;
+        bgRect.offsetMin = Vector2.zero;
+        bgRect.offsetMax = Vector2.zero;
+
+        GameObject fillAreaObj = new GameObject("Fill Area");
+        fillAreaObj.transform.SetParent(sliderObj.transform, false);
+        RectTransform fillAreaRect = fillAreaObj.AddComponent<RectTransform>();
+        fillAreaRect.anchorMin = Vector2.zero;
+        fillAreaRect.anchorMax = Vector2.one;
+        fillAreaRect.offsetMin = new Vector2(2, 2);
+        fillAreaRect.offsetMax = new Vector2(-2, -2);
+
+        GameObject fillObj = new GameObject("Fill");
+        fillObj.transform.SetParent(fillAreaObj.transform, false);
+        burdenFill = fillObj.AddComponent<Image>();
+        burdenFill.color = normalColor;
+        burdenFill.type = Image.Type.Filled;
+        burdenFill.fillMethod = Image.FillMethod.Horizontal;
+        RectTransform fillRect = fillObj.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+
+        burdenSlider.fillRect = fillRect;
+        burdenSlider.targetGraphic = null;
+
+        // 文本
+        GameObject textObj = new GameObject("BurdenText");
+        textObj.transform.SetParent(container.transform, false);
+        burdenText = textObj.AddComponent<Text>();
+        burdenText.font = font;
+        burdenText.fontSize = 12;
+        burdenText.alignment = TextAnchor.MiddleCenter;
+        burdenText.color = textColor;
+        burdenText.text = "0/100";
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = new Vector2(1, 0.5f);
+        textRect.anchorMax = new Vector2(1, 0.5f);
+        textRect.pivot = new Vector2(1, 0.5f);
+        textRect.anchoredPosition = new Vector2(-2, 0);
+        textRect.sizeDelta = new Vector2(56, 20);
     }
 
     void Update()

@@ -211,7 +211,7 @@ public class DodgeCooldownUI : MonoBehaviour
         GameObject textObj = new GameObject("CooldownText");
         textObj.transform.SetParent(indicatorObj.transform, false);
         cooldownText = textObj.AddComponent<Text>();
-        cooldownText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        cooldownText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         cooldownText.fontSize = 14;
         cooldownText.alignment = TextAnchor.MiddleCenter;
         cooldownText.color = Color.white;
@@ -228,7 +228,7 @@ public class DodgeCooldownUI : MonoBehaviour
         GameObject keyHintObj = new GameObject("KeyHint");
         keyHintObj.transform.SetParent(indicatorObj.transform, false);
         keyHintText = keyHintObj.AddComponent<Text>();
-        keyHintText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        keyHintText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         keyHintText.fontSize = 10;
         keyHintText.alignment = TextAnchor.UpperCenter;
         keyHintText.color = new Color(1, 1, 1, 0.7f);

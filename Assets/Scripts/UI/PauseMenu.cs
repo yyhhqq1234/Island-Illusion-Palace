@@ -1,11 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 using System.Collections;
+using IIPUI;
 
 /// <summary>
-/// 暂停菜单管理器 - 负责处理游戏暂停和恢复
-/// 完整功能实现：ESC键触发、按钮交互、确认对话框、动画效果
+/// 暂停菜单管理器 - 负责处理游戏暂停和恢复。
+/// 作为 Prefab 直接放置在玩法场景（Forest）中，随场景加载/卸载。
+/// 不再使用 DontDestroyOnLoad，不再靠场景名自禁用。
 /// </summary>
 public class PauseMenu : MonoBehaviour
 {
@@ -14,13 +15,13 @@ public class PauseMenu : MonoBehaviour
     [Header("暂停菜单配置")]
     [Tooltip("是否在游戏启动时自动隐藏暂停菜单")]
     public bool hideOnStart = true;
-    
+
     [Tooltip("是否使用ESC键切换暂停状态")]
     public bool useESCKey = true;
-    
+
     [Tooltip("暂停时是否调暗游戏界面")]
     public bool dimScreen = true;
-    
+
     [Tooltip("屏幕调暗透明度")]
     [Range(0f, 1f)]
     public float dimOpacity = 0.7f;
@@ -28,41 +29,40 @@ public class PauseMenu : MonoBehaviour
     [Header("UI组件")]
     [Tooltip("暂停菜单面板")]
     public GameObject pausePanel;
-    
+
     [Tooltip("屏幕调暗遮罩")]
     public Image dimMask;
 
     [Header("暂停菜单按钮")]
     [Tooltip("继续游戏按钮")]
     public Button resumeButton;
-    
+
     [Tooltip("设置按钮")]
     public Button settingsButton;
-    
+
     [Tooltip("返回主菜单按钮")]
     public Button mainMenuButton;
-    
+
     [Tooltip("退出游戏按钮")]
     public Button quitButton;
 
     [Header("确认对话框")]
     [Tooltip("确认对话框面板")]
     public GameObject confirmDialogPanel;
-    
+
     [Tooltip("对话框文本")]
     public Text dialogText;
-    
+
     [Tooltip("确认按钮")]
     public Button confirmButton;
-    
+
     [Tooltip("取消按钮")]
     public Button cancelButton;
 
-    [Header("设置面板（可选）")]
-    [Tooltip("设置面板Prefab或引用")]
-    public GameObject settingsPanelPrefab;
+    [Header("设置面板")]
+    [Tooltip("PauseMenu 内部自带的设置面板子节点（默认隐藏）。若为空则点击设置按钮无效。")]
+    public GameObject settingsPanel;
 
-    private GameObject settingsPanelInstance;
     private SettingsPanelController settingsPanelController;
     private bool settingsPanelOpen = false;
 
@@ -82,12 +82,10 @@ public class PauseMenu : MonoBehaviour
 
     void Awake()
     {
-        // 单例模式
+        // 单例模式（不 DontDestroyOnLoad，随 Forest 场景生命周期存在）
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
-            SceneManager.sceneLoaded += OnSceneLoaded;
         }
         else
         {
@@ -100,57 +98,34 @@ public class PauseMenu : MonoBehaviour
     {
         // 初始化UI组件
         InitializeUI();
-        
+
         // 初始化按钮事件
         InitializeButtons();
-        
-        // 场景感知：在主菜单中禁用整个 GameManager（含 Canvas/暂停功能）
-        if (SceneManager.GetActiveScene().name == IIPConstants.SceneMainMenu)
+
+        // 缓存设置面板控制器并绑定返回回调
+        if (settingsPanel != null)
         {
-            gameObject.SetActive(false);
-            Debug.Log("[PauseMenu] 主菜单场景中禁用 GameManager");
-            return;
+            settingsPanelController = settingsPanel.GetComponent<SettingsPanelController>();
+            if (settingsPanelController != null)
+            {
+                settingsPanelController.onBackToPauseMenu.AddListener(CloseSettingsPanel);
+            }
+            settingsPanel.SetActive(false);
         }
-        
+
         // 启动时隐藏暂停菜单
         if (hideOnStart)
         {
             HidePauseMenuImmediate();
         }
+
+        // 字体兜底：确保暂停面板、确认框、设置面板内的中文都正常显示（根治"操作"等乱码）
+        IIPUIFont.ApplyTo(transform);
     }
 
     void OnDestroy()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
         if (Instance == this) Instance = null;
-    }
-
-    /// <summary>
-    /// 场景加载回调：游戏场景启用 GameManager，主菜单禁用
-    /// </summary>
-    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        if (scene.name == IIPConstants.SceneMainMenu)
-        {
-            gameObject.SetActive(false);
-            Debug.Log("[PauseMenu] 返回主菜单，禁用 GameManager");
-        }
-        else
-        {
-            gameObject.SetActive(true);
-
-            // 如果之前是暂停状态（如从主菜单"继续修复"返回），正确恢复游戏状态
-            if (isPaused)
-            {
-                isPaused = false;
-                Time.timeScale = 1f;
-                IIPBootstrap.Events?.TriggerGameResumed();
-                Debug.Log("[PauseMenu] 检测到残留暂停状态，已自动恢复");
-            }
-
-            HidePauseMenuImmediate();
-            Debug.Log($"[PauseMenu] 进入游戏场景 {scene.name}，启用 GameManager");
-        }
     }
 
     void Update()
@@ -590,18 +565,18 @@ public class PauseMenu : MonoBehaviour
     /// </summary>
     void OnSettingsButtonClicked()
     {
+        if (settingsPanel == null)
+        {
+            Debug.LogWarning("[PauseMenu] 未绑定 settingsPanel，无法打开设置");
+            return;
+        }
+
         // 隐藏暂停面板和dimMask
         if (pausePanel != null) pausePanel.SetActive(false);
         if (dimMask != null) dimMask.gameObject.SetActive(false);
 
-        // 获取或创建设置面板
-        if (settingsPanelInstance == null)
-        {
-            CreateSettingsPanel();
-        }
-
-        settingsPanelInstance.SetActive(true);
-        settingsPanelInstance.transform.SetAsLastSibling();
+        settingsPanel.SetActive(true);
+        settingsPanel.transform.SetAsLastSibling();
         settingsPanelOpen = true;
 
         Debug.Log("[PauseMenu] 打开设置面板");
@@ -612,9 +587,9 @@ public class PauseMenu : MonoBehaviour
     /// </summary>
     void CloseSettingsPanel()
     {
-        if (settingsPanelInstance != null)
+        if (settingsPanel != null)
         {
-            settingsPanelInstance.SetActive(false);
+            settingsPanel.SetActive(false);
         }
         settingsPanelOpen = false;
 
@@ -634,42 +609,6 @@ public class PauseMenu : MonoBehaviour
         }
 
         Debug.Log("[PauseMenu] 关闭设置面板，返回暂停菜单");
-    }
-
-    /// <summary>
-    /// 创建或获取设置面板实例
-    /// </summary>
-    void CreateSettingsPanel()
-    {
-        // 优先级1：使用Prefab
-        if (settingsPanelPrefab != null)
-        {
-            settingsPanelInstance = Instantiate(settingsPanelPrefab, pausePanel.transform.parent);
-            settingsPanelController = settingsPanelInstance.GetComponent<SettingsPanelController>();
-            Debug.Log("[PauseMenu] 从Prefab创建设置面板");
-        }
-        else
-        {
-            // 优先级2：动态创建
-            settingsPanelInstance = new GameObject("SettingsPanel");
-            settingsPanelInstance.transform.SetParent(pausePanel.transform.parent, false);
-
-            RectTransform panelRect = settingsPanelInstance.AddComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-            panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(520f, 480f);
-            panelRect.anchoredPosition = Vector2.zero;
-
-            settingsPanelController = settingsPanelInstance.AddComponent<SettingsPanelController>();
-            Debug.Log("[PauseMenu] 动态创建设置面板");
-        }
-
-        // 绑定返回回调
-        if (settingsPanelController != null)
-        {
-            settingsPanelController.onBackToPauseMenu.AddListener(() => CloseSettingsPanel());
-        }
     }
 
     /// <summary>
