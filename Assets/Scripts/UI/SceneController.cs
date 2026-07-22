@@ -23,6 +23,10 @@ public class SceneController : MonoBehaviour
 
     void Start()
     {
+        // 字体兜底：主菜单按钮/退出确认面板的 Text 依赖场景内嵌的序列化字体，
+        // 运行时统一切到 IIPUIFont（内置字体优先，回退 OS 雅黑），消除 OS 字体依赖
+        ApplyUIFontFallback();
+
         if (startButton != null)
         {
             startButton.onClick.AddListener(OnStartGame);
@@ -65,6 +69,16 @@ public class SceneController : MonoBehaviour
             settingsPanel.SetActive(false);
         if (quitConfirmPanel != null)
             quitConfirmPanel.SetActive(false);
+    }
+
+    /// <summary>对本组件引用的按钮/面板子树统一应用菜单字体。</summary>
+    void ApplyUIFontFallback()
+    {
+        if (startButton != null) IIPUI.IIPUIFont.ApplyTo(startButton.transform);
+        if (continueButton != null) IIPUI.IIPUIFont.ApplyTo(continueButton.transform);
+        if (settingsButton != null) IIPUI.IIPUIFont.ApplyTo(settingsButton.transform);
+        if (quitButton != null) IIPUI.IIPUIFont.ApplyTo(quitButton.transform);
+        if (quitConfirmPanel != null) IIPUI.IIPUIFont.ApplyTo(quitConfirmPanel.transform);
     }
 
     /// <summary>新游戏 — 进入碎片</summary>

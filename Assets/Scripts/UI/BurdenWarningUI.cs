@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using IIPUI;
 
 /// <summary>
 /// 负担值三级警告UI - 根据负担值显示不同级别的视觉警告
@@ -25,14 +26,14 @@ public class BurdenWarningUI : MonoBehaviour
     public CanvasGroup crackCanvasGroup;
 
     [Header("颜色配置")]
-    public Color normalColor = new Color(0.4f, 0.8f, 0.4f, 1f);      // 正常: 绿色
-    public Color level1Color = new Color(1f, 0.9f, 0.3f, 1f);        // 一级: 黄色
-    public Color level2Color = new Color(1f, 0.6f, 0.2f, 1f);        // 二级: 橙色
-    public Color level3Color = new Color(1f, 0.2f, 0.2f, 1f);        // 三级: 红色
+    public Color normalColor = IIPUIStyle.HealthFill;          // 正常: 绿色
+    public Color level1Color = IIPUIStyle.WarningYellow;       // 一级: 黄色
+    public Color level2Color = IIPUIStyle.WarningOrange;       // 二级: 橙色
+    public Color level3Color = IIPUIStyle.WarningRed;          // 三级: 红色
     public Color textColor = Color.white;
 
     [Header("晕影参数")]
-    public Color vignetteColor = new Color(0.42f, 0.18f, 0.63f, 1f); // 紫色 #6B2FA0
+    public Color vignetteColor = IIPUIStyle.BurdenVignette;    // 紫色 #6B2FA0
     public float vignetteFadeDuration = 0.3f;
 
     [Header("闪烁参数")]
@@ -157,32 +158,38 @@ public class BurdenWarningUI : MonoBehaviour
         }
     }
 
-    /// <summary>构建默认负担条 UI（场景未指定引用时动态生成）</summary>
+    /// <summary>构建默认负担条 UI（圆角底 + 边框 + 图标 + Slider + 标签/数值）</summary>
     void CreateDefaultUI()
     {
-        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-        // 负担条容器：左上角，等级UI下方
+        // 负担条容器：左下角 HP/MP 下方（HP y=20~42, MP y=46~62, 负担条 y=70~94）
         GameObject container = new GameObject("BurdenBarContainer");
         container.transform.SetParent(transform, false);
         RectTransform containerRect = container.AddComponent<RectTransform>();
-        containerRect.anchorMin = new Vector2(0, 1);
-        containerRect.anchorMax = new Vector2(0, 1);
-        containerRect.pivot = new Vector2(0, 1);
-        containerRect.anchoredPosition = new Vector2(20, -140);
-        containerRect.sizeDelta = new Vector2(200, 24);
+        containerRect.anchorMin = new Vector2(0, 0);
+        containerRect.anchorMax = new Vector2(0, 0);
+        containerRect.pivot = new Vector2(0, 0);
+        containerRect.anchoredPosition = new Vector2(20, 70);
+        containerRect.sizeDelta = new Vector2(280, 24);
 
-        // 背景图标
-        GameObject iconObj = new GameObject("BurdenIcon");
+        // "负担"标签（雅黑，最左侧）
+        IIPUIFactory.CreateLabelAnchored("BurdenLabel", container.transform,
+            "负担", IIPUIStyle.FontSizeSmall, IIPUIFactory.TextDim,
+            new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+            new Vector2(0, -10), new Vector2(40, 10), TextAnchor.MiddleLeft);
+
+        // 背景图标（圆角紫色方块 + 边框）
+        GameObject iconObj = new GameObject("BurdenIcon", typeof(RectTransform), typeof(Image));
         iconObj.transform.SetParent(container.transform, false);
-        burdenIcon = iconObj.AddComponent<Image>();
-        burdenIcon.color = new Color(0.6f, 0.4f, 0.9f, 1f);
+        burdenIcon = iconObj.GetComponent<Image>();
+        burdenIcon.color = IIPUIStyle.BurdenIcon;
+        IIPUIFactory.ApplyRounded(burdenIcon, true);
         RectTransform iconRect = iconObj.GetComponent<RectTransform>();
         iconRect.anchorMin = new Vector2(0, 0.5f);
         iconRect.anchorMax = new Vector2(0, 0.5f);
         iconRect.pivot = new Vector2(0, 0.5f);
-        iconRect.anchoredPosition = new Vector2(0, 0);
+        iconRect.anchoredPosition = new Vector2(44, 0);
         iconRect.sizeDelta = new Vector2(20, 20);
+        IIPUIFactory.CreateBorder(iconObj.transform, IIPUIFactory.BorderBright, true);
 
         // Slider
         GameObject sliderObj = new GameObject("BurdenSlider");
@@ -191,9 +198,9 @@ public class BurdenWarningUI : MonoBehaviour
         sliderRect.anchorMin = new Vector2(0, 0.5f);
         sliderRect.anchorMax = new Vector2(1, 0.5f);
         sliderRect.pivot = new Vector2(0, 0.5f);
-        sliderRect.offsetMin = new Vector2(26, 0);
+        sliderRect.offsetMin = new Vector2(70, 0);
         sliderRect.offsetMax = new Vector2(-60, 0);
-        sliderRect.anchoredPosition = new Vector2(26, 0);
+        sliderRect.anchoredPosition = new Vector2(70, 0);
         sliderRect.sizeDelta = new Vector2(0, 20);
 
         burdenSlider = sliderObj.AddComponent<Slider>();
@@ -202,16 +209,18 @@ public class BurdenWarningUI : MonoBehaviour
         burdenSlider.value = 0f;
         burdenSlider.interactable = false;
 
-        // Slider 子结构: Background / Fill Area / Fill
-        GameObject bgObj = new GameObject("Background");
+        // Slider 子结构: Background / Fill Area / Fill（背景圆角+边框）
+        GameObject bgObj = new GameObject("Background", typeof(RectTransform), typeof(Image));
         bgObj.transform.SetParent(sliderObj.transform, false);
-        Image bgImg = bgObj.AddComponent<Image>();
-        bgImg.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+        Image bgImg = bgObj.GetComponent<Image>();
+        bgImg.color = IIPUIStyle.BarBackgroundNeutral;
+        IIPUIFactory.ApplyRounded(bgImg, true);
         RectTransform bgRect = bgObj.GetComponent<RectTransform>();
         bgRect.anchorMin = Vector2.zero;
         bgRect.anchorMax = Vector2.one;
         bgRect.offsetMin = Vector2.zero;
         bgRect.offsetMax = Vector2.zero;
+        IIPUIFactory.CreateBorder(sliderObj.transform, IIPUIFactory.BorderDim, true);
 
         GameObject fillAreaObj = new GameObject("Fill Area");
         fillAreaObj.transform.SetParent(sliderObj.transform, false);
@@ -221,10 +230,11 @@ public class BurdenWarningUI : MonoBehaviour
         fillAreaRect.offsetMin = new Vector2(2, 2);
         fillAreaRect.offsetMax = new Vector2(-2, -2);
 
-        GameObject fillObj = new GameObject("Fill");
+        GameObject fillObj = new GameObject("Fill", typeof(RectTransform), typeof(Image));
         fillObj.transform.SetParent(fillAreaObj.transform, false);
-        burdenFill = fillObj.AddComponent<Image>();
+        burdenFill = fillObj.GetComponent<Image>();
         burdenFill.color = normalColor;
+        IIPUIFactory.ApplyRounded(burdenFill, true); // 圆角 sprite，满条末端与底框一致
         burdenFill.type = Image.Type.Filled;
         burdenFill.fillMethod = Image.FillMethod.Horizontal;
         RectTransform fillRect = fillObj.GetComponent<RectTransform>();
@@ -236,21 +246,11 @@ public class BurdenWarningUI : MonoBehaviour
         burdenSlider.fillRect = fillRect;
         burdenSlider.targetGraphic = null;
 
-        // 文本
-        GameObject textObj = new GameObject("BurdenText");
-        textObj.transform.SetParent(container.transform, false);
-        burdenText = textObj.AddComponent<Text>();
-        burdenText.font = font;
-        burdenText.fontSize = 12;
-        burdenText.alignment = TextAnchor.MiddleCenter;
-        burdenText.color = textColor;
-        burdenText.text = "0/100";
-        RectTransform textRect = textObj.GetComponent<RectTransform>();
-        textRect.anchorMin = new Vector2(1, 0.5f);
-        textRect.anchorMax = new Vector2(1, 0.5f);
-        textRect.pivot = new Vector2(1, 0.5f);
-        textRect.anchoredPosition = new Vector2(-2, 0);
-        textRect.sizeDelta = new Vector2(56, 20);
+        // 数值文本（雅黑，右侧）
+        burdenText = IIPUIFactory.CreateLabelAnchored("BurdenText", container.transform,
+            "0/100", IIPUIStyle.FontSizeSmall, textColor,
+            new Vector2(1, 0.5f), new Vector2(1, 0.5f),
+            new Vector2(-56, -10), new Vector2(-2, 10), TextAnchor.MiddleRight);
     }
 
     void Update()
@@ -384,18 +384,15 @@ public class BurdenWarningUI : MonoBehaviour
         }
 
         float targetAlpha = 0f;
-        float targetRadius = 1f;
 
         switch (level)
         {
             case 2:
                 targetAlpha = 0.4f;
-                targetRadius = 0.6f;
                 vignetteMask.gameObject.SetActive(true);
                 break;
             case 3:
                 targetAlpha = 0.7f;
-                targetRadius = 0.4f;
                 vignetteMask.gameObject.SetActive(true);
                 break;
             default:

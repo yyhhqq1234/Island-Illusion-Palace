@@ -13,7 +13,7 @@ public class HoverButton : MonoBehaviour,
 {
     [Header("悬停反馈")]
     [Tooltip("悬停时的高亮色（叠加到 Image.color）")]
-    public Color hoverColor = new Color(0.32f, 0.28f, 0.50f, 1f);
+    public Color hoverColor = IIPUI.IIPUIStyle.ButtonHover;
 
     [Tooltip("悬停时的缩放倍数（1=不缩放）")]
     [Range(1f, 1.2f)]

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using IIPUI;
 
 /// <summary>
 /// 召唤物状态条UI - 显示所有召唤物的HP和状态
@@ -23,17 +24,17 @@ public class SummonStatusUI : MonoBehaviour
     public float barHeight = 32f;
     
     [Tooltip("状态条间距")]
-    public float spacing = 8f;
-    
+    public float spacing = IIPUIStyle.SpacingStandard;
+
     [Header("颜色配置")]
     [Tooltip("HP条背景色")]
-    public Color hpBackgroundColor = new Color(0.2f, 0.2f, 0.2f, 0.8f);
-    
+    public Color hpBackgroundColor = IIPUIStyle.BarBackgroundNeutral;
+
     [Tooltip("HP条填充色")]
-    public Color hpFillColor = new Color(0.4f, 0.8f, 0.4f, 1f);
-    
+    public Color hpFillColor = IIPUIStyle.HealthFill;
+
     [Tooltip("HP条低血量警告色")]
-    public Color hpLowColor = new Color(0.9f, 0.3f, 0.3f, 1f);
+    public Color hpLowColor = IIPUIStyle.HealthFillLow;
     
     [Tooltip("文本颜色")]
     public Color textColor = Color.white;
@@ -187,53 +188,48 @@ public class SummonStatusUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 创建默认状态条
+    /// 创建默认状态条（圆角底 + 边框 + HP背景/填充 + 名字标签）
     /// </summary>
     GameObject CreateDefaultStatusBar()
     {
-        GameObject barObj = new GameObject("SummonStatusBar");
+        // 圆角底（铺满 VerticalLayoutGroup 分配的格子）
+        GameObject barObj = new GameObject("SummonStatusBar", typeof(RectTransform), typeof(Image));
         barObj.transform.SetParent(container, false);
-        
-        // 背景
-        Image bgImage = barObj.AddComponent<Image>();
+
+        Image bgImage = barObj.GetComponent<Image>();
         bgImage.color = hpBackgroundColor;
-        
-        // HP条背景
-        GameObject hpBgObj = new GameObject("HPBackground");
+        IIPUIFactory.ApplyRounded(bgImage, true);
+        IIPUIFactory.CreateBorder(barObj.transform, IIPUIFactory.BorderDim, true);
+
+        // HP条背景（圆角内框）
+        GameObject hpBgObj = new GameObject("HPBackground", typeof(RectTransform), typeof(Image));
         hpBgObj.transform.SetParent(barObj.transform, false);
-        Image hpBgImage = hpBgObj.AddComponent<Image>();
-        hpBgImage.color = new Color(0.1f, 0.1f, 0.1f, 0.6f);
+        Image hpBgImage = hpBgObj.GetComponent<Image>();
+        hpBgImage.color = IIPUIStyle.HealthBarInnerBackground;
+        IIPUIFactory.ApplyRounded(hpBgImage, true);
         RectTransform hpBgRect = hpBgObj.GetComponent<RectTransform>();
         hpBgRect.anchorMin = new Vector2(0, 0);
         hpBgRect.anchorMax = new Vector2(1, 1);
-        hpBgRect.offsetMin = new Vector2(2, 2);
-        hpBgRect.offsetMax = new Vector2(-2, -2);
-        
-        // HP条填充
-        GameObject hpFillObj = new GameObject("HPFill");
+        hpBgRect.offsetMin = new Vector2(4, 4);
+        hpBgRect.offsetMax = new Vector2(-4, -4);
+
+        // HP条填充（Filled 类型，避免 localScale 拉伸导致圆角变形）
+        GameObject hpFillObj = new GameObject("HPFill", typeof(RectTransform), typeof(Image));
         hpFillObj.transform.SetParent(hpBgObj.transform, false);
-        Image hpFillImage = hpFillObj.AddComponent<Image>();
+        Image hpFillImage = hpFillObj.GetComponent<Image>();
         hpFillImage.color = hpFillColor;
+        hpFillImage.type = Image.Type.Filled;
+        hpFillImage.fillMethod = Image.FillMethod.Horizontal;
+        hpFillImage.fillAmount = 1f;
         RectTransform hpFillRect = hpFillObj.GetComponent<RectTransform>();
         hpFillRect.anchorMin = Vector2.zero;
         hpFillRect.anchorMax = Vector2.one;
         hpFillRect.offsetMin = Vector2.zero;
         hpFillRect.offsetMax = Vector2.zero;
-        
-        // 文本
-        GameObject textObj = new GameObject("Text");
-        textObj.transform.SetParent(barObj.transform, false);
-        Text text = textObj.AddComponent<Text>();
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 14;
-        text.alignment = TextAnchor.MiddleCenter;
-        text.color = textColor;
-        RectTransform textRect = textObj.GetComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        
+
+        // 名字+血量标签（雅黑）
+        IIPUIFactory.CreateLabel("Text", barObj.transform, "", IIPUIStyle.FontSizeBody, textColor);
+
         return barObj;
     }
 
@@ -278,15 +274,19 @@ public class SummonStatusBar : MonoBehaviour
     {
         hpFillColor = fillColor;
         hpLowColor = lowColor;
-        
+
         var images = GetComponentsInChildren<Image>(true);
         if (images.Length >= 3)
         {
             images[0].color = bgColor; // 背景
             hpFill = images[2]; // HP填充
             hpFill.color = fillColor;
+            // 确保运行时（含外部 statusPrefab）也为 Filled 类型，避免 localScale 拉伸圆角变形
+            hpFill.type = Image.Type.Filled;
+            hpFill.fillMethod = Image.FillMethod.Horizontal;
+            hpFill.fillAmount = 1f;
         }
-        
+
         var texts = GetComponentsInChildren<Text>(true);
         if (texts.Length > 0)
         {
@@ -294,17 +294,18 @@ public class SummonStatusBar : MonoBehaviour
             nameText.color = textColor;
         }
     }
-    
+
     public void UpdateStatus(GameObject summon)
     {
         if (summon == null) return;
-        
+
         var health = summon.GetComponent<HealthSystem>();
         if (health != null && hpFill != null)
         {
             float hpPercent = health.currentHealth / health.maxHealth;
-            hpFill.transform.localScale = new Vector3(hpPercent, 1, 1);
-            
+            // 使用 Filled fillAmount 替代 localScale，避免圆角左右拉伸变形
+            hpFill.fillAmount = hpPercent;
+
             // 低血量警告
             if (hpPercent < 0.3f)
             {
@@ -314,7 +315,7 @@ public class SummonStatusBar : MonoBehaviour
             {
                 hpFill.color = hpFillColor;
             }
-            
+
             // 更新文本
             if (nameText != null)
             {

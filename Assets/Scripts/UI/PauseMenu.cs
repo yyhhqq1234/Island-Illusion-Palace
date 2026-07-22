@@ -73,6 +73,10 @@ public class PauseMenu : MonoBehaviour
     private Coroutine currentAnimation;
     private ConfirmAction pendingAction;
 
+    // 缓存背包/炼金 UI 引用，用于 ESC 键优先级判断（Start 时查找，避免每帧 FindObjectOfType）
+    private InventoryUI cachedInventoryUI;
+    private AlchemyUI cachedAlchemyUI;
+
     // 确认动作类型
     private enum ConfirmAction
     {
@@ -119,6 +123,10 @@ public class PauseMenu : MonoBehaviour
             HidePauseMenuImmediate();
         }
 
+        // 缓存背包/炼金 UI 引用，用于 ESC 键优先级判断（场景里可能没有，需判空）
+        cachedInventoryUI = FindObjectOfType<InventoryUI>();
+        cachedAlchemyUI = FindObjectOfType<AlchemyUI>();
+
         // 字体兜底：确保暂停面板、确认框、设置面板内的中文都正常显示（根治"操作"等乱码）
         IIPUIFont.ApplyTo(transform);
     }
@@ -133,6 +141,10 @@ public class PauseMenu : MonoBehaviour
         // 检测ESC键按下
         if (useESCKey && Input.GetKeyDown(KeyCode.Escape))
         {
+            // 优先级0：若背包或炼金面板打开，ESC 交给它们关闭，PauseMenu 不响应
+            if (cachedInventoryUI != null && cachedInventoryUI.IsInventoryOpen()) return;
+            if (cachedAlchemyUI != null && cachedAlchemyUI.IsAlchemyPanelOpen()) return;
+
             // 优先级1：如果确认对话框打开，ESC关闭对话框
             if (confirmDialogPanel != null && confirmDialogPanel.activeSelf)
             {
@@ -259,6 +271,55 @@ public class PauseMenu : MonoBehaviour
                 confirmDialogCanvasGroup = confirmDialogPanel.AddComponent<CanvasGroup>();
             }
             confirmDialogPanel.SetActive(false);
+        }
+
+        // 视觉统一（Phase 2）：场景序列化的旧样式 → 工厂原语（深底圆角+紫辉光 hover+雅黑）
+        RestyleUI();
+    }
+
+    // ═══════════════════════════════════════════
+    // Phase 2 视觉统一（只改视觉：sprite/颜色/hover/字体，不动布局与事件）
+    // ═══════════════════════════════════════════
+
+    void RestyleUI()
+    {
+        IIPUIFactory.StylePanelRoot(pausePanel);
+        IIPUIFactory.StylePanelRoot(confirmDialogPanel);
+        IIPUIFactory.StylePanelRoot(settingsPanel);
+
+        IIPUIFactory.StyleButton(resumeButton);
+        IIPUIFactory.StyleButton(settingsButton);
+        IIPUIFactory.StyleButton(mainMenuButton);
+        IIPUIFactory.StyleButton(quitButton);
+        IIPUIFactory.StyleButton(confirmButton);
+        IIPUIFactory.StyleButton(cancelButton);
+
+        // 标题文本
+        if (pausePanel != null)
+        {
+            var title = pausePanel.transform.Find("Title");
+            var titleText = title != null ? title.GetComponent<Text>() : null;
+            if (titleText != null)
+            {
+                titleText.font = IIPUIFont.Get();
+                titleText.color = IIPUIStyle.TextTitle;
+                titleText.fontSize = IIPUIStyle.FontSizeTitle;
+            }
+        }
+
+        // 对话框正文
+        if (dialogText != null)
+        {
+            dialogText.font = IIPUIFont.Get();
+            dialogText.color = IIPUIStyle.TextPrimary;
+            dialogText.fontSize = IIPUIStyle.FontSizeBody;
+        }
+
+        // 调暗遮罩色调统一为调色板深色（alpha 逻辑保持原样，避免双重调暗变化）
+        if (dimMask != null)
+        {
+            var c = dimMask.color;
+            dimMask.color = new Color(0.03f, 0.03f, 0.06f, c.a);
         }
     }
 

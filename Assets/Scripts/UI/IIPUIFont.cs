@@ -6,7 +6,8 @@ namespace IIPUI
     /// <summary>
     /// 菜单 UI 统一字体工具。
     /// 根治 LegacyRuntime 动态字体首帧中文字形未烘焙导致的"操作/音画/辅助"等汉字乱码。
-    /// 采用 OS 动态字体（微软雅黑 UI），Windows 目标平台保证字形完整。
+    /// 字体加载链：优先项目内置字体 Resources/UI/MainFont（打包进构建，玩家机器无字体依赖）；
+    /// 缺失时回退 OS 动态字体（微软雅黑 UI，Windows 目标平台保证字形完整）。
     /// </summary>
     public static class IIPUIFont
     {
@@ -16,15 +17,25 @@ namespace IIPUI
             "召唤轮盘快捷背包炼金伤害数字显示小地图自动拾取物品色盲模式确定取消" +
             "0123456789%WASDRFICSpace鼠标左键";
 
+        /// <summary>内置字体资源路径（Resources 下，免 OS 字体依赖；当前未放置，预留接口）</summary>
+        private const string BUILTIN_FONT_PATH = "UI/MainFont";
+
         private static Font _font;
 
-        /// <summary>获取共享的菜单字体实例（懒加载）。</summary>
+        /// <summary>获取共享的菜单字体实例（懒加载，结果缓存不重复加载）。</summary>
         public static Font Get()
         {
             if (_font == null)
             {
-                // Windows 独占项目，微软雅黑 UI 必装；缺失时 Unity 会回退系统默认字体
-                _font = Font.CreateDynamicFontFromOSFont("Microsoft YaHei UI", 16);
+                // 1) 优先项目内置字体（随构建分发，最可靠）
+                _font = Resources.Load<Font>(BUILTIN_FONT_PATH);
+                if (_font == null)
+                {
+                    // 2) 回退 OS 微软雅黑；玩家机器缺该字体时 Unity 回退系统默认字体
+                    Debug.LogWarning("[IIPUIFont] 未找到内置字体 Resources/" + BUILTIN_FONT_PATH +
+                        "，回退到 OS 微软雅黑。请将打包字体放入 Assets/Resources/UI/MainFont 以消除 OS 字体依赖。");
+                    _font = Font.CreateDynamicFontFromOSFont("Microsoft YaHei UI", 16);
+                }
             }
             return _font;
         }

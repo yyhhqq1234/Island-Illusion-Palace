@@ -191,9 +191,25 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
         InventoryUI activeInventoryUI = injectedInventoryUI != null ? injectedInventoryUI : cachedInventoryUI;
         AlchemyUI activeAlchemyUI = injectedAlchemyUI != null ? injectedAlchemyUI : cachedAlchemyUI;
 
+        // 暂停时屏蔽所有游戏输入（但允许 UI 自身的按键处理，如 ESC 关暂停菜单）
         if (activePauseMenu != null && activePauseMenu.IsPaused()) return;
-        if (activeInventoryUI != null && activeInventoryUI.IsInventoryOpen()) return;
-        if (activeAlchemyUI != null && activeAlchemyUI.IsAlchemyPanelOpen()) return;
+
+        // 背包/炼金面板打开时屏蔽游戏输入，但仍允许切换开关键（I/E）通过，以便再按一次关闭面板
+        bool inventoryOpen = activeInventoryUI != null && activeInventoryUI.IsInventoryOpen();
+        bool alchemyOpen = activeAlchemyUI != null && activeAlchemyUI.IsAlchemyPanelOpen();
+        if (inventoryOpen || alchemyOpen)
+        {
+            // 面板打开时只处理切换键，跳过其余游戏输入
+            if (inventoryOpen && Input.GetKeyDown(KeyCode.I))
+            {
+                activeInventoryUI.HideInventory();
+            }
+            else if (alchemyOpen && Input.GetKeyDown(KeyCode.E) && activeAlchemyUI.PlayerInCauldronRange)
+            {
+                activeAlchemyUI.HideAlchemyPanel();
+            }
+            return;
+        }
 
         HandleMouseInput();
         HandleKeyboardInput();
@@ -298,7 +314,23 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
     {
         if (Input.GetKeyDown(IIPConstants.KeyInteract))
         {
-            TryInteract();
+            // E键单点分发：炼金锅范围内由 PlayerController 统一开关炼金面板
+            // （AlchemyUI 不再自检E键，避免脚本执行顺序漂移导致双重处理）；
+            // 范围外才走常规交互（拾取等）。
+            InventoryUI activeInventoryUI = injectedInventoryUI != null ? injectedInventoryUI : cachedInventoryUI;
+            AlchemyUI activeAlchemyUI = injectedAlchemyUI != null ? injectedAlchemyUI : cachedAlchemyUI;
+            bool alchemyHandlesE = activeAlchemyUI != null && activeAlchemyUI.PlayerInCauldronRange;
+            if (alchemyHandlesE)
+            {
+                if (activeAlchemyUI.IsAlchemyPanelOpen())
+                    activeAlchemyUI.HideAlchemyPanel();
+                else
+                    activeAlchemyUI.ShowAlchemyPanel();
+            }
+            else
+            {
+                TryInteract();
+            }
         }
 
         if (Input.GetKeyDown(IIPConstants.KeyInventory))
@@ -309,14 +341,17 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
 
     void OpenInventory()
     {
-        if (inventorySystem != null)
+        InventoryUI activeInventoryUI = injectedInventoryUI != null ? injectedInventoryUI : cachedInventoryUI;
+        if (activeInventoryUI != null)
         {
-            inventorySystem.DisplayInventory();
-            Debug.Log("打开背包");
+            if (activeInventoryUI.IsInventoryOpen())
+                activeInventoryUI.HideInventory();
+            else
+                activeInventoryUI.ShowInventory();
         }
         else
         {
-            Debug.Log("背包系统未初始化");
+            Debug.LogWarning("[PlayerController] InventoryUI 未初始化，无法打开背包");
         }
     }
 

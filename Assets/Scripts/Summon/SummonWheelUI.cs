@@ -1,15 +1,16 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using IIPUI;
 
 public class SummonWheelUI : MonoBehaviour
 {
     [Header("轮盘设置")]
     public float wheelRadius = 150f;
     public float slotSize = 80f;
-    public Color normalColor = new Color(0.2f, 0.2f, 0.2f, 0.8f);
-    public Color highlightColor = new Color(0.4f, 0.6f, 0.8f, 0.9f);
-    public Color emptyColor = new Color(0.1f, 0.1f, 0.1f, 0.5f);
+    public Color normalColor = IIPUIStyle.BarBackgroundNeutral;
+    public Color highlightColor = IIPUIStyle.SummonWheelHighlight;
+    public Color emptyColor = IIPUIStyle.SummonWheelEmpty;
 
     [Header("UI组件")]
     public GameObject wheelBackground;
@@ -95,24 +96,13 @@ public class SummonWheelUI : MonoBehaviour
 
     GameObject CreateDefaultSlot()
     {
-        GameObject slot = new GameObject("Slot");
-        slot.transform.SetParent(slotsParent);
+        // 圆角底 + 边框 + 中央槽位号（统一外观）
+        GameObject slot = IIPUIFactory.MakeSlot("Slot", slotsParent,
+            new Vector2(slotSize, slotSize), normalColor,
+            centerLabel: null, keyLabel: null, border: true);
 
-        Image image = slot.AddComponent<Image>();
-        image.color = normalColor;
-
-        GameObject textObj = new GameObject("Text");
-        textObj.transform.SetParent(slot.transform);
-        Text text = textObj.AddComponent<Text>();
-        text.alignment = TextAnchor.MiddleCenter;
-        text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        text.fontSize = 14;
-        text.color = Color.white;
-        text.rectTransform.anchorMin = Vector2.zero;
-        text.rectTransform.anchorMax = Vector2.one;
-        text.rectTransform.offsetMin = new Vector2(5, -30);
-        text.rectTransform.offsetMax = new Vector2(-5, -5);
-
+        // 中央槽位文本（雅黑）
+        IIPUIFactory.CreateLabel("Text", slot.transform, "", IIPUIStyle.FontSizeBody, Color.white);
         return slot;
     }
 

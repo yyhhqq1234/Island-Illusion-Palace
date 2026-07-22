@@ -14,21 +14,21 @@ namespace IIPUI
     /// </summary>
     public static class MenuVisualPolishEditor
     {
-        // ── 配色（紫调暗夜，呼应"幻宫"主题） ──
-        static readonly Color COL_PANEL_BG       = new Color(0.10f, 0.09f, 0.16f, 0.97f);
-        static readonly Color COL_BUTTON_NORMAL  = new Color(0.18f, 0.16f, 0.26f, 1.00f);
-        static readonly Color COL_BUTTON_HOVER   = new Color(0.32f, 0.28f, 0.50f, 1.00f);
-        static readonly Color COL_TAB_ACTIVE     = new Color(0.28f, 0.24f, 0.42f, 1.00f);
-        static readonly Color COL_TAB_INACTIVE   = new Color(0.15f, 0.14f, 0.22f, 1.00f);
-        static readonly Color COL_KEYDISPLAY     = new Color(0.22f, 0.20f, 0.34f, 1.00f);
-        static readonly Color COL_CONTENT_BG     = new Color(0.08f, 0.07f, 0.13f, 0.60f);
+        // ── 配色（紫调暗夜，呼应"幻宫"主题）—— 统一引用 IIPUIStyle 单一数据源 ──
+        static readonly Color COL_PANEL_BG       = IIPUIStyle.PanelBackground;
+        static readonly Color COL_BUTTON_NORMAL  = IIPUIStyle.ButtonNormal;
+        static readonly Color COL_BUTTON_HOVER   = IIPUIStyle.ButtonHover;
+        static readonly Color COL_TAB_ACTIVE     = IIPUIStyle.TabActive;
+        static readonly Color COL_TAB_INACTIVE   = IIPUIStyle.TabInactive;
+        static readonly Color COL_KEYDISPLAY     = IIPUIStyle.KeyDisplayBackground;
+        static readonly Color COL_CONTENT_BG     = IIPUIStyle.ContentBackground;
 
         // ── 文字色 ──
-        static readonly Color COL_TITLE     = new Color(0.95f, 0.90f, 1.00f, 1f);
-        static readonly Color COL_TEXT_MAIN = new Color(0.92f, 0.92f, 0.96f, 1f);
-        static readonly Color COL_TEXT_DIM  = new Color(0.65f, 0.65f, 0.75f, 1f);
-        static readonly Color COL_TEXT_VAL  = new Color(0.75f, 0.80f, 0.95f, 1f);
-        static readonly Color COL_TEXT_KEY  = new Color(1.00f, 1.00f, 1.00f, 1f);
+        static readonly Color COL_TITLE     = IIPUIStyle.TextTitle;
+        static readonly Color COL_TEXT_MAIN = IIPUIStyle.TextPrimary;
+        static readonly Color COL_TEXT_DIM  = IIPUIStyle.TextSecondary;
+        static readonly Color COL_TEXT_VAL  = IIPUIStyle.TextValue;
+        static readonly Color COL_TEXT_KEY  = IIPUIStyle.TextKey;
 
         // ── 字号 ──
         const int SIZE_TITLE_PAUSE = 32;

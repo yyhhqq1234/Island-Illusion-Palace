@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using IIPUI;
 
 /// <summary>
 /// 玩家等级+经验条UI组件（事件驱动）
@@ -22,10 +23,10 @@ public class PlayerLevelUI : MonoBehaviour
 
     [Header("样式配置")]
     [Tooltip("经验条颜色")]
-    public Color expBarColor = new Color(0.3f, 0.8f, 1f, 1f);
+    public Color expBarColor = IIPUIStyle.AccentCyan;
 
     [Tooltip("经验条背景颜色")]
-    public Color expBarBackgroundColor = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+    public Color expBarBackgroundColor = IIPUIStyle.BarBackgroundNeutral;
 
     [Tooltip("等级文本颜色")]
     public Color levelTextColor = Color.white;
@@ -106,7 +107,7 @@ public class PlayerLevelUI : MonoBehaviour
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
         rt.anchoredPosition = new Vector2(20, -80);
-        rt.sizeDelta = new Vector2(200, 60);
+        rt.sizeDelta = new Vector2(280, 60); // 与 CreateDefaultUI 内部容器一致，避免溢出
     }
 
     /// <summary>初始化UI（缺引用时构建默认）</summary>
@@ -124,16 +125,19 @@ public class PlayerLevelUI : MonoBehaviour
         container.transform.SetParent(transform, false);
 
         RectTransform containerRect = container.AddComponent<RectTransform>();
-        containerRect.anchorMin = new Vector2(0, 1);
-        containerRect.anchorMax = new Vector2(0, 1);
-        containerRect.pivot = new Vector2(0, 1);
-        containerRect.anchoredPosition = new Vector2(20, -80);
-        containerRect.sizeDelta = new Vector2(200, 60);
+        // 子容器相对根铺满（根已由 EnsureContainerLayout 定位到左上角 280×60），不再重复偏移
+        containerRect.anchorMin = Vector2.zero;
+        containerRect.anchorMax = Vector2.one;
+        containerRect.pivot = new Vector2(0.5f, 0.5f);
+        containerRect.offsetMin = Vector2.zero;
+        containerRect.offsetMax = Vector2.zero;
 
-        GameObject iconObj = new GameObject("LevelIcon");
+        // 等级图标（圆角金色方块 + 边框）
+        GameObject iconObj = new GameObject("LevelIcon", typeof(RectTransform), typeof(Image));
         iconObj.transform.SetParent(container.transform, false);
-        levelIcon = iconObj.AddComponent<Image>();
-        levelIcon.color = new Color(1f, 0.8f, 0.2f, 1f);
+        levelIcon = iconObj.GetComponent<Image>();
+        levelIcon.color = IIPUIStyle.AccentGold;
+        IIPUIFactory.ApplyRounded(levelIcon, true);
 
         RectTransform iconRect = iconObj.GetComponent<RectTransform>();
         iconRect.anchorMin = new Vector2(0, 0.5f);
@@ -141,38 +145,39 @@ public class PlayerLevelUI : MonoBehaviour
         iconRect.pivot = new Vector2(0, 0.5f);
         iconRect.anchoredPosition = new Vector2(0, 0);
         iconRect.sizeDelta = new Vector2(40, 40);
+        IIPUIFactory.CreateBorder(iconObj.transform, IIPUIFactory.BorderBright, true);
+        // 图标中央 "Lv" 小字
+        IIPUIFactory.CreateLabel("IconMark", iconObj.transform, "Lv", IIPUIStyle.FontSizeSmall, IIPUIStyle.LevelBadgeText,
+            TextAnchor.MiddleCenter, FontStyle.Bold);
 
-        GameObject levelObj = new GameObject("LevelText");
-        levelObj.transform.SetParent(container.transform, false);
-        levelText = levelObj.AddComponent<Text>();
-        levelText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        levelText.fontSize = 18;
-        levelText.alignment = TextAnchor.MiddleCenter;
-        levelText.color = levelTextColor;
+        // 等级文本（雅黑加粗，图标右侧）
+        levelText = IIPUIFactory.CreateLabelAnchored("LevelText", container.transform,
+            "", IIPUIStyle.FontSizeSubtitle, levelTextColor,
+            new Vector2(0, 0.5f), new Vector2(0, 0.5f),
+            new Vector2(45, -15), new Vector2(105, 15), TextAnchor.MiddleLeft);
+        levelText.fontStyle = FontStyle.Bold;
 
-        RectTransform levelRect = levelObj.GetComponent<RectTransform>();
-        levelRect.anchorMin = new Vector2(0, 0.5f);
-        levelRect.anchorMax = new Vector2(0, 0.5f);
-        levelRect.pivot = new Vector2(0, 0.5f);
-        levelRect.anchoredPosition = new Vector2(45, 0);
-        levelRect.sizeDelta = new Vector2(60, 30);
-
-        GameObject expBgObj = new GameObject("ExpBarBg");
+        // 经验条背景（圆角 + 边框）
+        GameObject expBgObj = new GameObject("ExpBarBg", typeof(RectTransform), typeof(Image));
         expBgObj.transform.SetParent(container.transform, false);
-        Image expBg = expBgObj.AddComponent<Image>();
+        Image expBg = expBgObj.GetComponent<Image>();
         expBg.color = expBarBackgroundColor;
+        IIPUIFactory.ApplyRounded(expBg, true);
 
         RectTransform expBgRect = expBgObj.GetComponent<RectTransform>();
         expBgRect.anchorMin = new Vector2(0, 0);
-        expBgRect.anchorMax = new Vector2(1, 0.4f);
+        expBgRect.anchorMax = new Vector2(1, 0.42f);
         expBgRect.pivot = new Vector2(0, 0);
         expBgRect.anchoredPosition = new Vector2(110, 5);
-        expBgRect.sizeDelta = new Vector2(80, 20);
+        expBgRect.sizeDelta = new Vector2(-110, 20);
+        IIPUIFactory.CreateBorder(expBgObj.transform, IIPUIFactory.BorderDim, true);
 
-        GameObject expFillObj = new GameObject("ExpBarFill");
+        // 经验条填充（圆角 sprite，与底框一致）
+        GameObject expFillObj = new GameObject("ExpBarFill", typeof(RectTransform), typeof(Image));
         expFillObj.transform.SetParent(expBgObj.transform, false);
-        expFill = expFillObj.AddComponent<Image>();
+        expFill = expFillObj.GetComponent<Image>();
         expFill.color = expBarColor;
+        IIPUIFactory.ApplyRounded(expFill, true);
         expFill.type = Image.Type.Filled;
         expFill.fillMethod = Image.FillMethod.Horizontal;
 
@@ -182,18 +187,7 @@ public class PlayerLevelUI : MonoBehaviour
         expFillRect.offsetMin = Vector2.zero;
         expFillRect.offsetMax = Vector2.zero;
 
-        GameObject expTextObj = new GameObject("ExpText");
-        expTextObj.transform.SetParent(expBgObj.transform, false);
-        expText = expTextObj.AddComponent<Text>();
-        expText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        expText.fontSize = 12;
-        expText.alignment = TextAnchor.MiddleCenter;
-        expText.color = Color.white;
-
-        RectTransform expTextRect = expTextObj.GetComponent<RectTransform>();
-        expTextRect.anchorMin = Vector2.zero;
-        expTextRect.anchorMax = Vector2.one;
-        expTextRect.offsetMin = Vector2.zero;
-        expTextRect.offsetMax = Vector2.zero;
+        // 经验文本（雅黑）
+        expText = IIPUIFactory.CreateLabel("ExpText", expBgObj.transform, "", IIPUIStyle.FontSizeSmall, Color.white);
     }
 }

@@ -66,8 +66,8 @@ public class SettingsPanelController : MonoBehaviour
     // 主题色（与 HoverButton / 暂停菜单统一）
     // ═══════════════════════════════════════════
 
-    private static readonly Color TAB_ACTIVE_COLOR = new Color(0.25f, 0.25f, 0.4f, 1f);
-    private static readonly Color TAB_INACTIVE_COLOR = new Color(0.18f, 0.18f, 0.25f, 1f);
+    private static readonly Color TAB_ACTIVE_COLOR = IIPUI.IIPUIStyle.SettingsTabActive;
+    private static readonly Color TAB_INACTIVE_COLOR = IIPUI.IIPUIStyle.SettingsTabInactive;
 
     // ═══════════════════════════════════════════
     // 持久化键名
@@ -93,6 +93,98 @@ public class SettingsPanelController : MonoBehaviour
         BindControls();
         // 字体兜底：确保场景未跑编辑器打磨脚本时，中文也能正常显示（根治"操作"等乱码）
         IIPUI.IIPUIFont.ApplyTo(transform);
+        // 视觉统一（Phase 2）：场景手搭的旧样式 → 工厂原语（深底圆角+紫辉光+雅黑）
+        RestyleUI();
+    }
+
+    // ═══════════════════════════════════════════
+    // Phase 2 视觉统一（只改视觉：sprite/颜色/hover，不动布局与事件）
+    // ═══════════════════════════════════════════
+
+    void RestyleUI()
+    {
+        IIPUIFactory.StylePanelRoot(gameObject);
+
+        // Tab 按钮 + 返回按钮（Tab 颜色由 SetTabColor 每帧语义维护，这里只刷形状/hover/字体）
+        StyleTabButton(tabAudioVideo);
+        StyleTabButton(tabControls);
+        StyleTabButton(tabAssist);
+        IIPUIFactory.StyleButton(backButton);
+
+        // 滑块：底槽中性灰 + 紫色填充 + 亮色手柄
+        StyleSlider(sliderMaster);
+        StyleSlider(sliderSFX);
+        StyleSlider(sliderMusic);
+        StyleSlider(sliderUI);
+
+        // 开关：底槽深底圆角 + 紫色勾选
+        StyleToggle(toggleDamageNumber);
+        StyleToggle(toggleMinimap);
+        StyleToggle(toggleAutoPickup);
+        StyleToggle(toggleColorblind);
+    }
+
+    void StyleTabButton(Button tab)
+    {
+        if (tab == null) return;
+        var img = tab.targetGraphic as Image;
+        if (img == null) img = tab.GetComponent<Image>();
+        if (img != null) IIPUIFactory.ApplyRounded(img, true); // 颜色由 SetTabColor 管理
+        tab.transition = Selectable.Transition.None;
+        IIPUIFactory.ApplyHover(tab.gameObject, IIPUIStyle.ButtonHover);
+        var label = tab.GetComponentInChildren<Text>(true);
+        if (label != null)
+        {
+            label.font = IIPUI.IIPUIFont.Get();
+            label.color = IIPUIStyle.TextPrimary;
+            label.fontSize = IIPUIStyle.FontSizeButton;
+        }
+    }
+
+    void StyleSlider(Slider slider)
+    {
+        if (slider == null) return;
+        var bg = slider.transform.Find("Background")?.GetComponent<Image>();
+        if (bg != null)
+        {
+            bg.color = IIPUIStyle.BarBackgroundNeutral;
+            IIPUIFactory.ApplyRounded(bg, true);
+        }
+        var fill = slider.fillRect != null ? slider.fillRect.GetComponent<Image>() : null;
+        if (fill != null)
+        {
+            fill.color = IIPUIStyle.AccentPurple;
+            IIPUIFactory.ApplyRounded(fill, true);
+        }
+        var handle = slider.handleRect != null ? slider.handleRect.GetComponent<Image>() : null;
+        if (handle != null)
+        {
+            handle.color = IIPUIStyle.BorderBright;
+            IIPUIFactory.ApplyRounded(handle, true);
+        }
+    }
+
+    void StyleToggle(Toggle toggle)
+    {
+        if (toggle == null) return;
+        var check = toggle.graphic as Image; // Checkmark
+        if (check != null)
+        {
+            check.color = IIPUIStyle.AccentPurple;
+            IIPUIFactory.ApplyRounded(check, true);
+        }
+        var bgTrans = toggle.targetGraphic as Image; // Background
+        if (bgTrans != null)
+        {
+            bgTrans.color = IIPUIStyle.SlotBackground;
+            IIPUIFactory.ApplyRounded(bgTrans, true);
+        }
+        var label = toggle.GetComponentInChildren<Text>(true);
+        if (label != null)
+        {
+            label.font = IIPUI.IIPUIFont.Get();
+            label.color = IIPUIStyle.TextPrimary;
+        }
     }
 
     void Start()

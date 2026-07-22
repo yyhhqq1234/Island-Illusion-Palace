@@ -128,16 +128,18 @@ A Unity 2D top-down Roguelite Action RPG. Read [CLAUDE.md](./CLAUDE.md) for the 
 
 ### 子Agent 调用规则
 
-Solo Agent 必须根据任务类型，通过 `Task` 工具或 `Skill` 工具调用对应的专业子Agent：
+Solo Agent 必须根据任务类型，调用 `.claude/agents/` 下对应的专业子Agent（通过 `Agent` 工具，`subagent_type` 填下表 agent 名），或通过 `Skill` 工具调用策划分发入口：
 
 | 任务类型 | 调用方式 | 触发条件 |
 |---------|---------|---------|
-| **策划案修改** | `Skill` → `AI团队协调` | 任何涉及策划文档内容修改、新增策划案、系统设计变更 |
-| **文案/文学创作** | `Skill` → `文学小说创作专家` | 任何涉及世界观构建、剧情写作、角色对话、任务文本、文学润色等文字创作 |
-| **代码开发/修改** | `Task` → `unity-topdown-developer` | 任何涉及 Unity C# 代码的新增、修改、重构 |
-| **代码审查** | `Task` → `TRAE-code-review` | 代码开发完成后，对所有变更进行审查 |
-| **安全审查** | `Task` → `TRAE-security-review` | 涉及用户数据、存档、网络等敏感代码变更 |
-| **运行时调试** | `Task` → `TRAE-debugger` | 仅通过静态分析无法诊断的 Bug |
+| **策划案修改/多角色协同** | `Skill` → `AI团队协调`（分发到 `lead-designer`/`system-designer`/`numerical-designer`/`narrative-designer`/`level-designer`/`art-style`/`uiux-designer`/`operation-strategy`） | 任何涉及策划文档内容修改、新增策划案、系统设计变更 |
+| **文案/文学创作** | `Skill` → `文学小说创作专家`（`.trae/skills/`） | 任何涉及世界观构建、剧情写作、角色对话、任务文本、文学润色等文字创作 |
+| **代码开发/修改** | `Agent` → `unity-topdown-developer` | 任何涉及 Unity C# 代码的新增、修改、重构 |
+| **代码审查** | `Agent` → `TRAE-code-review` | 代码开发完成后，对所有变更进行审查 |
+| **安全审查** | `Agent` → `TRAE-security-review` | 涉及用户数据、存档、网络等敏感代码变更 |
+| **运行时调试** | `Agent` → `TRAE-debugger` | 仅通过静态分析无法诊断的 Bug |
+
+> 所有子Agent 定义见 `.claude/agents/`，策划角色提示词全文见 `ai_agents_prompts/`。
 
 ### 策划案修改流程
 1. 识别修改范围，确定涉及哪些子系统的策划文档
