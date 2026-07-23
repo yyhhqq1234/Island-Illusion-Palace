@@ -204,6 +204,11 @@ public class PauseMenu : MonoBehaviour
                 vlg.spacing = 20f;
                 vlg.childAlignment = TextAnchor.UpperCenter;
                 vlg.padding = new RectOffset(20, 20, 20, 20);
+                // 按钮拉伸撑满 Content 宽度（旧版 controlW=false 导致按钮保持自身窄宽度，呈"小药丸"）
+                vlg.childControlWidth = true;
+                vlg.childForceExpandWidth = true;
+                vlg.childControlHeight = true;
+                vlg.childForceExpandHeight = false;
                 
                 // 添加 ContentSizeFitter
                 ContentSizeFitter csf = contentTransform.GetComponent<ContentSizeFitter>();
@@ -250,8 +255,12 @@ public class PauseMenu : MonoBehaviour
                 dimMaskCanvasGroup = dimMask.gameObject.AddComponent<CanvasGroup>();
             }
             dimMask.color = new Color(0f, 0f, 0f, dimOpacity);
-            
-            // 确保遮罩覆盖全屏
+
+            // 防御性修正：遮罩必须可见、可拦截点击、铺满全屏
+            dimMask.enabled = true;
+            dimMask.raycastTarget = true; // 挡住背后游戏世界/HUD 的点击
+            dimMask.sprite = null;        // 纯色遮罩，避免误挂圆角 sprite 露出四角
+            dimMask.type = Image.Type.Simple;
             RectTransform maskRect = dimMask.GetComponent<RectTransform>();
             if (maskRect != null)
             {
@@ -260,6 +269,13 @@ public class PauseMenu : MonoBehaviour
                 maskRect.offsetMin = Vector2.zero;
                 maskRect.offsetMax = Vector2.zero;
             }
+            // 遮罩挂在 pausePanel 之下会被随面板一起隐藏，提升到与面板同级并排在面板之下
+            if (pausePanel != null && dimMask.transform.IsChildOf(pausePanel.transform))
+            {
+                dimMask.transform.SetParent(pausePanel.transform.parent, false);
+                Debug.LogWarning("[PauseMenu] dimMask 原为 pausePanel 子节点，已提升到同级（否则面板隐藏时遮罩失效）");
+            }
+            dimMask.transform.SetSiblingIndex(0); // 渲染在面板之下、游戏画面之上
         }
         
         // 初始化确认对话框CanvasGroup
@@ -451,7 +467,14 @@ public class PauseMenu : MonoBehaviour
         {
             StopCoroutine(currentAnimation);
         }
-        
+
+        // 遮罩立即置为最终状态兜底：即使淡入协程被打断，也不会出现"无遮罩"的裸面板
+        if (dimScreen && dimMask != null)
+        {
+            dimMask.gameObject.SetActive(true);
+            if (dimMaskCanvasGroup != null) dimMaskCanvasGroup.alpha = dimOpacity;
+        }
+
         currentAnimation = StartCoroutine(ShowPauseMenuAnimation());
     }
     

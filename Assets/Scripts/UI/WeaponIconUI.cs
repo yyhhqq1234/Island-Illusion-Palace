@@ -50,6 +50,9 @@ public class WeaponIconUI : MonoBehaviour
     private float maxDashCooldown = 1f;
     private bool dataRefreshed = false;
 
+    /// <summary>HUD 整体放大系数（与其它 HUD 组件一致）</summary>
+    const float HudScale = 1.4f;
+
     void Start()
     {
         EnsureContainerLayout();
@@ -218,8 +221,9 @@ public class WeaponIconUI : MonoBehaviour
         rt.anchorMin = new Vector2(1, 0);
         rt.anchorMax = new Vector2(1, 0);
         rt.pivot = new Vector2(1, 0);
-        rt.anchoredPosition = new Vector2(-40, 40);
-        rt.sizeDelta = new Vector2(ringOuterSize, ringOuterSize);
+        // HUD 整体放大 1.4×：偏移 (-40,40)→(-56,56)，环形外径 ×1.4（68→95.2）
+        rt.anchoredPosition = new Vector2(-56, 56);
+        rt.sizeDelta = new Vector2(ringOuterSize * HudScale, ringOuterSize * HudScale);
     }
 
     /// <summary>初始化UI</summary>
@@ -306,22 +310,22 @@ public class WeaponIconUI : MonoBehaviour
         iconRect.offsetMin = Vector2.zero;
         iconRect.offsetMax = Vector2.zero;
 
-        // ── 顶部键位提示 "Space"（雅黑 10pt）──
+        // ── 顶部键位提示 "Space"（10→14，1.4×）──
         dashKeyHintText = IIPUIFactory.CreateLabelAnchored("DashKeyHint", root.transform,
-            "Space", IIPUIStyle.FontSizeKeyHint, IIPUIStyle.TextKeyHint,
+            "Space", 14, IIPUIStyle.TextKeyHint,
             new Vector2(0, 0.82f), new Vector2(1, 1),
             Vector2.zero, Vector2.zero, TextAnchor.UpperCenter);
 
-        // ── 武器名称文本（根下方外部）──
+        // ── 武器名称文本（根下方外部，12→17，偏移 ×1.4）──
         weaponNameText = IIPUIFactory.CreateLabelAnchored("WeaponName", transform,
-            "", IIPUIStyle.FontSizeSmall, IIPUIFactory.TextMain,
+            "", 17, IIPUIFactory.TextMain,
             new Vector2(0, 0), new Vector2(1, 0),
-            new Vector2(0, -18), new Vector2(0, -2), TextAnchor.UpperCenter);
+            new Vector2(0, -25), new Vector2(0, -3), TextAnchor.UpperCenter);
 
-        // ── 武器类型文本（名称下方）──
+        // ── 武器类型文本（名称下方，10→14，偏移 ×1.4）──
         weaponTypeText = IIPUIFactory.CreateLabelAnchored("WeaponType", transform,
-            "", IIPUIStyle.FontSizeKeyHint, IIPUIFactory.TextDim,
+            "", 14, IIPUIFactory.TextDim,
             new Vector2(0, 0), new Vector2(1, 0),
-            new Vector2(0, -32), new Vector2(0, -18), TextAnchor.UpperCenter);
+            new Vector2(0, -45), new Vector2(0, -25), TextAnchor.UpperCenter);
     }
 }

@@ -107,7 +107,8 @@ public class PlayerLevelUI : MonoBehaviour
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
         rt.anchoredPosition = new Vector2(20, -80);
-        rt.sizeDelta = new Vector2(280, 60); // 与 CreateDefaultUI 内部容器一致，避免溢出
+        // HUD 整体放大 1.4×：280×60 → 392×84
+        rt.sizeDelta = new Vector2(392, 84); // 与 CreateDefaultUI 内部容器一致，避免溢出
     }
 
     /// <summary>初始化UI（缺引用时构建默认）</summary>
@@ -132,7 +133,7 @@ public class PlayerLevelUI : MonoBehaviour
         containerRect.offsetMin = Vector2.zero;
         containerRect.offsetMax = Vector2.zero;
 
-        // 等级图标（圆角金色方块 + 边框）
+        // 等级图标（圆角金色方块 + 边框），40→56（1.4×）
         GameObject iconObj = new GameObject("LevelIcon", typeof(RectTransform), typeof(Image));
         iconObj.transform.SetParent(container.transform, false);
         levelIcon = iconObj.GetComponent<Image>();
@@ -144,20 +145,20 @@ public class PlayerLevelUI : MonoBehaviour
         iconRect.anchorMax = new Vector2(0, 0.5f);
         iconRect.pivot = new Vector2(0, 0.5f);
         iconRect.anchoredPosition = new Vector2(0, 0);
-        iconRect.sizeDelta = new Vector2(40, 40);
+        iconRect.sizeDelta = new Vector2(56, 56);
         IIPUIFactory.CreateBorder(iconObj.transform, IIPUIFactory.BorderBright, true);
-        // 图标中央 "Lv" 小字
-        IIPUIFactory.CreateLabel("IconMark", iconObj.transform, "Lv", IIPUIStyle.FontSizeSmall, IIPUIStyle.LevelBadgeText,
+        // 图标中央 "Lv" 小字（12→17）
+        IIPUIFactory.CreateLabel("IconMark", iconObj.transform, "Lv", 17, IIPUIStyle.LevelBadgeText,
             TextAnchor.MiddleCenter, FontStyle.Bold);
 
-        // 等级文本（雅黑加粗，图标右侧）
+        // 等级文本（雅黑加粗，图标右侧，18→25）
         levelText = IIPUIFactory.CreateLabelAnchored("LevelText", container.transform,
-            "", IIPUIStyle.FontSizeSubtitle, levelTextColor,
+            "", 25, levelTextColor,
             new Vector2(0, 0.5f), new Vector2(0, 0.5f),
-            new Vector2(45, -15), new Vector2(105, 15), TextAnchor.MiddleLeft);
+            new Vector2(63, -21), new Vector2(147, 21), TextAnchor.MiddleLeft);
         levelText.fontStyle = FontStyle.Bold;
 
-        // 经验条背景（圆角 + 边框）
+        // 经验条背景（圆角 + 边框），位置/厚度 ×1.4
         GameObject expBgObj = new GameObject("ExpBarBg", typeof(RectTransform), typeof(Image));
         expBgObj.transform.SetParent(container.transform, false);
         Image expBg = expBgObj.GetComponent<Image>();
@@ -168,8 +169,8 @@ public class PlayerLevelUI : MonoBehaviour
         expBgRect.anchorMin = new Vector2(0, 0);
         expBgRect.anchorMax = new Vector2(1, 0.42f);
         expBgRect.pivot = new Vector2(0, 0);
-        expBgRect.anchoredPosition = new Vector2(110, 5);
-        expBgRect.sizeDelta = new Vector2(-110, 20);
+        expBgRect.anchoredPosition = new Vector2(154, 7);
+        expBgRect.sizeDelta = new Vector2(-154, 28);
         IIPUIFactory.CreateBorder(expBgObj.transform, IIPUIFactory.BorderDim, true);
 
         // 经验条填充（圆角 sprite，与底框一致）
@@ -187,7 +188,7 @@ public class PlayerLevelUI : MonoBehaviour
         expFillRect.offsetMin = Vector2.zero;
         expFillRect.offsetMax = Vector2.zero;
 
-        // 经验文本（雅黑）
-        expText = IIPUIFactory.CreateLabel("ExpText", expBgObj.transform, "", IIPUIStyle.FontSizeSmall, Color.white);
+        // 经验文本（雅黑，12→17）
+        expText = IIPUIFactory.CreateLabel("ExpText", expBgObj.transform, "", 17, Color.white);
     }
 }

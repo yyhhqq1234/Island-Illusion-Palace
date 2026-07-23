@@ -62,4 +62,8 @@ public static class IIPConstants
     public const KeyCode KeyQuickItem1   = KeyCode.Alpha1;
     public const KeyCode KeyQuickItem2   = KeyCode.Alpha2;
     public const KeyCode KeyQuickItem3   = KeyCode.Alpha3;
+
+    // ── 设置项 PlayerPrefs 键（设置面板 ↔ 消费系统共用，避免魔法字符串散落）──
+    public const string PrefKeyShowDamageNumbers = "IIP_ShowDamageNumbers";
+    public const string PrefKeyAutoPickup = "IIP_AutoPickup";
 }

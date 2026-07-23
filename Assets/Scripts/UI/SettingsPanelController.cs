@@ -77,9 +77,9 @@ public class SettingsPanelController : MonoBehaviour
     private const string KEY_SFX_VOL = "IIP_SFXVolume";
     private const string KEY_MUSIC_VOL = "IIP_MusicVolume";
     private const string KEY_UI_VOL = "IIP_UIVolume";
-    private const string KEY_DAMAGE_NUM = "IIP_ShowDamageNumbers";
+    private const string KEY_DAMAGE_NUM = IIPConstants.PrefKeyShowDamageNumbers;
     private const string KEY_MINIMAP = "IIP_ShowMinimap";
-    private const string KEY_AUTO_PICKUP = "IIP_AutoPickup";
+    private const string KEY_AUTO_PICKUP = IIPConstants.PrefKeyAutoPickup;
     private const string KEY_COLORBLIND = "IIP_ColorblindMode";
 
     private string currentTab = "AudioVideo";
@@ -95,6 +95,9 @@ public class SettingsPanelController : MonoBehaviour
         IIPUI.IIPUIFont.ApplyTo(transform);
         // 视觉统一（Phase 2）：场景手搭的旧样式 → 工厂原语（深底圆角+紫辉光+雅黑）
         RestyleUI();
+        // 布局重建（Phase 3）：统一卡片尺寸/滑块方向/滚动区/勾形开关，
+        // 对主菜单场景实例与暂停菜单预制体实例都生效（两处都是本组件，Awake 各自执行）
+        RebuildLayout();
     }
 
     // ═══════════════════════════════════════════
@@ -171,7 +174,7 @@ public class SettingsPanelController : MonoBehaviour
         if (check != null)
         {
             check.color = IIPUIStyle.AccentPurple;
-            IIPUIFactory.ApplyRounded(check, true);
+            IIPUIFactory.ApplyCheckmark(check); // 勾形勾选，替代实心方块
         }
         var bgTrans = toggle.targetGraphic as Image; // Background
         if (bgTrans != null)
@@ -184,6 +187,320 @@ public class SettingsPanelController : MonoBehaviour
         {
             label.font = IIPUI.IIPUIFont.Get();
             label.color = IIPUIStyle.TextPrimary;
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // Phase 3 布局重建（只改 RectTransform/布局组件，不动字段绑定与事件）
+    // 兼容两种节点树：
+    //   A. 主菜单场景版：SettingsPanel > SettingsCard > (TitleText/TabContainer/ContentArea/BackButton)
+    //   B. 暂停菜单预制体版：SettingsPanel > (TitleText/TabContainer/ContentArea/BackButton)（扁平，无卡片）
+    // ═══════════════════════════════════════════
+
+    void RebuildLayout()
+    {
+        // ── 1. 根节点：还原为全屏暗色遮罩（去圆角 sprite，消除四角锯齿；去旧 VLG）──
+        var rootRt = transform as RectTransform;
+        if (rootRt != null)
+        {
+            rootRt.anchorMin = Vector2.zero;
+            rootRt.anchorMax = Vector2.one;
+            rootRt.offsetMin = Vector2.zero;
+            rootRt.offsetMax = Vector2.zero;
+        }
+        var rootImg = GetComponent<Image>();
+        if (rootImg != null)
+        {
+            rootImg.sprite = null;
+            rootImg.type = Image.Type.Simple;
+            rootImg.color = new Color(0.04f, 0.04f, 0.08f, 0.92f);
+            rootImg.raycastTarget = true; // 挡住背后 UI 的点击
+        }
+        // RestyleUI 可能给根加了圆角边框节点，全屏遮罩不需要，隐藏
+        var rootBorder = transform.Find("IIPBorder");
+        if (rootBorder != null) rootBorder.gameObject.SetActive(false);
+        // 预制体旧版根上挂了 VerticalLayoutGroup，会把子节点顶散，禁用
+        var rootVlg = GetComponent<VerticalLayoutGroup>();
+        if (rootVlg != null) rootVlg.enabled = false;
+
+        // ── 2. SettingsCard：900×640 居中卡片（扁平结构先收编出卡片）──
+        Transform card = transform.Find("SettingsCard");
+        if (card == null)
+        {
+            var cardGo = new GameObject("SettingsCard", typeof(RectTransform), typeof(Image));
+            card = cardGo.transform;
+            card.SetParent(transform, false);
+            // 按展示顺序收编旧的直接子节点
+            string[] childNames = { "TitleText", "TabContainer", "ContentArea", "BackButton" };
+            foreach (var name in childNames)
+            {
+                var child = transform.Find(name);
+                if (child != null)
+                {
+                    child.SetParent(card, false);
+                    // 旧节点上的 LayoutElement 是配合根 VLG 的，卡片内不再需要
+                    var le = child.GetComponent<LayoutElement>();
+                    if (le != null) Destroy(le);
+                }
+            }
+        }
+        var cardRt = card as RectTransform;
+        cardRt.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRt.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRt.pivot = new Vector2(0.5f, 0.5f);
+        cardRt.sizeDelta = new Vector2(900f, 640f);
+        cardRt.anchoredPosition = Vector2.zero;
+        cardRt.localScale = Vector3.one;
+        IIPUIFactory.StylePanelRoot(card.gameObject); // 深底圆角 + 低调边框
+
+        // ── 3. 卡片内部四区布局 ──
+        // 标题：顶部通栏，高 56
+        var title = card.Find("TitleText");
+        if (title != null)
+        {
+            var rt = title as RectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = new Vector2(0f, -64f);
+            rt.offsetMax = new Vector2(0f, -12f);
+            var txt = title.GetComponent<Text>();
+            if (txt != null) txt.alignment = TextAnchor.MiddleCenter;
+        }
+        // Tab 容器：标题下方，高 48，三按钮均分
+        var tabContainer = card.Find("TabContainer");
+        if (tabContainer != null)
+        {
+            var rt = tabContainer as RectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = new Vector2(24f, -124f);
+            rt.offsetMax = new Vector2(-24f, -76f);
+            var hlg = tabContainer.GetComponent<HorizontalLayoutGroup>();
+            if (hlg == null) hlg = tabContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 12f;
+            hlg.padding = new RectOffset(0, 0, 0, 0);
+            hlg.childAlignment = TextAnchor.MiddleCenter;
+            hlg.childControlWidth = true;
+            hlg.childControlHeight = true;
+            hlg.childForceExpandWidth = true;   // 三 Tab 均分宽度
+            hlg.childForceExpandHeight = true;
+            var tabLe = tabContainer.GetComponent<LayoutElement>();
+            if (tabLe != null) Destroy(tabLe); // 预制体旧版残留
+            // Tab 按钮布局参数：等宽
+            foreach (var tab in new[] { tabAudioVideo, tabControls, tabAssist })
+            {
+                if (tab == null) continue;
+                var le = tab.GetComponent<LayoutElement>();
+                if (le == null) le = tab.gameObject.AddComponent<LayoutElement>();
+                le.flexibleWidth = 1f;
+                le.preferredWidth = -1f;
+                le.minHeight = 0f;
+                le.preferredHeight = -1f;
+            }
+        }
+        // 返回按钮：底部居中 280×50
+        if (backButton != null)
+        {
+            var rt = backButton.transform as RectTransform;
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.sizeDelta = new Vector2(280f, 50f);
+            rt.anchoredPosition = new Vector2(0f, 22f);
+            var le = backButton.GetComponent<LayoutElement>();
+            if (le != null) Destroy(le);
+        }
+        // 内容区：Tab 与返回按钮之间，四边留 24
+        Transform contentArea = card.Find("ContentArea");
+        if (contentArea != null)
+        {
+            var rt = contentArea as RectTransform;
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(24f, 88f);
+            rt.offsetMax = new Vector2(-24f, -140f);
+            var areaLe = contentArea.GetComponent<LayoutElement>();
+            if (areaLe != null) Destroy(areaLe);
+            // 预制体旧版 ContentArea 上直接挂了 ScrollRect（无 Viewport 结构），移除改由逐页包装
+            var oldSr = contentArea.GetComponent<ScrollRect>();
+            if (oldSr != null) Destroy(oldSr);
+            var areaImg = contentArea.GetComponent<Image>();
+            if (areaImg != null)
+            {
+                areaImg.color = IIPUIStyle.ContentBackground;
+                IIPUIFactory.ApplyRounded(areaImg, true);
+                areaImg.raycastTarget = true; // ScrollRect 拖拽需要
+            }
+        }
+
+        // ── 4. 三个内容页：滚动包装 + 行布局 ──
+        SetupScrollContent(contentAudioVideo, contentArea);
+        SetupScrollContent(contentControls, contentArea);
+        SetupScrollContent(contentAssist, contentArea);
+
+        // ── 5. 滑块方向强制水平（主菜单旧版曾渲染成竖条）──
+        foreach (var s in new[] { sliderMaster, sliderSFX, sliderMusic, sliderUI })
+            if (s != null) s.direction = Slider.Direction.LeftToRight;
+
+        // ── 6. 隐藏色盲模式行（功能未实装，避免误导）──
+        if (toggleColorblind != null && toggleColorblind.transform.parent != null)
+            toggleColorblind.transform.parent.gameObject.SetActive(false);
+
+        Debug.Log("[SettingsPanel] RebuildLayout 完成（卡片 900×640 居中 + 滚动内容区 + 勾形开关）");
+    }
+
+    /// <summary>
+    /// 把内容页包装进 ScrollRect（ContentArea/Scroll_X/Viewport/Content），
+    /// 内容超出可视高度时可滚动（操作Tab 7行按键不再溢出卡片）。
+    /// 幂等：重复调用时复用已建包装。
+    /// </summary>
+    void SetupScrollContent(GameObject content, Transform contentArea)
+    {
+        if (content == null || contentArea == null) return;
+
+        string wrapperName = "Scroll_" + content.name;
+        Transform wrapper = contentArea.Find(wrapperName);
+        RectTransform viewportRt;
+        if (wrapper == null)
+        {
+            // 包装层：铺满内容区
+            var wrapperGo = new GameObject(wrapperName, typeof(RectTransform), typeof(ScrollRect));
+            wrapper = wrapperGo.transform;
+            wrapper.SetParent(contentArea, false);
+            var wrapperRt = (RectTransform)wrapper;
+            wrapperRt.anchorMin = Vector2.zero;
+            wrapperRt.anchorMax = Vector2.one;
+            wrapperRt.offsetMin = Vector2.zero;
+            wrapperRt.offsetMax = Vector2.zero;
+
+            // 视口：铺满包装层，负责裁剪
+            var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+            viewportRt = (RectTransform)viewportGo.transform;
+            viewportRt.SetParent(wrapper, false);
+            viewportRt.anchorMin = Vector2.zero;
+            viewportRt.anchorMax = Vector2.one;
+            viewportRt.offsetMin = Vector2.zero;
+            viewportRt.offsetMax = Vector2.zero;
+
+            // 内容页挪进视口
+            content.transform.SetParent(viewportRt, false);
+
+            var sr = wrapperGo.GetComponent<ScrollRect>();
+            sr.viewport = viewportRt;
+            sr.content = (RectTransform)content.transform;
+            sr.horizontal = false;
+            sr.vertical = true;
+            sr.movementType = ScrollRect.MovementType.Clamped;
+            sr.scrollSensitivity = 25f;
+        }
+        else
+        {
+            viewportRt = wrapper.Find("Viewport") as RectTransform;
+        }
+
+        // 内容页自身：顶部锚定 + 宽度铺满，高度由 ContentSizeFitter 决定
+        var contentRt = (RectTransform)content.transform;
+        contentRt.anchorMin = new Vector2(0f, 1f);
+        contentRt.anchorMax = new Vector2(1f, 1f);
+        contentRt.pivot = new Vector2(0.5f, 1f);
+        contentRt.offsetMin = new Vector2(0f, contentRt.offsetMin.y);
+        contentRt.offsetMax = new Vector2(0f, contentRt.offsetMax.y);
+        contentRt.anchoredPosition = new Vector2(0f, 0f);
+
+        var vlg = content.GetComponent<VerticalLayoutGroup>();
+        if (vlg == null) vlg = content.AddComponent<VerticalLayoutGroup>();
+        vlg.spacing = 12f;
+        vlg.padding = new RectOffset(20, 20, 16, 16);
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;   // 行铺满宽度
+        vlg.childForceExpandHeight = false;
+
+        var csf = content.GetComponent<ContentSizeFitter>();
+        if (csf == null) csf = content.AddComponent<ContentSizeFitter>();
+        csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // 行布局重建
+        for (int i = 0; i < content.transform.childCount; i++)
+            RebuildRow(content.transform.GetChild(i));
+    }
+
+    /// <summary>统一行内布局：行高 48，Label 定宽 / Slider 弹性拉横 / Value 定宽 / Toggle 32×32。</summary>
+    void RebuildRow(Transform row)
+    {
+        var le = row.GetComponent<LayoutElement>();
+        if (le == null) le = row.gameObject.AddComponent<LayoutElement>();
+        le.minHeight = 48f;
+        le.preferredHeight = 48f;
+        le.flexibleWidth = 1f;
+
+        var hlg = row.GetComponent<HorizontalLayoutGroup>();
+        if (hlg == null) hlg = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 14f;
+        hlg.padding = new RectOffset(12, 12, 4, 4);
+        hlg.childAlignment = TextAnchor.MiddleCenter;
+        hlg.childControlWidth = true;
+        hlg.childControlHeight = true;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+
+        for (int i = 0; i < row.childCount; i++)
+        {
+            var child = row.GetChild(i);
+            var cle = child.GetComponent<LayoutElement>();
+            if (cle == null) cle = child.gameObject.AddComponent<LayoutElement>();
+
+            var slider = child.GetComponent<Slider>();
+            var toggle = child.GetComponent<Toggle>();
+            if (slider != null)
+            {
+                // 滑块：弹性占满剩余宽度，横向
+                cle.minWidth = 180f;
+                cle.flexibleWidth = 1f;
+                cle.preferredHeight = 28f;
+                slider.direction = Slider.Direction.LeftToRight;
+            }
+            else if (toggle != null)
+            {
+                // 开关：32×32 方块 + 勾形
+                cle.minWidth = 32f;
+                cle.preferredWidth = 32f;
+                cle.preferredHeight = 32f;
+                cle.flexibleWidth = 0f;
+            }
+            else if (child.name == "Label")
+            {
+                cle.preferredWidth = 150f;
+                cle.preferredHeight = 40f;
+                cle.flexibleWidth = 0f;
+                var txt = child.GetComponent<Text>();
+                if (txt != null) txt.alignment = TextAnchor.MiddleLeft;
+            }
+            else if (child.name == "Value")
+            {
+                cle.preferredWidth = 80f;
+                cle.preferredHeight = 40f;
+                cle.flexibleWidth = 0f;
+                var txt = child.GetComponent<Text>();
+                if (txt != null) txt.alignment = TextAnchor.MiddleRight;
+            }
+            else if (child.name == "KeyDisplay")
+            {
+                cle.preferredWidth = 140f;
+                cle.preferredHeight = 36f;
+                cle.flexibleWidth = 0f;
+            }
+            else
+            {
+                // Spacer 等：吃掉剩余空间
+                cle.flexibleWidth = 1f;
+                cle.preferredHeight = 1f;
+            }
         }
     }
 

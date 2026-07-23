@@ -98,9 +98,13 @@ public class DamageNumberManager : MonoBehaviour
 
     /// <summary>
     /// 显示伤害数字
+    /// 受设置面板"伤害数字显示"开关控制（PlayerPrefs: IIP_ShowDamageNumbers，默认开）
     /// </summary>
     public void ShowDamage(Vector3 position, int damage, bool isCritical = false)
     {
+        // 设置面板关闭伤害数字时直接不生成
+        if (PlayerPrefs.GetInt(IIPConstants.PrefKeyShowDamageNumbers, 1) == 0) return;
+
         if (damageNumberPrefab != null)
         {
             GameObject damageObj = Instantiate(damageNumberPrefab, position, Quaternion.identity);

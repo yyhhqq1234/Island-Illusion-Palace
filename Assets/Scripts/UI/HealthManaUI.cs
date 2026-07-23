@@ -166,7 +166,8 @@ public class HealthManaUI : MonoBehaviour
         rt.anchorMax = new Vector2(0, 0);
         rt.pivot = new Vector2(0, 0);
         rt.anchoredPosition = new Vector2(20, 20);
-        rt.sizeDelta = new Vector2(280, 46); // HP(0~22)+间隙+MP(26~42)，总高 46
+        // HUD 整体放大 1.4×：280×46 → 392×64（HP 0~31 + 间隙 + MP 36~59）
+        rt.sizeDelta = new Vector2(392, 64);
     }
 
     /// <summary>初始化UI（缺引用时构建默认）</summary>
@@ -178,10 +179,10 @@ public class HealthManaUI : MonoBehaviour
         }
     }
 
-    /// <summary>构建默认 HP/MP 条 UI（圆角底+边框+Filled填充+数值文本+小标签）</summary>
+    /// <summary>构建默认 HP/MP 条 UI（圆角底+边框+Filled填充+数值文本+小标签）。HUD 1.4× 放大版。</summary>
     void CreateDefaultUI()
     {
-        // HP 条容器：左下角 (0,0)，y=0~22（高 22）
+        // HP 条容器：左下角 (0,0)，y=0~31（高 31，原 22×1.4）
         GameObject hpBarObj = new GameObject("HPBar", typeof(RectTransform), typeof(Image));
         hpBarObj.transform.SetParent(transform, false);
         hpBarBackground = hpBarObj.GetComponent<Image>();
@@ -192,7 +193,7 @@ public class HealthManaUI : MonoBehaviour
         hpBgRect.anchorMax = new Vector2(1, 0);
         hpBgRect.pivot = new Vector2(0, 0);
         hpBgRect.offsetMin = new Vector2(0, 0);
-        hpBgRect.offsetMax = new Vector2(0, 22);
+        hpBgRect.offsetMax = new Vector2(0, 31);
         IIPUIFactory.CreateBorder(hpBarObj.transform, IIPUIFactory.BorderDim, true);
 
         // HP 填充（Filled Horizontal，避免 localScale 圆角变形；圆角 sprite 让满条末端与底框一致）
@@ -209,19 +210,19 @@ public class HealthManaUI : MonoBehaviour
         hpFillRect.offsetMin = Vector2.zero;
         hpFillRect.offsetMax = Vector2.zero;
 
-        // HP 数值文本（右侧）
+        // HP 数值文本（右侧），字号 12→17（1.4×）
         hpText = IIPUIFactory.CreateLabelAnchored("HPText", hpBarObj.transform,
-            "", IIPUIFactory.SizeSmall, valueTextColor,
+            "", 17, valueTextColor,
             new Vector2(1, 0), new Vector2(1, 1),
-            new Vector2(-60, 0), new Vector2(-4, 0), TextAnchor.MiddleRight);
+            new Vector2(-84, 0), new Vector2(-6, 0), TextAnchor.MiddleRight);
 
         // HP 小标签（左侧外）
         hpLabel = IIPUIFactory.CreateLabelAnchored("HPLabel", transform,
-            "HP", IIPUIFactory.SizeSmall, IIPUIFactory.TextDim,
+            "HP", 17, IIPUIFactory.TextDim,
             new Vector2(0, 0), new Vector2(0, 0),
-            new Vector2(-24, 0), new Vector2(0, 22), TextAnchor.MiddleRight);
+            new Vector2(-34, 0), new Vector2(0, 31), TextAnchor.MiddleRight);
 
-        // MP 条容器：左下角，y=26~42（高 16，紧贴 HP 上方留 4px 间隙）
+        // MP 条容器：左下角，y=36~59（高 23，原 16×1.4，紧贴 HP 上方留 5px 间隙）
         GameObject mpBarObj = new GameObject("MPBar", typeof(RectTransform), typeof(Image));
         mpBarObj.transform.SetParent(transform, false);
         mpBarBackground = mpBarObj.GetComponent<Image>();
@@ -231,8 +232,8 @@ public class HealthManaUI : MonoBehaviour
         mpBgRect.anchorMin = new Vector2(0, 0);
         mpBgRect.anchorMax = new Vector2(1, 0);
         mpBgRect.pivot = new Vector2(0, 0);
-        mpBgRect.offsetMin = new Vector2(0, 26);
-        mpBgRect.offsetMax = new Vector2(0, 42);
+        mpBgRect.offsetMin = new Vector2(0, 36);
+        mpBgRect.offsetMax = new Vector2(0, 59);
         IIPUIFactory.CreateBorder(mpBarObj.transform, IIPUIFactory.BorderDim, true);
 
         // MP 填充（Filled Horizontal，圆角 sprite 与 HP 一致）
@@ -251,14 +252,14 @@ public class HealthManaUI : MonoBehaviour
 
         // MP 数值文本（右侧）
         mpText = IIPUIFactory.CreateLabelAnchored("MPText", mpBarObj.transform,
-            "", IIPUIFactory.SizeSmall, valueTextColor,
+            "", 17, valueTextColor,
             new Vector2(1, 0), new Vector2(1, 1),
-            new Vector2(-60, 0), new Vector2(-4, 0), TextAnchor.MiddleRight);
+            new Vector2(-84, 0), new Vector2(-6, 0), TextAnchor.MiddleRight);
 
         // MP 小标签（左侧外）
         mpLabel = IIPUIFactory.CreateLabelAnchored("MPLabel", transform,
-            "MP", IIPUIFactory.SizeSmall, IIPUIFactory.TextDim,
+            "MP", 17, IIPUIFactory.TextDim,
             new Vector2(0, 0), new Vector2(0, 0),
-            new Vector2(-24, 26), new Vector2(0, 42), TextAnchor.MiddleRight);
+            new Vector2(-34, 36), new Vector2(0, 59), TextAnchor.MiddleRight);
     }
 }

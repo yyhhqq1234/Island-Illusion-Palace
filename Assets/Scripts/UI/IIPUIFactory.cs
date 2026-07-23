@@ -42,7 +42,11 @@ namespace IIPUI
 
         static Sprite _rounded;
         static bool _roundedChecked; // 避免每次 ApplyRounded 都重复打 Warning
-        /// <summary>圆角 9-slice Sprite（运行时从 Resources/UI 加载，编辑器脚本注入亦可）。</summary>
+        /// <summary>
+        /// 圆角 9-slice Sprite。
+        /// 优先用 Resources/UI/MenuRoundedCorner，但该资源若为低分辨率（&lt;64px）或未设 9-slice border，
+        /// sliced 拉伸时圆角会退化成模糊锯齿，此时改用程序化生成的 128×128 高质量圆角（半径 20px + 1.2px 抗锯齿 + 正确 border）。
+        /// </summary>
         public static Sprite RoundedSprite
         {
             get
@@ -50,16 +54,107 @@ namespace IIPUI
                 if (_rounded == null)
                 {
                     _rounded = Resources.Load<Sprite>("UI/MenuRoundedCorner");
-                    // 资源缺失时只警告一次，避免静默降级为白色 Sprite 导致圆角不一致
-                    if (_rounded == null && !_roundedChecked)
+                    // 资源缺失或质量不达标（无 border / 太小）时，程序化生成高质量圆角，根治"圆角锯齿"
+                    if (_rounded == null || _rounded.border == Vector4.zero || _rounded.rect.width < 64f)
                     {
-                        _roundedChecked = true;
-                        Debug.LogWarning("[IIPUIFactory] 未找到 Resources/UI/MenuRoundedCorner 圆角 Sprite，UI 将退化为默认白色方块。请放入该资源以保证圆角一致性。");
+                        if (_rounded == null && !_roundedChecked)
+                        {
+                            _roundedChecked = true;
+                            Debug.LogWarning("[IIPUIFactory] 未找到 Resources/UI/MenuRoundedCorner 圆角 Sprite，改用程序化生成圆角。");
+                        }
+                        _rounded = GenerateRoundedRectSprite(128, 20f, 1.2f);
                     }
                 }
                 return _rounded;
             }
             set { _rounded = value; _roundedChecked = value != null; }
+        }
+
+        /// <summary>
+        /// 程序化生成圆角矩形 9-slice Sprite（SDF 签名距离场 + 边缘抗锯齿）。
+        /// size: 纹理边长；radius: 圆角半径（像素）；aa: 抗锯齿过渡宽度（像素）。
+        /// border 设为 radius 四边，sliced 拉伸时四角不变形。
+        /// </summary>
+        public static Sprite GenerateRoundedRectSprite(int size, float radius, float aa)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            var px = new Color32[size * size];
+            float half = size * 0.5f;
+            float r = Mathf.Min(radius, half - 1f);
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                // 点到内部矩形（收缩 r 后的中心区域）的距离，即圆角 SDF
+                float dx = Mathf.Max(Mathf.Abs(x + 0.5f - half) - (half - r), 0f);
+                float dy = Mathf.Max(Mathf.Abs(y + 0.5f - half) - (half - r), 0f);
+                float d = Mathf.Sqrt(dx * dx + dy * dy) - r;
+                // d<0 在形内；边缘 aa 宽度线性过渡
+                float a = Mathf.Clamp01(0.5f - d / aa);
+                px[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+            tex.SetPixels32(px);
+            tex.Apply(false, false);
+            int b = Mathf.CeilToInt(r);
+            var sp = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f,
+                0, SpriteMeshType.FullRect, new Vector4(b, b, b, b));
+            sp.name = "IIP_RoundedRect_Gen";
+            return sp;
+        }
+
+        static Sprite _checkmark;
+        /// <summary>
+        /// 程序化"勾形" Sprite（64×64，两笔划线 + 抗锯齿）。
+        /// 用于 Toggle 的 Checkmark，替代实心方块，让开关状态一目了然。
+        /// </summary>
+        public static Sprite CheckmarkSprite
+        {
+            get
+            {
+                if (_checkmark == null)
+                {
+                    const int N = 64;
+                    var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+                    tex.wrapMode = TextureWrapMode.Clamp;
+                    tex.filterMode = FilterMode.Bilinear;
+                    var px = new Color32[N * N];
+                    // 勾形的三个拐点（归一化坐标，左下原点）
+                    Vector2 p0 = new Vector2(0.20f, 0.52f);
+                    Vector2 p1 = new Vector2(0.42f, 0.28f);
+                    Vector2 p2 = new Vector2(0.82f, 0.72f);
+                    const float thickness = 0.09f; // 笔划半宽（归一化）
+                    for (int y = 0; y < N; y++)
+                    for (int x = 0; x < N; x++)
+                    {
+                        var p = new Vector2((x + 0.5f) / N, (y + 0.5f) / N);
+                        float d = Mathf.Min(DistToSegment(p, p0, p1), DistToSegment(p, p1, p2));
+                        float a = Mathf.Clamp01((thickness - d) / 0.03f);
+                        px[y * N + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+                    }
+                    tex.SetPixels32(px);
+                    tex.Apply(false, false);
+                    _checkmark = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), 100f);
+                    _checkmark.name = "IIP_Checkmark";
+                }
+                return _checkmark;
+            }
+        }
+
+        static float DistToSegment(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a;
+            float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+            return Vector2.Distance(p, a + ab * t);
+        }
+
+        /// <summary>把 Toggle 的勾选图形换成勾形 sprite（Simple 模式，颜色由调用方定）。</summary>
+        public static void ApplyCheckmark(Image img)
+        {
+            if (img == null) return;
+            img.sprite = CheckmarkSprite;
+            img.type = Image.Type.Simple;
+            img.preserveAspect = true;
         }
 
         /// <summary>应用圆角 9-slice sprite 到 Image（sliced 模式可任意拉伸不变形）。</summary>
