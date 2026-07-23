@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using System.Collections.Generic;
 using IIPUI;
 
@@ -601,33 +602,63 @@ public class SettingsPanelController : MonoBehaviour
         if (contentControls != null) contentControls.SetActive(key == "Controls");
         if (contentAssist != null) contentAssist.SetActive(key == "Assist");
 
-        // 内容矮于视口时垂直居中（音画页只有 4 行滑块，顶部对齐会显得底部大片空白）
-        RefreshContentCentering(contentAudioVideo);
-        RefreshContentCentering(contentControls);
-        RefreshContentCentering(contentAssist);
+        // 每次打开面板/切换 Tab 后，内容统一从顶部开始显示
+        // （旧版矮内容垂直居中会把条目顶到视口中下部，被误读为"显示在靠下位置"）
+        ResetContentToTop();
     }
 
-    /// <summary>内容页垂直居中：内容高度不足视口时加大上 padding（不影响超高页面的滚动）</summary>
-    void RefreshContentCentering(GameObject content)
+    private Coroutine resetTopCoroutine;
+
+    /// <summary>
+    /// 所有内容页回到顶部：固定上 padding + 滚动位置置顶。
+    /// 另起一帧延迟兜底，应对 ContentSizeFitter 首帧未完成重建时 ScrollRect 钳制到旧高度的时序问题。
+    /// </summary>
+    void ResetContentToTop()
+    {
+        ResetPageToTop(contentAudioVideo);
+        ResetPageToTop(contentControls);
+        ResetPageToTop(contentAssist);
+
+        if (gameObject.activeInHierarchy)
+        {
+            if (resetTopCoroutine != null) StopCoroutine(resetTopCoroutine);
+            resetTopCoroutine = StartCoroutine(ResetToTopNextFrame());
+        }
+    }
+
+    /// <summary>单页置顶：padding 归位 + anchoredPosition 归零 + ScrollRect 归一化位置置顶</summary>
+    void ResetPageToTop(GameObject content)
     {
         if (content == null) return;
-        var vlg = content.GetComponent<VerticalLayoutGroup>();
-        if (vlg == null) return;
-
         var contentRt = content.transform as RectTransform;
-        var viewportRt = contentRt != null ? contentRt.parent as RectTransform : null;
-        if (viewportRt == null) return;
+        if (contentRt == null) return;
 
-        float viewportH = viewportRt.rect.height;
-        if (viewportH <= 0f) return; // 布局未就绪（Awake 阶段），下次 SwitchToTab 再补
-
-        float contentH = LayoutUtility.GetPreferredHeight(contentRt);
-        int topPad = Mathf.Max(16, Mathf.RoundToInt((viewportH - contentH) * 0.5f));
-        if (vlg.padding.top != topPad)
+        var vlg = content.GetComponent<VerticalLayoutGroup>();
+        if (vlg != null && vlg.padding.top != 16)
         {
-            vlg.padding.top = topPad;
+            vlg.padding.top = 16;
             LayoutRebuilder.MarkLayoutForRebuild(contentRt);
         }
+
+        // pivot(0.5,1) + 顶部锚定下，anchoredPosition.y = 0 即内容顶对齐视口顶
+        contentRt.anchoredPosition = new Vector2(contentRt.anchoredPosition.x, 0f);
+
+        // 包装层 ScrollRect（ContentArea/Scroll_X/Viewport/Content 结构）
+        var sr = contentRt.parent != null && contentRt.parent.parent != null
+            ? contentRt.parent.parent.GetComponent<ScrollRect>()
+            : null;
+        if (sr != null) sr.verticalNormalizedPosition = 1f;
+    }
+
+    /// <summary>首帧布局重建完成后再次置顶兜底（ContentSizeFitter 高度结算时序）</summary>
+    IEnumerator ResetToTopNextFrame()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        ResetPageToTop(contentAudioVideo);
+        ResetPageToTop(contentControls);
+        ResetPageToTop(contentAssist);
+        resetTopCoroutine = null;
     }
 
     void SetTabColor(Button tab, bool active)

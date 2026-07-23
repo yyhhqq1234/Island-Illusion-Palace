@@ -146,6 +146,14 @@ public class AlchemyUI : MonoBehaviour
         if (burdenSystem == null) burdenSystem = FindObjectOfType<BurdenSystem>();
         if (characterStats == null) characterStats = FindObjectOfType<CharacterStats>();
 
+        // 迁移容错：拖入新场景后序列化引用断开时，按名字自动查找（含未激活节点）
+        if (alchemyPanel == null)
+        {
+            alchemyPanel = FindPanelByName("AlchemyPanel");
+            if (alchemyPanel != null)
+                Debug.LogWarning("[AlchemyUI] alchemyPanel 未绑定，已按名字自动查找（建议在 Inspector 绑定）");
+        }
+
         IIPIconLibrary.SeedFromPrefab(itemSlotPrefab);
 
         for (int i = 0; i < 4; i++)
@@ -180,6 +188,18 @@ public class AlchemyUI : MonoBehaviour
 
         if (isTooltipVisible && tooltipRect != null)
             UpdateTooltipPosition();
+    }
+
+    /// <summary>按名字在场景中查找面板节点（含未激活节点，供序列化引用断开时兜底）</summary>
+    static GameObject FindPanelByName(string panelName)
+    {
+        var rts = FindObjectsOfType<RectTransform>(true);
+        foreach (var rt in rts)
+        {
+            if (rt.name == panelName)
+                return rt.gameObject;
+        }
+        return null;
     }
 
     // ═══════════════════════════════════════════
@@ -518,7 +538,7 @@ public class AlchemyUI : MonoBehaviour
         // 空槽（hasContent=false）不响应点击/悬停，保持干净空背景
         WireSlotEvents(slot, () => OnMaterialSlotClick(slot),
             () => OnMaterialHover(slot.material), () => OnHoverExit(),
-            () => slot.hasContent);
+            () => slot.hasContent, materialGrid);
         return slot;
     }
 
@@ -540,10 +560,12 @@ public class AlchemyUI : MonoBehaviour
     }
 
     /// <summary>统一接线：点击 + 悬停进入/离开（悬停叠加紫辉光，离开恢复基线）。
-    /// interactWhen 非空时，仅在谓词为真（如材料槽有料）才响应点击/悬停，空槽保持干净空背景。</summary>
+    /// interactWhen 非空时，仅在谓词为真（如材料槽有料）才响应点击/悬停，空槽保持干净空背景。
+    /// scrollGrid 非空时（材料槽），把滚轮事件转发给该网格的 ScrollRect——
+    /// EventTrigger 实现 IScrollHandler 会在冒泡链上吞掉滚轮，不转发则槽位上方滚轮失效。</summary>
     void WireSlotEvents(ArtSlot slot, UnityEngine.Events.UnityAction onClick,
         UnityEngine.Events.UnityAction onEnter, UnityEngine.Events.UnityAction onExit,
-        System.Func<bool> interactWhen = null)
+        System.Func<bool> interactWhen = null, IIPUI.ArtScrollGrid scrollGrid = null)
     {
         var btn = slot.root.AddComponent<Button>();
         btn.transition = Selectable.Transition.None;
@@ -575,6 +597,9 @@ public class AlchemyUI : MonoBehaviour
             SetSlotGlow(slot, BaselineGlow(slot));
         });
         trigger.triggers.Add(exit);
+
+        // 滚轮转发：材料槽在滚动网格内，EventTrigger 会吞滚轮，必须显式转发给 ScrollRect
+        if (scrollGrid != null) scrollGrid.AttachScrollForward(trigger);
     }
 
     /// <summary>槽位基线辉光：选中配方 0.70，有料篮 0.25，其余 0</summary>

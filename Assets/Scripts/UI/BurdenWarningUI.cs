@@ -58,6 +58,7 @@ public class BurdenWarningUI : MonoBehaviour
         EnsureContainerLayout();
         InitializeReferences();
         InitializeUI();
+        EnsureBurdenBarPosition();
         // 主动拉一次初值
         if (burdenSystem != null)
         {
@@ -66,6 +67,22 @@ public class BurdenWarningUI : MonoBehaviour
             UpdateBurdenBarDisplay();
             UpdateWarningLevel();
         }
+    }
+
+    /// <summary>
+    /// 强制负担条容器布局（左上角 HP/MP 正下方），免疫场景序列化的旧位置残留。
+    /// 只动 BurdenBarContainer，根对象的全屏晕影/裂纹效果不受影响。
+    /// </summary>
+    void EnsureBurdenBarPosition()
+    {
+        var container = transform.Find("BurdenBarContainer") as RectTransform;
+        if (container == null) return;
+        // HUD 纵向堆叠：HP/MP 占 y-20~-84，间距 8 → 负担条 y=-92~-116
+        container.anchorMin = new Vector2(0, 1);
+        container.anchorMax = new Vector2(0, 1);
+        container.pivot = new Vector2(0, 1);
+        container.anchoredPosition = new Vector2(20, -92);
+        container.sizeDelta = new Vector2(280, 24);
     }
 
     void OnEnable()
@@ -161,14 +178,14 @@ public class BurdenWarningUI : MonoBehaviour
     /// <summary>构建默认负担条 UI（圆角底 + 边框 + 图标 + Slider + 标签/数值）</summary>
     void CreateDefaultUI()
     {
-        // 负担条容器：左下角 HP/MP 下方（HP y=20~42, MP y=46~62, 负担条 y=70~94）
+        // 负担条容器：左上角 HP/MP 正下方（HUD 纵向堆叠：HP/MP 占 y-20~-84，间距 8 → 负担条 y=-92~-116）
         GameObject container = new GameObject("BurdenBarContainer");
         container.transform.SetParent(transform, false);
         RectTransform containerRect = container.AddComponent<RectTransform>();
-        containerRect.anchorMin = new Vector2(0, 0);
-        containerRect.anchorMax = new Vector2(0, 0);
-        containerRect.pivot = new Vector2(0, 0);
-        containerRect.anchoredPosition = new Vector2(20, 70);
+        containerRect.anchorMin = new Vector2(0, 1);
+        containerRect.anchorMax = new Vector2(0, 1);
+        containerRect.pivot = new Vector2(0, 1);
+        containerRect.anchoredPosition = new Vector2(20, -92);
         containerRect.sizeDelta = new Vector2(280, 24);
 
         // "负担"标签（雅黑，最左侧）

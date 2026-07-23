@@ -6,7 +6,7 @@ using IIPUI;
 /// HP/MP 血条UI组件（事件驱动）
 /// 订阅 GlobalEventManager.OnPlayerHealthChanged / OnPlayerManaChanged，
 /// 仅在血量/蓝量变化时刷新，无 Update 轮询。
-/// 位置：屏幕左下角，HP条在上、MP条在下。
+/// 位置：屏幕左上角，HP条在上、MP条在下（HUD 纵向堆叠第一层：HP/MP → 负担 → 经验）。
 /// </summary>
 public class HealthManaUI : MonoBehaviour
 {
@@ -160,16 +160,18 @@ public class HealthManaUI : MonoBehaviour
         }
     }
 
-    /// <summary>确保根 RectTransform 布局（左下角，pivot 0,0）</summary>
+    /// <summary>确保根 RectTransform 布局（左上角，pivot 0,1；HUD 纵向堆叠：HP/MP → 负担 → 经验）</summary>
     void EnsureContainerLayout()
     {
         RectTransform rt = GetComponent<RectTransform>();
         if (rt == null) return;
-        rt.anchorMin = new Vector2(0, 0);
-        rt.anchorMax = new Vector2(0, 0);
-        rt.pivot = new Vector2(0, 0);
-        rt.anchoredPosition = new Vector2(20, 20);
-        // HUD 整体放大 1.4×：280×46 → 392×64（HP 0~31 + 间隙 + MP 36~59）
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        // x=54 给左侧 HP/MP 小标签留位（标签在容器 x-34~0 区间），避免标签越出屏幕左缘；
+        // 左缘标签区起点 x=20，与下方负担条/经验条容器左边距一致
+        rt.anchoredPosition = new Vector2(54, -20);
+        // HUD 整体放大 1.4×：280×46 → 392×64（HP 28~59 + 间隙 + MP 0~23）
         rt.sizeDelta = new Vector2(392, 64);
     }
 
@@ -191,7 +193,7 @@ public class HealthManaUI : MonoBehaviour
     /// <summary>构建默认 HP/MP 条 UI（圆角底+边框+Filled填充+数值文本+小标签）。HUD 1.4× 放大版。</summary>
     void CreateDefaultUI()
     {
-        // HP 条容器：左下角 (0,0)，y=0~31（高 31，原 22×1.4）
+        // HP 条容器：左上角布局 HP 在上，y=28~59（高 31，原 22×1.4）
         GameObject hpBarObj = new GameObject("HPBar", typeof(RectTransform), typeof(Image));
         hpBarObj.transform.SetParent(transform, false);
         hpBarBackground = hpBarObj.GetComponent<Image>();
@@ -201,8 +203,8 @@ public class HealthManaUI : MonoBehaviour
         hpBgRect.anchorMin = new Vector2(0, 0);
         hpBgRect.anchorMax = new Vector2(1, 0);
         hpBgRect.pivot = new Vector2(0, 0);
-        hpBgRect.offsetMin = new Vector2(0, 0);
-        hpBgRect.offsetMax = new Vector2(0, 31);
+        hpBgRect.offsetMin = new Vector2(0, 28);
+        hpBgRect.offsetMax = new Vector2(0, 59);
         IIPUIFactory.CreateBorder(hpBarObj.transform, IIPUIFactory.BorderDim, true);
 
         // HP 填充（Filled Horizontal，避免 localScale 圆角变形；圆角 sprite 让满条末端与底框一致）
@@ -225,13 +227,13 @@ public class HealthManaUI : MonoBehaviour
             new Vector2(1, 0), new Vector2(1, 1),
             new Vector2(-84, 0), new Vector2(-6, 0), TextAnchor.MiddleRight);
 
-        // HP 小标签（左侧外）
+        // HP 小标签（左侧外，与 HP 条同区间 y=28~59）
         hpLabel = IIPUIFactory.CreateLabelAnchored("HPLabel", transform,
             "HP", 17, IIPUIFactory.TextDim,
             new Vector2(0, 0), new Vector2(0, 0),
-            new Vector2(-34, 0), new Vector2(0, 31), TextAnchor.MiddleRight);
+            new Vector2(-34, 28), new Vector2(0, 59), TextAnchor.MiddleRight);
 
-        // MP 条容器：左下角，y=36~59（高 23，原 16×1.4，紧贴 HP 上方留 5px 间隙）
+        // MP 条容器：HP 正下方，y=0~23（高 23，原 16×1.4，与 HP 留 5px 间隙）
         GameObject mpBarObj = new GameObject("MPBar", typeof(RectTransform), typeof(Image));
         mpBarObj.transform.SetParent(transform, false);
         mpBarBackground = mpBarObj.GetComponent<Image>();
@@ -241,8 +243,8 @@ public class HealthManaUI : MonoBehaviour
         mpBgRect.anchorMin = new Vector2(0, 0);
         mpBgRect.anchorMax = new Vector2(1, 0);
         mpBgRect.pivot = new Vector2(0, 0);
-        mpBgRect.offsetMin = new Vector2(0, 36);
-        mpBgRect.offsetMax = new Vector2(0, 59);
+        mpBgRect.offsetMin = new Vector2(0, 0);
+        mpBgRect.offsetMax = new Vector2(0, 23);
         IIPUIFactory.CreateBorder(mpBarObj.transform, IIPUIFactory.BorderDim, true);
 
         // MP 填充（Filled Horizontal，圆角 sprite 与 HP 一致）
@@ -265,10 +267,10 @@ public class HealthManaUI : MonoBehaviour
             new Vector2(1, 0), new Vector2(1, 1),
             new Vector2(-84, 0), new Vector2(-6, 0), TextAnchor.MiddleRight);
 
-        // MP 小标签（左侧外）
+        // MP 小标签（左侧外，与 MP 条同区间 y=0~23）
         mpLabel = IIPUIFactory.CreateLabelAnchored("MPLabel", transform,
             "MP", 17, IIPUIFactory.TextDim,
             new Vector2(0, 0), new Vector2(0, 0),
-            new Vector2(-34, 36), new Vector2(0, 59), TextAnchor.MiddleRight);
+            new Vector2(-34, 0), new Vector2(0, 23), TextAnchor.MiddleRight);
     }
 }

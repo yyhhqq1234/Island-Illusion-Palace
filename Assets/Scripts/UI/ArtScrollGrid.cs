@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace IIPUI
@@ -27,6 +28,7 @@ namespace IIPUI
         readonly Vector2 cellSize;   // 单槽尺寸（面板单位）
         readonly Vector2 pitch;      // 槽位步进（面板单位）
         readonly Vector2 gridSize;   // 可见网格总尺寸（面板单位）
+        readonly ScrollRect scrollRect; // 滚动组件（槽位滚轮转发目标）
 
         /// <summary>视口（带 RectMask2D / ScrollRect）</summary>
         public RectTransform Viewport { get; private set; }
@@ -85,7 +87,7 @@ namespace IIPUI
             Content.anchoredPosition = Vector2.zero;
             Content.sizeDelta = Viewport.sizeDelta;
 
-            var scrollRect = vpGo.GetComponent<ScrollRect>();
+            scrollRect = vpGo.GetComponent<ScrollRect>();
             scrollRect.viewport = Viewport;
             scrollRect.content = Content;
             scrollRect.horizontal = false;
@@ -123,6 +125,22 @@ namespace IIPUI
         public void ResetToTop()
         {
             Content.anchoredPosition = Vector2.zero;
+        }
+
+        /// <summary>
+        /// 给槽位的 EventTrigger 追加 Scroll 转发条目（滚轮事件 → 本网格 ScrollRect）。
+        /// 背景：EventTrigger 实现了 IScrollHandler，uGUI 滚轮事件冒泡到槽位即被其空 OnScroll 消费，
+        /// 不再向上传到 ScrollRect；槽位覆盖网格大部分面积，表现为"滚轮完全不生效"。
+        /// 每个挂在 Content 下的槽位创建 EventTrigger 后都必须调用本方法。
+        /// </summary>
+        public void AttachScrollForward(EventTrigger trigger)
+        {
+            if (trigger == null) return;
+            // 幂等防御：槽位复用/重复接线时不重复挂 Scroll 条目，避免滚轮翻倍速
+            if (trigger.triggers.Exists(e => e.eventID == EventTriggerType.Scroll)) return;
+            var entry = new EventTrigger.Entry { eventID = EventTriggerType.Scroll };
+            entry.callback.AddListener(data => scrollRect.OnScroll((PointerEventData)data));
+            trigger.triggers.Add(entry);
         }
     }
 }

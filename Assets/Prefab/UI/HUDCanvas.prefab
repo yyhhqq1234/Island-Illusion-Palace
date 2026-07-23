@@ -116,6 +116,7 @@ MonoBehaviour:
   hpBarColor: {r: 0.9, g: 0.35, b: 0.35, a: 1}
   mpBarColor: {r: 0.3, g: 0.8, b: 1, a: 1}
   barBackgroundColor: {r: 0.08, g: 0.07, b: 0.13, a: 0.8}
+  mpBarBackgroundColor: {r: 0.04, g: 0.04, b: 0.07, a: 0.92}
   valueTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &1215405069252754007
 GameObject:
@@ -129,6 +130,7 @@ GameObject:
   - component: {fileID: 8694655018475394476}
   - component: {fileID: 3661486525412740211}
   - component: {fileID: 5040548341923031909}
+  - component: {fileID: 7179343402348897944}
   m_Layer: 5
   m_Name: HUDCanvas
   m_TagString: Untagged
@@ -228,6 +230,18 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &7179343402348897944
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1215405069252754007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34df61e9e4b10e44690fa5fc52a70ccd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2172016214463387443
 GameObject:
   m_ObjectHideFlags: 0
@@ -352,6 +366,7 @@ MonoBehaviour:
   expBarColor: {r: 0.3, g: 0.8, b: 1, a: 1}
   expBarBackgroundColor: {r: 0.2, g: 0.2, b: 0.2, a: 0.8}
   levelTextColor: {r: 1, g: 1, b: 1, a: 1}
+  expVisibleDuration: 3
 --- !u!1 &5561005662193415763
 GameObject:
   m_ObjectHideFlags: 0

@@ -12,7 +12,7 @@
 ## Build & Run
 
 - Open the project in Unity Editor at `d:\Program Files\Unity\U3Dproject\Island-Illusion-Palace`
-- The `GamePlay` scene is the main gameplay scene (`Assets/Scenes/GamePlay.unity`)
+- `Forest.unity` 和 `Wasteland.unity` 是主要玩法场景（`Assets/Scenes/Forest.unity`、`Assets/Scenes/Wasteland.unity`）；`Assets/Scenes/UITransferTest.unity` 是 UI 迁移验证场景
 - The `MainMenu` scene is the title screen (`Assets/Scenes/MainMenu.unity`)
 - Build target: Windows (StandaloneWindows64)
 - Use MCP `cinemachine-*` 工具进行相机控制，`timeline-*` 工具管理动画时间轴
@@ -313,6 +313,16 @@ Music:            OnMusicStateChange (MusicState: MainMenu, Exploration, Battle,
 ### Save/Load
 - `SaveSystem`: Serializes player state, inventory, map progress
 - Multi-cycle progression: up to 30 attribute points carry over between cycles
+
+### UI Architecture (跨场景可迁移)
+
+- **HUDCanvas**（`Assets/Prefab/UI/HUDCanvas.prefab`）：所有 HUD 根预制体（HP/MP/负担/经验/快捷栏/小地图/武器图标/召唤状态/区域名），含内嵌 InventoryPanel/AlchemyPanel 嵌套预制体。根上挂 `EventSystemEnsurer` 自动创建 EventSystem。
+- **PauseMenu**（`Assets/Prefab/UI/PauseMenu.prefab`）：暂停菜单 + 内置设置面板。根上同样挂 `EventSystemEnsurer`。
+- **Manager 预制体**：`Assets/Prefab/UI/InventoryManager.prefab`（InventorySystem+InventoryUI）、`Assets/Prefab/UI/AlchemyManager.prefab`（AlchemySystem+AlchemyUI）。
+- **新场景迁移**：拖入以上 4 个预制体 + 正交 Camera 即可，无需手工绑定（全部走 FindObjectOfType/事件总线/按名查找兜底）。
+- 迁移指南：`Assets/Prefab/UI/README_UIMigration.md`；验证场景：`Assets/Scenes/UITransferTest.unity`
+- HUD 布局：左上角纵向堆叠 HP/MP → 负担 → 经验（经验条平时隐藏，涨经验/升级显示 3 秒后自动隐藏）
+
 
 ## Development Rules
 

@@ -104,6 +104,14 @@ public class InventoryUI : MonoBehaviour
         if (inventorySystem == null)
             inventorySystem = FindObjectOfType<InventorySystem>();
 
+        // 迁移容错：拖入新场景后序列化引用断开时，按名字自动查找（含未激活节点）
+        if (inventoryPanel == null)
+        {
+            inventoryPanel = FindPanelByName("InventoryPanel");
+            if (inventoryPanel != null)
+                Debug.LogWarning("[InventoryUI] inventoryPanel 未绑定，已按名字自动查找（建议在 Inspector 绑定）");
+        }
+
         IIPUI.IIPIconLibrary.SeedFromPrefab(itemSlotPrefab);
 
         BuildArtPanel();
@@ -187,6 +195,18 @@ public class InventoryUI : MonoBehaviour
     public InventoryItem GetSelectedItem()
     {
         return selectedItem;
+    }
+
+    /// <summary>按名字在场景中查找面板节点（含未激活节点，供序列化引用断开时兜底）</summary>
+    static GameObject FindPanelByName(string panelName)
+    {
+        var rts = FindObjectsOfType<RectTransform>(true);
+        foreach (var rt in rts)
+        {
+            if (rt.name == panelName)
+                return rt.gameObject;
+        }
+        return null;
     }
 
     /// <summary>刷新三栏物品显示（由背包系统变更或外部脚本调用）</summary>
@@ -420,6 +440,9 @@ public class InventoryUI : MonoBehaviour
         var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
         exit.callback.AddListener(_ => OnSlotHoverExit(captured));
         trigger.triggers.Add(exit);
+
+        // 滚轮转发：EventTrigger 实现 IScrollHandler 会在冒泡链上吞掉滚轮，必须显式转发给 ScrollRect
+        sg.AttachScrollForward(trigger);
 
         return slot;
     }
