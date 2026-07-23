@@ -60,13 +60,15 @@ public class InventoryUI : MonoBehaviour
         public Image rarityGlow;  // 稀有度底晕
         public Image icon;
         public Text count;
-        public Text overflowMark; // "+N" 溢出标记（仅每栏末槽使用）
         public InventoryItem item;
     }
 
     readonly List<ArtSlot> weaponSlots = new List<ArtSlot>();
     readonly List<ArtSlot> consumableSlots = new List<ArtSlot>();
     readonly List<ArtSlot> materialSlots = new List<ArtSlot>();
+
+    // 三栏滚动网格（滚轮上下滚动，行数随物品数量动态增长，替代旧 +N 溢出标记）
+    IIPUI.ArtScrollGrid weaponGrid, consumableGrid, materialGrid;
 
     // 详情面板
     GameObject detailPanel;
@@ -106,7 +108,7 @@ public class InventoryUI : MonoBehaviour
         UpdateBottomInfoBar();
         HideInventory();
 
-        Debug.Log("[InventoryUI] 背包UI初始化完成（美术底图 + 程序对齐槽位，3栏×24格）");
+        Debug.Log("[InventoryUI] 背包UI初始化完成（美术底图 + 程序对齐槽位，3栏×24格+滚轮增行）");
     }
 
     void Update()
@@ -147,6 +149,12 @@ public class InventoryUI : MonoBehaviour
         inventoryPanel.SetActive(true);
         UpdateInventoryUI();
         UpdateBottomInfoBar();
+
+        // 重开面板回到各栏滚动顶部
+        if (weaponGrid != null) weaponGrid.ResetToTop();
+        if (consumableGrid != null) consumableGrid.ResetToTop();
+        if (materialGrid != null) materialGrid.ResetToTop();
+
         Time.timeScale = 0f; // 暂停游戏
     }
 
@@ -183,14 +191,14 @@ public class InventoryUI : MonoBehaviour
     {
         if (inventorySystem == null || !isBuilt) return;
 
-        FillSection(weaponSlots, inventorySystem.GetAllWeapons());
+        FillSection(weaponSlots, inventorySystem.GetAllWeapons(), weaponGrid, "Weapon");
         var consumablesAndOthers = inventorySystem.GetAllPotions();
-        FillSection(consumableSlots, consumablesAndOthers);
+        FillSection(consumableSlots, consumablesAndOthers, consumableGrid, "Consumable");
 
         // 材料栏：材料优先，记忆碎片填充剩余槽位
         var matsAndFrags = new List<InventoryItem>(inventorySystem.GetAllMaterials());
         matsAndFrags.AddRange(inventorySystem.GetAllMemoryFragments());
-        FillSection(materialSlots, matsAndFrags);
+        FillSection(materialSlots, matsAndFrags, materialGrid, "Material");
     }
 
     // ═══════════════════════════════════════════
@@ -239,10 +247,10 @@ public class InventoryUI : MonoBehaviour
         bgBtn.transition = Selectable.Transition.None;
         bgBtn.onClick.AddListener(HideItemDetailPanel);
 
-        // 4) 三栏槽位（一次性创建，之后仅刷新数据）
-        BuildSection(weaponSlots, IIPArtLayout.InvWeapons, "Weapon");
-        BuildSection(consumableSlots, IIPArtLayout.InvConsumables, "Consumable");
-        BuildSection(materialSlots, IIPArtLayout.InvMaterials, "Material");
+        // 4) 三栏槽位（ScrollRect 滚动区：初始可见行，槽位池按需增行）
+        weaponGrid = BuildSection(weaponSlots, IIPArtLayout.InvWeapons, "Weapon");
+        consumableGrid = BuildSection(consumableSlots, IIPArtLayout.InvConsumables, "Consumable");
+        materialGrid = BuildSection(materialSlots, IIPArtLayout.InvMaterials, "Material");
 
         // 5) 底部信息栏（面板下缘外侧）
         BuildBottomInfoBar(panelRT);
@@ -256,33 +264,32 @@ public class InventoryUI : MonoBehaviour
         isBuilt = true;
     }
 
-    /// <summary>按网格几何创建一栏 24 个槽位</summary>
-    void BuildSection(List<ArtSlot> slots, IIPArtLayout.Grid grid, string sectionName)
+    /// <summary>创建一栏滚动网格 + 可见行槽位（后续刷新时按需增行）</summary>
+    IIPUI.ArtScrollGrid BuildSection(List<ArtSlot> slots, IIPArtLayout.Grid grid, string sectionName)
     {
+        // 间隙点击转发给"关闭详情"，与点击面板空白语义一致
+        var sg = new IIPUI.ArtScrollGrid(inventoryPanel.transform, sectionName, grid,
+            IIPArtLayout.InvW, IIPArtLayout.InvH, PanelSize, HideItemDetailPanel);
         for (int row = 0; row < grid.rows; row++)
-        {
             for (int col = 0; col < grid.cols; col++)
-            {
-                Vector2 center, size;
-                IIPArtLayout.GetSlot(grid, col, row, IIPArtLayout.InvW, IIPArtLayout.InvH, PanelSize, out center, out size);
-                slots.Add(MakeSlot(sectionName, row * grid.cols + col, center, size));
-            }
-        }
+                slots.Add(MakeSlot(sg, sectionName, row * grid.cols + col, col, row));
+        return sg;
     }
 
-    /// <summary>创建单个交互槽位（空态零视觉覆盖，透出底图手绘格）</summary>
-    ArtSlot MakeSlot(string sectionName, int index, Vector2 center, Vector2 cellSize)
+    /// <summary>创建单个交互槽位（空态零视觉覆盖，透出底图手绘格；挂到滚动 Content 下）</summary>
+    ArtSlot MakeSlot(IIPUI.ArtScrollGrid sg, string sectionName, int index, int col, int row)
     {
         var slot = new ArtSlot();
+        Vector2 cellSize = sg.CellSize;
 
         // 根：透明 Image 仅用于射线接收
         var root = new GameObject($"Slot_{sectionName}_{index}", typeof(RectTransform), typeof(Image));
-        root.transform.SetParent(inventoryPanel.transform, false);
+        root.transform.SetParent(sg.Content, false);
         var rootRT = (RectTransform)root.transform;
-        rootRT.anchorMin = new Vector2(0.5f, 0.5f);
-        rootRT.anchorMax = new Vector2(0.5f, 0.5f);
+        rootRT.anchorMin = new Vector2(0.5f, 1f); // 顶锚定：Content 增高时首行位置不变
+        rootRT.anchorMax = new Vector2(0.5f, 1f);
         rootRT.pivot = new Vector2(0.5f, 0.5f);
-        rootRT.anchoredPosition = center;
+        rootRT.anchoredPosition = sg.GetCellAnchoredPos(col, row);
         rootRT.sizeDelta = cellSize * 0.96f; // 略小于手绘格，避免遮挡格线
         var rootImg = root.GetComponent<Image>();
         rootImg.color = new Color(1f, 1f, 1f, 0f);
@@ -312,9 +319,6 @@ public class InventoryUI : MonoBehaviour
         slot.count = IIPUIFactory.CreateLabelAnchored("Count", rootRT, "", 18, IIPUIStyle.TextKey,
             new Vector2(0.55f, 0f), new Vector2(1f, 0.38f),
             new Vector2(0f, -2f), new Vector2(-4f, 0f), TextAnchor.MiddleRight);
-
-        // 溢出标记（+N，默认空）
-        slot.overflowMark = IIPUIFactory.CreateLabel("Overflow", rootRT, "", 20, IIPUIStyle.AccentGold);
 
         // 交互
         var btn = root.AddComponent<Button>();
@@ -562,29 +566,28 @@ public class InventoryUI : MonoBehaviour
     // 数据填充
     // ═══════════════════════════════════════════
 
-    /// <summary>填充一栏槽位（稀有度降序→名称升序，超出 24 格显示 +N 溢出标记）</summary>
-    void FillSection(List<ArtSlot> slots, List<InventoryItem> items)
+    /// <summary>填充一栏槽位（稀有度降序→名称升序；超出可见行时槽位池增行，滚轮滚动可见全部物品）</summary>
+    void FillSection(List<ArtSlot> slots, List<InventoryItem> items, IIPUI.ArtScrollGrid sg, string sectionName)
     {
         var sorted = items
             .OrderByDescending(i => ResolveRarity(i))
             .ThenBy(i => i.itemName)
             .ToList();
 
-        int capacity = slots.Count;
-        int shown = Mathf.Min(sorted.Count, capacity);
-        int overflow = sorted.Count - shown;
-        if (overflow > 0)
+        // 槽位池按需增行（替代旧 +N 溢出标记，所有物品均可滚动看到并选中）
+        int neededRows = Mathf.Max(sg.VisibleRows, Mathf.CeilToInt(sorted.Count / (float)sg.Cols));
+        while (slots.Count < neededRows * sg.Cols)
         {
-            shown = capacity; // 末槽让位给溢出标记
-            Debug.LogWarning($"[InventoryUI] 栏位溢出: {sorted.Count}/{capacity}，隐藏 {overflow} 项（末槽显示 +N）");
+            int index = slots.Count;
+            slots.Add(MakeSlot(sg, sectionName, index, index % sg.Cols, index / sg.Cols));
         }
+        sg.SetTotalRows(neededRows);
 
-        for (int i = 0; i < capacity; i++)
+        for (int i = 0; i < slots.Count; i++)
         {
             var slot = slots[i];
-            bool isOverflowSlot = overflow > 0 && i == capacity - 1;
 
-            if (i < shown && !isOverflowSlot)
+            if (i < sorted.Count)
             {
                 var item = sorted[i];
                 slot.item = item;
@@ -593,7 +596,6 @@ public class InventoryUI : MonoBehaviour
                 slot.icon.sprite = sp;
                 slot.icon.color = sp != null ? Color.white : IIPUIStyle.WeaponIconPlaceholder;
                 slot.count.text = item.quantity > 1 ? item.quantity.ToString() : "";
-                slot.overflowMark.text = "";
 
                 // 稀有度底晕（普通不显示）
                 ItemRarity rar = ResolveRarity(item);
@@ -614,22 +616,13 @@ public class InventoryUI : MonoBehaviour
                     slot.rarityGlow.color = new Color(gold.r, gold.g, gold.b, 0.45f);
                 }
             }
-            else if (isOverflowSlot)
-            {
-                slot.item = null;
-                slot.icon.sprite = null;
-                slot.icon.color = Color.clear;
-                slot.count.text = "";
-                slot.overflowMark.text = $"+{overflow + (i < sorted.Count ? 1 : 0)}";
-                slot.rarityGlow.color = new Color(1f, 1f, 1f, 0f);
-            }
             else
             {
+                // 空槽：零信息覆盖（无图标/数量/底晕），透出底图手绘格
                 slot.item = null;
                 slot.icon.sprite = null;
                 slot.icon.color = Color.clear;
                 slot.count.text = "";
-                slot.overflowMark.text = "";
                 slot.rarityGlow.color = new Color(1f, 1f, 1f, 0f);
             }
 

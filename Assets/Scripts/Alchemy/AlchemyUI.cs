@@ -72,11 +72,15 @@ public class AlchemyUI : MonoBehaviour
         public RecipeData recipe;      // 配方槽数据（null=材料槽）
         public bool discovered;        // 配方是否已发现
         public MaterialTypeEnum material; // 材料槽/篮槽数据
+        public bool hasContent;        // 材料槽是否有料（空槽屏蔽悬停 tooltip / 点击入篮 / 辉光）
     }
 
     readonly List<ArtSlot> recipeSlots = new List<ArtSlot>();
     readonly List<ArtSlot> materialSlots = new List<ArtSlot>();
     readonly ArtSlot[] basketSlots = new ArtSlot[4];
+
+    // 材料栏滚动网格（滚轮上下滚动，行数随持有材料种类动态增长）
+    IIPUI.ArtScrollGrid materialGrid;
 
     // 书本区（预览 / 结果 / 失败反馈）
     GameObject bookRoot;
@@ -155,7 +159,7 @@ public class AlchemyUI : MonoBehaviour
         UpdateAlchemyUI();
         HideAlchemyPanel();
 
-        Debug.Log("[AlchemyUI] 炼金UI初始化完成（美术底图 + 程序对齐槽位，配方2×7 / 材料3×6 / 4菱形篮）");
+        Debug.Log("[AlchemyUI] 炼金UI初始化完成（美术底图 + 程序对齐槽位，配方2×7 / 材料3×6+滚轮增行 / 4菱形篮）");
     }
 
     void Update()
@@ -197,6 +201,10 @@ public class AlchemyUI : MonoBehaviour
 
         alchemyPanel.SetActive(true);
         UpdateAlchemyUI();
+
+        // 重开面板回到材料栏滚动顶部
+        if (materialGrid != null) materialGrid.ResetToTop();
+
         Time.timeScale = 0f; // 暂停游戏
         isAlchemyPanelOpen = true;
     }
@@ -341,15 +349,13 @@ public class AlchemyUI : MonoBehaviour
                 recipeSlots.Add(MakeRecipeSlot(row * IIPArtLayout.AlcRecipes.cols + col, center, size));
             }
 
-        // 5) 右侧材料栏 3×6
+        // 5) 右侧材料栏 3×6（ScrollRect 滚动区：初始可见行，槽位池按需增行）
+        // 间隙点击转发给"取消选中/收起结果"，与点击面板空白语义一致
+        materialGrid = new IIPUI.ArtScrollGrid(panelRT, "Materials", IIPArtLayout.AlcMaterials,
+            IIPArtLayout.AlcW, IIPArtLayout.AlcH, PanelSize, OnPanelBackgroundClick);
         for (int row = 0; row < IIPArtLayout.AlcMaterials.rows; row++)
             for (int col = 0; col < IIPArtLayout.AlcMaterials.cols; col++)
-            {
-                Vector2 center, size;
-                IIPArtLayout.GetSlot(IIPArtLayout.AlcMaterials, col, row,
-                    IIPArtLayout.AlcW, IIPArtLayout.AlcH, PanelSize, out center, out size);
-                materialSlots.Add(MakeMaterialSlot(row * IIPArtLayout.AlcMaterials.cols + col, center, size));
-            }
+                materialSlots.Add(MakeMaterialSlot(row * IIPArtLayout.AlcMaterials.cols + col, col, row));
 
         // 6) 中央 4 菱形准备篮（北/东/南/西）
         BuildBaskets(panelRT);
@@ -405,16 +411,30 @@ public class AlchemyUI : MonoBehaviour
         return slot;
     }
 
-    /// <summary>创建材料槽（图标 + 数量角标）</summary>
-    ArtSlot MakeMaterialSlot(int index, Vector2 center, Vector2 cellSize)
+    /// <summary>创建材料槽（图标 + 数量角标；挂到滚动 Content 下，空槽无信息不响应交互）</summary>
+    ArtSlot MakeMaterialSlot(int index, int col, int row)
     {
         var slot = new ArtSlot();
-        BuildSlotRoot($"Slot_Material_{index}", center, cellSize, slot);
+        Vector2 cellSize = materialGrid.CellSize;
 
-        slot.glow = MakeGlow("HoverGlow", (RectTransform)slot.root.transform, cellSize * 1.08f);
+        // 根：透明 Image 仅用于射线接收，顶锚定（Content 增高时首行位置不变）
+        var root = new GameObject($"Slot_Material_{index}", typeof(RectTransform), typeof(Image));
+        root.transform.SetParent(materialGrid.Content, false);
+        var rootRT = (RectTransform)root.transform;
+        rootRT.anchorMin = new Vector2(0.5f, 1f);
+        rootRT.anchorMax = new Vector2(0.5f, 1f);
+        rootRT.pivot = new Vector2(0.5f, 0.5f);
+        rootRT.anchoredPosition = materialGrid.GetCellAnchoredPos(col, row);
+        rootRT.sizeDelta = cellSize * 0.96f;
+        var rootImg = root.GetComponent<Image>();
+        rootImg.color = new Color(1f, 1f, 1f, 0f);
+        rootImg.raycastTarget = true;
+        slot.root = root;
+
+        slot.glow = MakeGlow("HoverGlow", rootRT, cellSize * 1.08f);
 
         var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-        iconGo.transform.SetParent(slot.root.transform, false);
+        iconGo.transform.SetParent(rootRT, false);
         var iconRT = (RectTransform)iconGo.transform;
         iconRT.anchorMin = new Vector2(0.5f, 0.5f);
         iconRT.anchorMax = new Vector2(0.5f, 0.5f);
@@ -425,13 +445,15 @@ public class AlchemyUI : MonoBehaviour
         slot.icon.color = Color.clear;
         slot.icon.raycastTarget = false;
 
-        slot.count = IIPUIFactory.CreateLabelAnchored("Count", (RectTransform)slot.root.transform, "",
+        slot.count = IIPUIFactory.CreateLabelAnchored("Count", rootRT, "",
             15, IIPUIStyle.TextKey,
             new Vector2(0.5f, 0f), new Vector2(1f, 0.36f),
             new Vector2(0f, -1f), new Vector2(-3f, 0f), TextAnchor.MiddleRight);
 
+        // 空槽（hasContent=false）不响应点击/悬停，保持干净空背景
         WireSlotEvents(slot, () => OnMaterialSlotClick(slot),
-            () => OnMaterialHover(slot.material), () => OnHoverExit());
+            () => OnMaterialHover(slot.material), () => OnHoverExit(),
+            () => slot.hasContent);
         return slot;
     }
 
@@ -452,19 +474,31 @@ public class AlchemyUI : MonoBehaviour
         slot.root = root;
     }
 
-    /// <summary>统一接线：点击 + 悬停进入/离开（悬停叠加紫辉光，离开恢复基线）</summary>
+    /// <summary>统一接线：点击 + 悬停进入/离开（悬停叠加紫辉光，离开恢复基线）。
+    /// interactWhen 非空时，仅在谓词为真（如材料槽有料）才响应点击/悬停，空槽保持干净空背景。</summary>
     void WireSlotEvents(ArtSlot slot, UnityEngine.Events.UnityAction onClick,
-        UnityEngine.Events.UnityAction onEnter, UnityEngine.Events.UnityAction onExit)
+        UnityEngine.Events.UnityAction onEnter, UnityEngine.Events.UnityAction onExit,
+        System.Func<bool> interactWhen = null)
     {
         var btn = slot.root.AddComponent<Button>();
         btn.transition = Selectable.Transition.None;
         btn.targetGraphic = slot.root.GetComponent<Image>();
-        btn.onClick.AddListener(onClick);
+        btn.onClick.AddListener(() =>
+        {
+            if (interactWhen != null && !interactWhen())
+            {
+                // 空槽点击 = 点击空白：取消配方选中/收起结果，与间隙点击语义一致
+                OnPanelBackgroundClick();
+                return;
+            }
+            onClick();
+        });
 
         var trigger = slot.root.AddComponent<EventTrigger>();
         var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
         enter.callback.AddListener(_ =>
         {
+            if (interactWhen != null && !interactWhen()) return;
             onEnter();
             SetSlotGlow(slot, Mathf.Max(BaselineGlow(slot), 0.40f));
         });
@@ -889,7 +923,7 @@ public class AlchemyUI : MonoBehaviour
         }
     }
 
-    /// <summary>材料栏：持有材料按炼金价值降序，单击入篮</summary>
+    /// <summary>材料栏：持有材料按炼金价值降序，单击入篮；超出可见行时槽位池增行，滚轮滚动可见全部</summary>
     void FillMaterialSlots()
     {
         List<KeyValuePair<MaterialTypeEnum, int>> owned = new List<KeyValuePair<MaterialTypeEnum, int>>();
@@ -906,6 +940,16 @@ public class AlchemyUI : MonoBehaviour
             .ThenBy(kv => alchemySystem.GetMaterialName(kv.Key))
             .ToList();
 
+        // 槽位池按需增行（24 种材料 > 18 可见槽时，滚动查看全部）
+        int neededRows = Mathf.Max(materialGrid.VisibleRows,
+            Mathf.CeilToInt(sorted.Count / (float)materialGrid.Cols));
+        while (materialSlots.Count < neededRows * materialGrid.Cols)
+        {
+            int index = materialSlots.Count;
+            materialSlots.Add(MakeMaterialSlot(index, index % materialGrid.Cols, index / materialGrid.Cols));
+        }
+        materialGrid.SetTotalRows(neededRows);
+
         for (int i = 0; i < materialSlots.Count; i++)
         {
             var slot = materialSlots[i];
@@ -913,6 +957,7 @@ public class AlchemyUI : MonoBehaviour
             {
                 var kv = sorted[i];
                 slot.material = kv.Key;
+                slot.hasContent = true;
                 string name = alchemySystem.GetMaterialName(kv.Key);
                 Sprite sp = IIPIconLibrary.Resolve(name);
                 slot.icon.sprite = sp;
@@ -921,9 +966,12 @@ public class AlchemyUI : MonoBehaviour
             }
             else
             {
+                // 空槽：零信息覆盖（无图标/数量/辉光），hasContent=false 屏蔽悬停 tooltip 与点击入篮
+                slot.hasContent = false;
                 slot.icon.sprite = null;
                 slot.icon.color = Color.clear;
                 slot.count.text = "";
+                SetSlotGlow(slot, 0f); // 清掉材料入篮前的悬停辉光残留
             }
         }
     }
