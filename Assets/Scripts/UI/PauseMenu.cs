@@ -178,7 +178,7 @@ public class PauseMenu : MonoBehaviour
                 pausePanelCanvasGroup = pausePanel.AddComponent<CanvasGroup>();
             }
             
-            // 确保暂停面板布局符合规范：450×550 紧凑居中
+            // 确保暂停面板布局符合规范：450×460 紧凑居中（收紧底部空白）
             RectTransform panelRect = pausePanel.GetComponent<RectTransform>();
             if (panelRect != null)
             {
@@ -186,9 +186,9 @@ public class PauseMenu : MonoBehaviour
                 panelRect.anchorMin = new Vector2(0.5f, 0.5f);
                 panelRect.anchorMax = new Vector2(0.5f, 0.5f);
                 panelRect.pivot = new Vector2(0.5f, 0.5f);
-                
-                // 设置固定尺寸 450×550
-                panelRect.sizeDelta = new Vector2(450f, 550f);
+
+                // 设置固定尺寸 450×460
+                panelRect.sizeDelta = new Vector2(450f, 460f);
                 panelRect.anchoredPosition = Vector2.zero;
             }
             
@@ -443,8 +443,16 @@ public class PauseMenu : MonoBehaviour
     /// </summary>
     public void ResumeGame()
     {
+        // 兜底：恢复游戏时强制关闭设置面板并复位标记，
+        // 根治 settingsPanelOpen 残留 true 后下次 ESC 在游戏运行中弹出暂停面板的状态机错乱
+        if (settingsPanel != null)
+        {
+            settingsPanel.SetActive(false);
+        }
+        settingsPanelOpen = false;
+
         if (!isPaused) return;
-        
+
         isPaused = false;
         Time.timeScale = 1f;
         
@@ -618,6 +626,13 @@ public class PauseMenu : MonoBehaviour
     /// </summary>
     void HidePauseMenuImmediate()
     {
+        // 兜底：隐藏暂停菜单时强制关闭设置面板并复位标记（与 ResumeGame 同一状态机兜底）
+        if (settingsPanel != null)
+        {
+            settingsPanel.SetActive(false);
+        }
+        settingsPanelOpen = false;
+
         if (pausePanel != null)
         {
             pausePanel.SetActive(false);
@@ -676,6 +691,17 @@ public class PauseMenu : MonoBehaviour
             settingsPanel.SetActive(false);
         }
         settingsPanelOpen = false;
+
+        // isPaused 守卫：未暂停时不复活暂停面板（防止状态机错乱下 ESC 在游戏运行中弹出暂停菜单）
+        if (!isPaused)
+        {
+            if (dimScreen && dimMask != null)
+            {
+                dimMask.gameObject.SetActive(false);
+            }
+            Debug.Log("[PauseMenu] 关闭设置面板（当前未暂停，不恢复暂停面板）");
+            return;
+        }
 
         // 恢复暂停面板和dimMask
         if (pausePanel != null)

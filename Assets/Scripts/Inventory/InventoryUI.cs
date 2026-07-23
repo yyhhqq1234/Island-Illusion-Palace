@@ -85,6 +85,9 @@ public class InventoryUI : MonoBehaviour
     // 底部信息栏
     Text soulCurrencyText, materialCountText, burdenText;
 
+    // 空栏提示（某栏无物品时栏中央灰字提示）
+    GameObject weaponEmptyHint, consumableEmptyHint, materialEmptyHint;
+
     // 状态
     InventoryItem selectedItem;
     InventoryItem currentHoveredItem;
@@ -252,6 +255,16 @@ public class InventoryUI : MonoBehaviour
         consumableGrid = BuildSection(consumableSlots, IIPArtLayout.InvConsumables, "Consumable");
         materialGrid = BuildSection(materialSlots, IIPArtLayout.InvMaterials, "Material");
 
+        // 4.5) 栏目标签 + AccentGold 下划线（三栏同屏无 Tab，用文字标签替代图标猜测，提升可发现性）
+        BuildSectionHeader(panelRT, weaponGrid, "武器");
+        BuildSectionHeader(panelRT, consumableGrid, "消耗品");
+        BuildSectionHeader(panelRT, materialGrid, "材料");
+
+        // 4.6) 空栏提示（某栏无物品时栏中央灰字，默认隐藏）
+        weaponEmptyHint = BuildEmptyHint(panelRT, weaponGrid, "尚未获得武器");
+        consumableEmptyHint = BuildEmptyHint(panelRT, consumableGrid, "尚未获得消耗品");
+        materialEmptyHint = BuildEmptyHint(panelRT, materialGrid, "尚未获得材料");
+
         // 5) 底部信息栏（面板下缘外侧）
         BuildBottomInfoBar(panelRT);
 
@@ -261,7 +274,80 @@ public class InventoryUI : MonoBehaviour
         // 7) Tooltip（最后创建 = 渲染最上层）
         BuildTooltip(panelRT);
 
+        // 8) 右上角 X 关闭按钮（点击 = ESC 语义：先关详情，再关背包）
+        BuildCloseButton(panelRT);
+
         isBuilt = true;
+    }
+
+    /// <summary>栏目标签：网格正上方文字 + AccentGold 下划线（三栏同屏无 Tab 选中态，用常驻标识代替）</summary>
+    void BuildSectionHeader(RectTransform panelRT, IIPUI.ArtScrollGrid sg, string title)
+    {
+        Vector2 center = sg.Viewport.anchoredPosition;
+        float topY = center.y + sg.Viewport.sizeDelta.y * 0.5f;
+
+        var label = IIPUIFactory.CreateLabelAnchored($"Header_{title}", panelRT, title,
+            IIPUIStyle.FontSizeButton, IIPUIStyle.TextTitle,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(center.x - 70f, topY + 4f), new Vector2(center.x + 70f, topY + 30f),
+            TextAnchor.MiddleCenter);
+        label.fontStyle = FontStyle.Bold;
+
+        // 金色下划线（宽 56px 高 3px，贴标签底部）
+        var barGo = new GameObject($"HeaderBar_{title}", typeof(RectTransform), typeof(Image));
+        barGo.transform.SetParent(panelRT, false);
+        var barRt = (RectTransform)barGo.transform;
+        barRt.anchorMin = new Vector2(0.5f, 0.5f);
+        barRt.anchorMax = new Vector2(0.5f, 0.5f);
+        barRt.pivot = new Vector2(0.5f, 0.5f);
+        barRt.anchoredPosition = new Vector2(center.x, topY + 2f);
+        barRt.sizeDelta = new Vector2(56f, 3f);
+        var barImg = barGo.GetComponent<Image>();
+        barImg.color = IIPUIStyle.AccentGold;
+        barImg.raycastTarget = false;
+        IIPUIFactory.ApplyRounded(barImg, true);
+    }
+
+    /// <summary>空栏提示：栏中央灰色文字（挂面板层，不随滚动区滚动；默认隐藏）</summary>
+    GameObject BuildEmptyHint(RectTransform panelRT, IIPUI.ArtScrollGrid sg, string hintText)
+    {
+        Vector2 center = sg.Viewport.anchoredPosition;
+        var label = IIPUIFactory.CreateLabelAnchored($"EmptyHint_{hintText}", panelRT, hintText,
+            IIPUIStyle.FontSizeLabel, IIPUIStyle.TextSecondary,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            new Vector2(center.x - 140f, center.y - 20f), new Vector2(center.x + 140f, center.y + 20f),
+            TextAnchor.MiddleCenter);
+        label.gameObject.SetActive(false);
+        return label.gameObject;
+    }
+
+    /// <summary>右上角 X 关闭按钮（点击 = ESC 语义：详情打开先关详情，否则关背包）</summary>
+    void BuildCloseButton(RectTransform panelRT)
+    {
+        var go = new GameObject("CloseButton", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(panelRT, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = new Vector2(1f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-12f, -12f);
+        rt.sizeDelta = new Vector2(40f, 40f);
+        var img = go.GetComponent<Image>();
+        img.color = IIPUIStyle.ButtonNormal;
+        IIPUIFactory.ApplyRounded(img, true);
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = img;
+        btn.transition = Selectable.Transition.None;
+        IIPUIFactory.ApplyHover(go, IIPUIStyle.ButtonHover, 1.08f);
+        IIPUIFactory.CreateLabel("X", rt, "X", IIPUIStyle.FontSizeButton, IIPUIStyle.TextTitle);
+        btn.onClick.AddListener(() =>
+        {
+            IIPBootstrap.Audio?.PlayClick();
+            if (detailPanel != null && detailPanel.activeSelf)
+                HideItemDetailPanel(); // 与 ESC 一致：先关详情
+            else
+                HideInventory();
+        });
     }
 
     /// <summary>创建一栏滚动网格 + 可见行槽位（后续刷新时按需增行）</summary>
@@ -574,6 +660,10 @@ public class InventoryUI : MonoBehaviour
             .ThenBy(i => i.itemName)
             .ToList();
 
+        // 空栏提示：该栏无物品时显示灰色引导文字
+        var emptyHint = GetEmptyHint(sectionName);
+        if (emptyHint != null) emptyHint.SetActive(sorted.Count == 0);
+
         // 槽位池按需增行（替代旧 +N 溢出标记，所有物品均可滚动看到并选中）
         int neededRows = Mathf.Max(sg.VisibleRows, Mathf.CeilToInt(sorted.Count / (float)sg.Cols));
         while (slots.Count < neededRows * sg.Cols)
@@ -636,6 +726,18 @@ public class InventoryUI : MonoBehaviour
         {
             var sel = slots.FirstOrDefault(s => s.item == selectedItem);
             if (sel != null) SetGlow(sel, false, true);
+        }
+    }
+
+    /// <summary>按栏名取空栏提示节点</summary>
+    GameObject GetEmptyHint(string sectionName)
+    {
+        switch (sectionName)
+        {
+            case "Weapon": return weaponEmptyHint;
+            case "Consumable": return consumableEmptyHint;
+            case "Material": return materialEmptyHint;
+            default: return null;
         }
     }
 

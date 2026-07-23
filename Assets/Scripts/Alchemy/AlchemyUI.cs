@@ -339,6 +339,9 @@ public class AlchemyUI : MonoBehaviour
         bgBtn.transition = Selectable.Transition.None;
         bgBtn.onClick.AddListener(OnPanelBackgroundClick);
 
+        // 3.5) 中央炼金阵深色底板（盖住从底图透明区透出的场景画面，提升槽位/文字可读性）
+        BuildCenterBackdrop(panelRT);
+
         // 4) 左侧配方栏 2×7
         for (int row = 0; row < IIPArtLayout.AlcRecipes.rows; row++)
             for (int col = 0; col < IIPArtLayout.AlcRecipes.cols; col++)
@@ -372,7 +375,69 @@ public class AlchemyUI : MonoBehaviour
         // 10) Tooltip（最后创建 = 渲染最上层）
         BuildTooltip(panelRT);
 
+        // 11) 右上角 X 关闭按钮（点击 = ESC 关闭面板）
+        BuildCloseButton(panelRT);
+
         isBuilt = true;
+    }
+
+    /// <summary>中央炼金阵区域深色底板：按 4 菱形篮+书本包围盒外扩生成（PanelBackground alpha 0.97≥0.85），
+    /// raycastTarget=false 让点击穿透给底图 Button（保持"点空白=取消选中"语义）</summary>
+    void BuildCenterBackdrop(RectTransform panelRT)
+    {
+        // 汇总 4 篮 + 书本的面板局部包围盒
+        float minX = float.MaxValue, maxX = float.MinValue;
+        float minY = float.MaxValue, maxY = float.MinValue;
+        void Accumulate(IIPArtLayout.SlotBox box)
+        {
+            Vector2 c = IIPArtLayout.ToPanel(box.cx, box.cy, IIPArtLayout.AlcW, IIPArtLayout.AlcH, PanelSize);
+            Vector2 s = IIPArtLayout.ScaleSize(box.w, box.h, IIPArtLayout.AlcW, IIPArtLayout.AlcH, PanelSize);
+            minX = Mathf.Min(minX, c.x - s.x * 0.5f); maxX = Mathf.Max(maxX, c.x + s.x * 0.5f);
+            minY = Mathf.Min(minY, c.y - s.y * 0.5f); maxY = Mathf.Max(maxY, c.y + s.y * 0.5f);
+        }
+        Accumulate(IIPArtLayout.AlcBasketN); Accumulate(IIPArtLayout.AlcBasketE);
+        Accumulate(IIPArtLayout.AlcBasketS); Accumulate(IIPArtLayout.AlcBasketW);
+        Accumulate(IIPArtLayout.AlcBook);
+
+        const float pad = 36f; // 外扩留白，罩住手绘阵纹外圈
+        var go = new GameObject("CenterBackdrop", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(panelRT, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+        rt.sizeDelta = new Vector2(maxX - minX + pad * 2f, maxY - minY + pad * 2f);
+        var img = go.GetComponent<Image>();
+        img.color = IIPUIStyle.PanelBackground;
+        img.raycastTarget = false;
+        IIPUIFactory.ApplyRounded(img, true);
+    }
+
+    /// <summary>右上角 X 关闭按钮（点击 = ESC 关闭炼金面板）</summary>
+    void BuildCloseButton(RectTransform panelRT)
+    {
+        var go = new GameObject("CloseButton", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(panelRT, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = new Vector2(1f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-12f, -12f);
+        rt.sizeDelta = new Vector2(40f, 40f);
+        var img = go.GetComponent<Image>();
+        img.color = IIPUIStyle.ButtonNormal;
+        IIPUIFactory.ApplyRounded(img, true);
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = img;
+        btn.transition = Selectable.Transition.None;
+        IIPUIFactory.ApplyHover(go, IIPUIStyle.ButtonHover, 1.08f);
+        IIPUIFactory.CreateLabel("X", rt, "X", IIPUIStyle.FontSizeButton, IIPUIStyle.TextTitle);
+        btn.onClick.AddListener(() =>
+        {
+            IIPBootstrap.Audio?.PlayClick();
+            HideAlchemyPanel(); // 等同 ESC 语义
+        });
     }
 
     /// <summary>创建配方槽（图标 + 名称，未发现时整槽压暗显 "???"）</summary>
@@ -560,6 +625,14 @@ public class AlchemyUI : MonoBehaviour
 
             var slot = new ArtSlot();
             BuildSlotRoot($"Basket_{names[i]}", center, size, slot);
+
+            // 深色底 + 描边：与手绘阵纹拉开对比（菱形内接区内用圆角矩形近似）
+            var basketBg = slot.root.GetComponent<Image>();
+            basketBg.color = IIPUIStyle.SlotBackground;
+            IIPUIFactory.ApplyRounded(basketBg, true);
+            var basketBorder = IIPUIFactory.CreateBorder(slot.root.transform, IIPUIStyle.BorderDim, true);
+            basketBorder.raycastTarget = false; // 不拦截点击，交给根 Button
+
             slot.glow = MakeGlow("Glow", (RectTransform)slot.root.transform, size * 1.05f, radial: true);
 
             var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
@@ -723,15 +796,15 @@ public class AlchemyUI : MonoBehaviour
         failRoot.SetActive(false);
     }
 
-    /// <summary>底部状态行：理智(成功率) | 记忆碎片 | 负载（面板下缘空隙，手绘图标+数值）</summary>
+    /// <summary>底部状态行：理智(成功率) | 记忆碎片 | 负载（炼金阵正下方显眼处，手绘图标+大字号数值）</summary>
     void BuildStatsRow(RectTransform panelRT)
     {
-        sanityValue = MakeStatGroup(panelRT, "Sanity", IconSanityPath, -260f, IIPUIStyle.AccentCyan);
+        sanityValue = MakeStatGroup(panelRT, "Sanity", IconSanityPath, -320f, IIPUIStyle.AccentCyan);
         memFragValue = MakeStatGroup(panelRT, "MemFrag", IconMemFragPath, 0f, IIPUIStyle.AccentPurple);
-        burdenValue = MakeStatGroup(panelRT, "Burden", IconBurdenPath, 260f, IIPUIStyle.AccentGold);
+        burdenValue = MakeStatGroup(panelRT, "Burden", IconBurdenPath, 320f, IIPUIStyle.AccentGold);
     }
 
-    /// <summary>创建一组状态图标+数值（图标 40px 左，数值文本右）</summary>
+    /// <summary>创建一组状态图标+数值（图标 44px 左，数值文本右，字号=标题级 24）</summary>
     Text MakeStatGroup(RectTransform panelRT, string name, string iconPath, float x, Color valueColor)
     {
         var group = new GameObject($"Stat_{name}", typeof(RectTransform));
@@ -741,7 +814,7 @@ public class AlchemyUI : MonoBehaviour
         groupRT.anchorMax = new Vector2(0.5f, 0.5f);
         groupRT.pivot = new Vector2(0.5f, 0.5f);
         groupRT.anchoredPosition = new Vector2(x, -368f);
-        groupRT.sizeDelta = new Vector2(220f, 44f);
+        groupRT.sizeDelta = new Vector2(300f, 44f);
 
         var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
         iconGo.transform.SetParent(groupRT, false);
@@ -757,7 +830,7 @@ public class AlchemyUI : MonoBehaviour
         iconImg.raycastTarget = false;
 
         return IIPUIFactory.CreateLabelAnchored("Value", groupRT, "",
-            IIPUIStyle.FontSizeLabel, valueColor,
+            IIPUIStyle.FontSizeAreaTitle, valueColor,
             new Vector2(0f, 0f), new Vector2(1f, 1f),
             new Vector2(52f, 0f), new Vector2(0f, 0f), TextAnchor.MiddleLeft);
     }

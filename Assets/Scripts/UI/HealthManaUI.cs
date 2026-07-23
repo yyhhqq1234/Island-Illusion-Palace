@@ -45,6 +45,9 @@ public class HealthManaUI : MonoBehaviour
     [Tooltip("条背景颜色")]
     public Color barBackgroundColor = IIPUIStyle.BarBackgroundDark;
 
+    [Tooltip("MP条背景颜色（压暗，与青色填充拉开对比，0 MP 不呈满条观感）")]
+    public Color mpBarBackgroundColor = IIPUIStyle.ManaBarBackground;
+
     [Tooltip("数值文本颜色")]
     public Color valueTextColor = Color.white;
 
@@ -177,6 +180,12 @@ public class HealthManaUI : MonoBehaviour
         {
             CreateDefaultUI();
         }
+
+        // MP 条背景强制压暗（覆盖场景序列化旧色，与青色填充拉开对比）
+        if (mpBarBackground != null)
+        {
+            mpBarBackground.color = mpBarBackgroundColor;
+        }
     }
 
     /// <summary>构建默认 HP/MP 条 UI（圆角底+边框+Filled填充+数值文本+小标签）。HUD 1.4× 放大版。</summary>
@@ -226,7 +235,7 @@ public class HealthManaUI : MonoBehaviour
         GameObject mpBarObj = new GameObject("MPBar", typeof(RectTransform), typeof(Image));
         mpBarObj.transform.SetParent(transform, false);
         mpBarBackground = mpBarObj.GetComponent<Image>();
-        mpBarBackground.color = barBackgroundColor;
+        mpBarBackground.color = mpBarBackgroundColor; // 比 HP 更暗的专属底色
         IIPUIFactory.ApplyRounded(mpBarBackground, true);
         RectTransform mpBgRect = mpBarObj.GetComponent<RectTransform>();
         mpBgRect.anchorMin = new Vector2(0, 0);

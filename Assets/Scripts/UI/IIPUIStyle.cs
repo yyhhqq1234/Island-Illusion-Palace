@@ -24,6 +24,8 @@ namespace IIPUI
         public static readonly Color SlotBackgroundEmpty = new Color(0.11f, 0.10f, 0.17f, 0.80f);
         /// <summary>进度条深色底（HP/MP 条背景，比 ContentBackground 更不透明）</summary>
         public static readonly Color BarBackgroundDark = new Color(0.08f, 0.07f, 0.13f, 0.80f);
+        /// <summary>MP 条专属背景（比 HP 更暗，与青色填充拉开对比，0 MP 时不呈"满条"观感）</summary>
+        public static readonly Color ManaBarBackground = new Color(0.04f, 0.04f, 0.07f, 0.92f);
         /// <summary>进度条中性灰底（经验条/召唤物 HP/负担条背景）</summary>
         public static readonly Color BarBackgroundNeutral = new Color(0.2f, 0.2f, 0.2f, 0.8f);
         /// <summary>设置面板键位展示框背景</summary>

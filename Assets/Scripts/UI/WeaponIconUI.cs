@@ -49,6 +49,10 @@ public class WeaponIconUI : MonoBehaviour
     private PlayerController playerController;
     private float maxDashCooldown = 1f;
     private bool dataRefreshed = false;
+    private bool hasRealWeaponIcon = false; // 是否有真实武器图标（区分空态灰色占位，防止冷却刷新把占位刷白）
+
+    /// <summary>空态灰色占位图标颜色（替代纯"无武器"文字）</summary>
+    static readonly Color EmptyWeaponIconColor = new Color(0.55f, 0.55f, 0.60f, 0.55f);
 
     /// <summary>HUD 整体放大系数（与其它 HUD 组件一致）</summary>
     const float HudScale = 1.4f;
@@ -146,11 +150,12 @@ public class WeaponIconUI : MonoBehaviour
                 {
                     weaponIcon.sprite = weaponData.icon;
                     weaponIcon.color = Color.white;
+                    hasRealWeaponIcon = true;
                 }
                 else
                 {
-                    weaponIcon.sprite = null;
-                    weaponIcon.color = Color.clear;
+                    // 有武器数据但无图标：灰色占位图标
+                    ApplyEmptyWeaponIcon();
                 }
             }
 
@@ -167,11 +172,8 @@ public class WeaponIconUI : MonoBehaviour
         }
         else
         {
-            if (weaponIcon != null)
-            {
-                weaponIcon.sprite = null;
-                weaponIcon.color = Color.clear;
-            }
+            // 武器空态：灰色圆环占位图标（替代旧版纯"无武器"文字的空洞观感）
+            ApplyEmptyWeaponIcon();
 
             if (weaponNameText != null)
             {
@@ -183,6 +185,15 @@ public class WeaponIconUI : MonoBehaviour
                 weaponTypeText.text = GetWeaponTypeText(weaponType);
             }
         }
+    }
+
+    /// <summary>应用空态灰色占位图标（空心圆环轮廓，读作"空槽位"）</summary>
+    void ApplyEmptyWeaponIcon()
+    {
+        if (weaponIcon == null) return;
+        weaponIcon.sprite = IIPUIFactory.RingSprite;
+        weaponIcon.color = EmptyWeaponIconColor;
+        hasRealWeaponIcon = false;
     }
 
     /// <summary>刷新闪避冷却环形指示器</summary>
@@ -203,8 +214,9 @@ public class WeaponIconUI : MonoBehaviour
         {
             if (ready)
             {
-                // 若有 sprite 则白色显示外发光感，无 sprite 保持透明
-                weaponIcon.color = (weaponIcon.sprite != null) ? Color.white : Color.clear;
+                // 真实图标白色显示；空态占位保持灰色（防止被刷白）
+                weaponIcon.color = hasRealWeaponIcon ? Color.white
+                    : (weaponIcon.sprite != null ? EmptyWeaponIconColor : Color.clear);
             }
             else
             {
@@ -310,22 +322,22 @@ public class WeaponIconUI : MonoBehaviour
         iconRect.offsetMin = Vector2.zero;
         iconRect.offsetMax = Vector2.zero;
 
-        // ── 顶部键位提示 "Space"（10→14，1.4×）──
+        // ── 顶部键位提示 "Space"（14→18，HUD 可读性二轮放大）──
         dashKeyHintText = IIPUIFactory.CreateLabelAnchored("DashKeyHint", root.transform,
-            "Space", 14, IIPUIStyle.TextKeyHint,
+            "Space", 18, IIPUIStyle.TextKeyHint,
             new Vector2(0, 0.82f), new Vector2(1, 1),
             Vector2.zero, Vector2.zero, TextAnchor.UpperCenter);
 
-        // ── 武器名称文本（根下方外部，12→17，偏移 ×1.4）──
+        // ── 武器名称文本（根下方外部，17→20，HUD 可读性二轮放大）──
         weaponNameText = IIPUIFactory.CreateLabelAnchored("WeaponName", transform,
-            "", 17, IIPUIFactory.TextMain,
+            "", 20, IIPUIFactory.TextMain,
             new Vector2(0, 0), new Vector2(1, 0),
-            new Vector2(0, -25), new Vector2(0, -3), TextAnchor.UpperCenter);
+            new Vector2(0, -27), new Vector2(0, -3), TextAnchor.UpperCenter);
 
-        // ── 武器类型文本（名称下方，10→14，偏移 ×1.4）──
+        // ── 武器类型文本（名称下方，14→16，HUD 可读性二轮放大）──
         weaponTypeText = IIPUIFactory.CreateLabelAnchored("WeaponType", transform,
-            "", 14, IIPUIFactory.TextDim,
+            "", 16, IIPUIFactory.TextDim,
             new Vector2(0, 0), new Vector2(1, 0),
-            new Vector2(0, -45), new Vector2(0, -25), TextAnchor.UpperCenter);
+            new Vector2(0, -49), new Vector2(0, -27), TextAnchor.UpperCenter);
     }
 }

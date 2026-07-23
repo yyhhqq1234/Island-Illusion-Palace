@@ -118,7 +118,10 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
         }
         if (summonWheelUI == null)
         {
-            summonWheelUI = FindObjectOfType<SummonWheelUI>();
+            // 组件与 PlayerController 同挂 Player 根节点，先取同物体组件；
+            // 注意不能用 FindObjectOfType 找未激活对象（轮盘旧版 Awake 会自隐藏）
+            summonWheelUI = GetComponent<SummonWheelUI>();
+            if (summonWheelUI == null) summonWheelUI = FindObjectOfType<SummonWheelUI>();
         }
         if (characterStats == null) characterStats = GetComponent<CharacterStats>();
         if (burdenSystem == null) burdenSystem = GetComponent<BurdenSystem>();
@@ -185,6 +188,15 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
     {
         // 防止意外禁用
         if (!enabled) { enabled = true; Debug.LogWarning("[PlayerController] 自动恢复 enabled"); }
+
+        // 兜底：轮盘开启期间被暂停/面板遮挡 → 强制关闭轮盘，防止 KeyUp 丢失导致轮盘卡死
+        // 场景：按住 R 开轮盘 → ESC 暂停/背包/炼金面板 → Update() 早退 → 松 R 的 KeyUp 未处理
+        // → summonWheelActive 永久 true → WheelRoot (sortOrder=400) 盖在暂停菜单上方
+        if (summonWheelActive && !Input.GetKey(IIPConstants.KeySummonWheel))
+        {
+            summonWheelActive = false;
+            if (summonWheelUI != null) summonWheelUI.HideWheel();
+        }
 
         // UI状态检查：优先使用注入依赖，降级到缓存
         PauseMenu activePauseMenu = injectedPauseMenu != null ? injectedPauseMenu : cachedPauseMenu;
@@ -373,18 +385,13 @@ public class PlayerController : MonoBehaviour, IDashProvider, IDieHandler
             if (summonWheelUI != null)
             {
                 int selectedSlot = summonWheelUI.GetSelectedSlot();
-                if (selectedSlot >= 0)
+                if (selectedSlot >= 0 && summonSystem != null)
                 {
                     Vector2 wheelDirection = GetWheelDirectionFromSlot(selectedSlot);
-                    if (summonSystem != null)
-                    {
-                        summonSystem.SelectSummonFromWheel(wheelDirection);
-                    }
+                    summonSystem.SelectSummonFromWheel(wheelDirection);
                 }
-                else
-                {
-                    summonWheelUI.HideWheel();
-                }
+                // 松开 R 必定收起轮盘（修复旧版选中召唤后轮盘逻辑上常开不收的问题）
+                summonWheelUI.HideWheel();
             }
         }
     }

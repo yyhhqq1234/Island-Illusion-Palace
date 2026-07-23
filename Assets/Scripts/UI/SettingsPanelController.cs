@@ -312,6 +312,14 @@ public class SettingsPanelController : MonoBehaviour
             var le = backButton.GetComponent<LayoutElement>();
             if (le != null) Destroy(le);
         }
+        // ESC 返回提示（卡片右下角灰字，幂等）
+        if (card.Find("EscHint") == null)
+        {
+            IIPUIFactory.CreateLabelAnchored("EscHint", card, "ESC 返回",
+                IIPUIStyle.FontSizeSmall, IIPUIStyle.TextSecondary,
+                new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(-140f, 26f), new Vector2(-16f, 58f), TextAnchor.MiddleRight);
+        }
         // 内容区：Tab 与返回按钮之间，四边留 24
         Transform contentArea = card.Find("ContentArea");
         if (contentArea != null)
@@ -514,6 +522,9 @@ public class SettingsPanelController : MonoBehaviour
     {
         // 每次打开面板时刷新一次显示，反映外部可能的改动
         RefreshDisplayFromPrefs();
+        // 状态重申：重新激活时强制刷一次 Tab 颜色与内容显隐，
+        // 防止上次关闭时序异常导致 Tab 高亮与内容页不一致
+        SwitchToTab(currentTab);
     }
 
     // ═══════════════════════════════════════════
@@ -522,13 +533,13 @@ public class SettingsPanelController : MonoBehaviour
 
     void BindControls()
     {
-        // Tab 按钮
+        // Tab 按钮（点击补音效，与 PauseMenu 按钮模式一致）
         if (tabAudioVideo != null)
-            tabAudioVideo.onClick.AddListener(() => SwitchToTab("AudioVideo"));
+            tabAudioVideo.onClick.AddListener(() => { IIPBootstrap.Audio?.PlayClick(); SwitchToTab("AudioVideo"); });
         if (tabControls != null)
-            tabControls.onClick.AddListener(() => SwitchToTab("Controls"));
+            tabControls.onClick.AddListener(() => { IIPBootstrap.Audio?.PlayClick(); SwitchToTab("Controls"); });
         if (tabAssist != null)
-            tabAssist.onClick.AddListener(() => SwitchToTab("Assist"));
+            tabAssist.onClick.AddListener(() => { IIPBootstrap.Audio?.PlayClick(); SwitchToTab("Assist"); });
 
         // 返回按钮
         if (backButton != null)
@@ -589,6 +600,34 @@ public class SettingsPanelController : MonoBehaviour
         if (contentAudioVideo != null) contentAudioVideo.SetActive(key == "AudioVideo");
         if (contentControls != null) contentControls.SetActive(key == "Controls");
         if (contentAssist != null) contentAssist.SetActive(key == "Assist");
+
+        // 内容矮于视口时垂直居中（音画页只有 4 行滑块，顶部对齐会显得底部大片空白）
+        RefreshContentCentering(contentAudioVideo);
+        RefreshContentCentering(contentControls);
+        RefreshContentCentering(contentAssist);
+    }
+
+    /// <summary>内容页垂直居中：内容高度不足视口时加大上 padding（不影响超高页面的滚动）</summary>
+    void RefreshContentCentering(GameObject content)
+    {
+        if (content == null) return;
+        var vlg = content.GetComponent<VerticalLayoutGroup>();
+        if (vlg == null) return;
+
+        var contentRt = content.transform as RectTransform;
+        var viewportRt = contentRt != null ? contentRt.parent as RectTransform : null;
+        if (viewportRt == null) return;
+
+        float viewportH = viewportRt.rect.height;
+        if (viewportH <= 0f) return; // 布局未就绪（Awake 阶段），下次 SwitchToTab 再补
+
+        float contentH = LayoutUtility.GetPreferredHeight(contentRt);
+        int topPad = Mathf.Max(16, Mathf.RoundToInt((viewportH - contentH) * 0.5f));
+        if (vlg.padding.top != topPad)
+        {
+            vlg.padding.top = topPad;
+            LayoutRebuilder.MarkLayoutForRebuild(contentRt);
+        }
     }
 
     void SetTabColor(Button tab, bool active)
