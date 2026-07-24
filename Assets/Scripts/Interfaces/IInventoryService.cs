@@ -8,6 +8,8 @@ public interface IInventoryService
     int GetMaterialQuantity(MaterialTypeEnum type);
     bool AddPotion(RecipeType type, int count);
     int GetPotionQuantity(RecipeType type);
+    /// <summary>按 WeaponData 添加武器到背包（数据驱动版）</summary>
+    bool AddWeapon(WeaponData data);
     List<InventoryItem> GetAllMemoryFragments();
     bool HasMemoryFragment();
     List<InventoryItem> GetAllItems();

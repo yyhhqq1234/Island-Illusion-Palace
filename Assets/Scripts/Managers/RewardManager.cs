@@ -119,6 +119,19 @@ public class RewardManager : MonoBehaviour, IRewardSystem
                     if (inventoryService != null)
                         inventoryService.AddPotion(result.recipeType, result.amount);
                     break;
+                case DropTableData.DropType.Weapon:
+                    if (inventoryService != null && result.weaponData != null)
+                    {
+                        inventoryService.AddWeapon(result.weaponData);
+                        if (GlobalEventManager.Instance != null)
+                            GlobalEventManager.Instance.ShowNotification($"获得武器：{result.weaponData.weaponName}", 3f);
+                        Debug.Log($"[RewardManager] 通过掉落表获得武器：{result.weaponData.weaponName}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[RewardManager] 无法发放武器：inventoryService 或 weaponData 为空");
+                    }
+                    break;
             }
         }
     }

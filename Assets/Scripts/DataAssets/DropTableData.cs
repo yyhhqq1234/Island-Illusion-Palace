@@ -19,9 +19,11 @@ public class DropTableData : ScriptableObject
         public MaterialTypeEnum materialType;
         public RecipeType recipeType;
         public SoulCoreQuality soulCoreQuality;
+        [Tooltip("当type=Weapon时，掉落的武器数据资产")]
+        public WeaponData weaponData;
     }
 
-    public enum DropType { Soul, SoulEssence, Material, Recipe, SoulCore, MemoryFragment }
+    public enum DropType { Soul, SoulEssence, Material, Recipe, SoulCore, MemoryFragment, Weapon }
 
     public List<DropRollResult> RollLoot(float luckMultiplier = 1f)
     {
@@ -48,6 +50,7 @@ public class DropRollResult
     public MaterialTypeEnum materialType;
     public RecipeType recipeType;
     public SoulCoreQuality soulCoreQuality;
+    public WeaponData weaponData;
 
     public DropRollResult(DropTableData.DropEntry entry, int amount)
     {
@@ -57,5 +60,6 @@ public class DropRollResult
         materialType = entry.materialType;
         recipeType = entry.recipeType;
         soulCoreQuality = entry.soulCoreQuality;
+        weaponData = entry.weaponData;
     }
 }

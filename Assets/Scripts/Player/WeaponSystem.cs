@@ -1015,6 +1015,38 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
         BroadcastWeaponChanged();
     }
 
+    /// <summary>按 WeaponData 切换武器：覆盖 weaponData/类型/数值/手持精灵并广播变化</summary>
+    /// <param name="data">武器数据资产；传 null 则清空数据驱动武器，降级到 currentWeaponType 分支</param>
+    public void SwitchWeapon(WeaponData data)
+    {
+        this.weaponData = data; // 允许 null：清空数据驱动武器，降级到 currentWeaponType 分支
+        if (data != null)
+        {
+            currentWeaponType = data.weaponType;
+        }
+        UpdateWeaponStats();
+        UpdateWeaponSpriteFromData();
+        BroadcastWeaponChanged();
+    }
+
+    /// <summary>优先用 weaponData.weaponSprite 切换手持精灵，缺失则降级到四类硬编码兜底</summary>
+    private void UpdateWeaponSpriteFromData()
+    {
+        if (weaponSpriteRenderer == null) return;
+
+        Sprite dataSprite = weaponData != null ? weaponData.weaponSprite : null;
+        if (dataSprite != null)
+        {
+            weaponSpriteRenderer.sprite = dataSprite;
+            weaponSpriteRenderer.enabled = true;
+        }
+        else
+        {
+            // 降级：现有 UpdateWeaponSprite 按 currentWeaponType 取硬编码兜底精灵
+            UpdateWeaponSprite();
+        }
+    }
+
     /// <summary>广播武器变化（仅玩家广播给 HUD）</summary>
     void BroadcastWeaponChanged()
     {
@@ -1030,7 +1062,7 @@ public class WeaponSystem : MonoBehaviour, IWeaponProvider
             baseDamage = weaponData.GetRandomDamage();
             attackInterval = weaponData.attackInterval;
             attackRange = weaponData.attackRange;
-            weaponElement = (ElementType)(int)weaponData.elementType;
+            weaponElement = weaponData.elementType;
             switch (weaponData.weaponType)
             {
                 case WeaponType.Sword:       damageType = DamageType.Physical; break;

@@ -47,6 +47,8 @@ public class InventoryItem
     // 武器特有属性
     public WeaponType weaponType;
     public int weaponLevel;
+    // 武器数据资产引用（新增）：用于按 WeaponData 切换手持精灵/数值
+    public WeaponData weaponDataRef;
     
     public InventoryItem(string name, ItemType type, int qty, string desc = "", int val = 0, ItemRarity r = ItemRarity.Common)
     {
@@ -322,7 +324,110 @@ public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollec
             return false;
         }
     }
-    
+
+    // 按 WeaponData 添加武器到背包（数据驱动版）
+    // data 为空返回 false；已持有相同引用返回 false（仅阻止重复入包，不实现分解 P1-005）
+    public bool AddWeapon(WeaponData data)
+    {
+        if (data == null) return false;
+
+        // 重复武器检查：按 weaponName 判等（兼容同名不同 asset 实例）
+        foreach (var w in weaponItems)
+        {
+            if (w != null && w.weaponDataRef != null && w.weaponDataRef.weaponName == data.weaponName)
+            {
+                Debug.Log($"[InventorySystem] 已持有该武器：{data.weaponName}，跳过入包（重复武器分解 P1-005 暂未实现）");
+                return false;
+            }
+        }
+
+        // 检查武器空间上限
+        if (weaponItems.Count >= maxWeaponSlots)
+        {
+            Debug.Log("[InventorySystem] 武器空间已满，无法添加物品");
+            return false;
+        }
+
+        // 名称：优先用 weaponName，降级用类型中文名
+        string weaponName = !string.IsNullOrEmpty(data.weaponName) ? data.weaponName : GetWeaponName(data.weaponType);
+
+        // 稀有度映射
+        ItemRarity rarity = MapRarity(data.rarity);
+
+        // 价值：按稀有度（与策划案重复分解返还量一致）
+        int value = GetWeaponValueByRarity(data.rarity);
+
+        // 元素中文名
+        string elementName = GetElementName(data.elementType);
+
+        // 组装描述
+        string desc = $"{data.specialEffectDesc}\n获取：{data.obtainMethod}\n伤害 {data.baseDamageMin}-{data.baseDamageMax} · 攻速 {data.attackInterval}s · 元素 {elementName}";
+
+        InventoryItem newItem = new InventoryItem(weaponName, ItemType.Weapon, 1, desc, value, rarity);
+        newItem.weaponType = data.weaponType;
+        newItem.weaponLevel = 0;
+        newItem.weaponDataRef = data;
+        newItem.icon = data.icon;
+
+        if (AddToWeaponSlot(newItem))
+        {
+            inventory.Add(newItem);
+            weaponItems.Add(newItem);
+            currentInventorySize++;
+            Debug.Log($"[InventorySystem] 添加{weaponName}到背包（稀有度 {rarity}）");
+            return true;
+        }
+        else
+        {
+            Debug.Log("[InventorySystem] 武器栏目已满，无法添加物品");
+            return false;
+        }
+    }
+
+    /// <summary>WeaponData.Rarity 映射到背包 ItemRarity（Epic 合并到 Rare）</summary>
+    private ItemRarity MapRarity(WeaponData.Rarity r)
+    {
+        switch (r)
+        {
+            case WeaponData.Rarity.Common: return ItemRarity.Common;
+            case WeaponData.Rarity.Uncommon: return ItemRarity.Uncommon;
+            case WeaponData.Rarity.Rare:
+            case WeaponData.Rarity.Epic: return ItemRarity.Rare;
+            case WeaponData.Rarity.Legendary: return ItemRarity.Legendary;
+            default: return ItemRarity.Common;
+        }
+    }
+
+    /// <summary>按稀有度获取武器价值（与策划案重复分解返还量一致）</summary>
+    private int GetWeaponValueByRarity(WeaponData.Rarity r)
+    {
+        switch (r)
+        {
+            case WeaponData.Rarity.Common: return 150;
+            case WeaponData.Rarity.Uncommon: return 400;
+            case WeaponData.Rarity.Rare:
+            case WeaponData.Rarity.Epic: return 800;
+            case WeaponData.Rarity.Legendary: return 1500;
+            default: return 150;
+        }
+    }
+
+    /// <summary>元素类型中文名</summary>
+    private string GetElementName(ElementType element)
+    {
+        switch (element)
+        {
+            case ElementType.None: return "物理";
+            case ElementType.Frost: return "冰霜";
+            case ElementType.Water: return "流水";
+            case ElementType.Fire: return "火焰";
+            case ElementType.Lightning: return "雷电";
+            case ElementType.Soul: return "灵魂";
+            case ElementType.Holy: return "圣光";
+            default: return "无";
+        }
+    }
+
     // 添加记忆碎片到背包
     public bool AddMemoryFragment(string fragmentName, int quantity = 1)
     {
@@ -853,7 +958,11 @@ public class InventorySystem : MonoBehaviour, IInventoryService, IResourceCollec
         
         if (weaponSystem != null)
         {
-            weaponSystem.SwitchWeapon(item.weaponType);
+            // 优先按 WeaponData 切换（数据驱动，含手持精灵），否则降级按类型
+            if (item.weaponDataRef != null)
+                weaponSystem.SwitchWeapon(item.weaponDataRef);
+            else
+                weaponSystem.SwitchWeapon(item.weaponType);
         }
         
         Debug.Log($"装备了{item.itemName}");
